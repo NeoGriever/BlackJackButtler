@@ -42,9 +42,10 @@ public sealed class ChatLogBuffer
 
 public sealed record ParsedChatMessage(
   DateTime Timestamp,
-  string GroupIndexNumber, // "", "", ...
+  int GroupIndexNumber,
   string Name,
-  int WorldId,              // -1 wenn nicht vorhanden
+  int WorldId,
   string Message,
-  bool Event                // true = kein normaler "Player chat" (z.B. System/Event)
+  bool Event,
+  uint ColorU32
 );

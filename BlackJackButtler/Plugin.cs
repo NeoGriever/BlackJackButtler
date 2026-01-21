@@ -19,6 +19,8 @@ public sealed class Plugin : IDalamudPlugin
   [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
   [PluginService] internal static IPluginLog Log { get; private set; } = null!;
   [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
+  [PluginService] internal static IClientState ClientState { get; private set; } = null!;
+  [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
 
   private const string CommandName = "/bjb";
 
@@ -95,9 +97,9 @@ public sealed class Plugin : IDalamudPlugin
       if (type != XivChatType.Party)
         return;
 
-      var parsed = ChatMessageParser.Parse(DateTime.Now, sender, message);
+      var localName = ObjectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
+      var parsed = ChatMessageParser.Parse(DateTime.Now, sender, message, localName);
       chatLog.Add(parsed);
-
     }
 
     private static string DumpPayloads(SeString s)

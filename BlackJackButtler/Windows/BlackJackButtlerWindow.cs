@@ -102,29 +102,30 @@ public sealed class BlackJackButtlerWindow : Window, IDisposable
     ImGui.Separator();
 
     var entries = _chatLog.Snapshot();
-    var sb = new System.Text.StringBuilder(4096);
 
     foreach (var e in entries)
     {
-        sb.Append('[').Append(e.Timestamp.ToString("HH:mm:ss")).Append("] ");
-        sb.Append('[').Append(e.GroupIndexNumber).Append("] ");
+      var sb = new System.Text.StringBuilder(4096);
+      sb.Append('[').Append(e.Timestamp.ToString("HH:mm:ss")).Append("] ");
+      sb.Append('[').Append(e.GroupIndexNumber).Append("] ");
 
-        if (!e.Event)
-        {
-            sb.Append(e.Name);
-            if (e.WorldId != -1)
-                sb.Append(" (WorldId ").Append(e.WorldId).Append(')');
-            sb.Append(": ");
-            sb.AppendLine(e.Message);
-        }
-        else
-        {
-            sb.Append("[EVENT] ").AppendLine(e.Message);
-        }
+      if (!e.Event)
+      {
+        sb.Append(e.Name);
+        if (e.WorldId != -1)
+        sb.Append(" (WorldId ").Append(e.WorldId).Append(')');
+        sb.Append(": ");
+        sb.AppendLine(e.Message);
+      }
+      else
+      {
+        sb.Append("[EVENT] ").AppendLine(e.Message);
+      }
+      _partyDump = sb.ToString();
+      ImGui.PushStyleColor(ImGuiCol.Text, e.ColorU32);
+      ImGui.TextUnformatted($"{_partyDump}");
+      ImGui.PopStyleColor();
     }
-
-    _partyDump = sb.ToString();
-    ImGui.InputTextMultiline("##partyDump", ref _partyDump, 20000, new Vector2(-1, -1), ImGuiInputTextFlags.ReadOnly);
   }
 
   private void DrawMessageBatches()
