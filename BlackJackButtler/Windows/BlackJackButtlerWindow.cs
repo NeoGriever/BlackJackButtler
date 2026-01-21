@@ -15,6 +15,8 @@ public sealed class BlackJackButtlerWindow : Window, IDisposable
   private readonly Configuration _config;
   private readonly Action _save;
   private readonly ChatLogBuffer _chatLog;
+  private string _partyDump = string.Empty;
+
 
   public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog) : base("BlackJack Buttler")
   {
@@ -99,29 +101,45 @@ public sealed class BlackJackButtlerWindow : Window, IDisposable
     ImGui.TextUnformatted("Regular Expressions");
     ImGui.Separator();
 
-    if (ImGui.Button("Clear Chat Log"))
+    if (ImGui.Button("Clear Party Log"))
     _chatLog.Clear();
 
     ImGui.SameLine();
-    ImGui.TextDisabled("Showing last 20 chat messages (debug).");
+    if (ImGui.Button("Copy All"))
+    ImGui.SetClipboardText(_partyDump);
+
+    ImGui.SameLine();
+    ImGui.TextDisabled("Capturing Party only (max 20). Showing text + hex bytes.");
 
     ImGui.Spacing();
 
-    // Scrollbarer Bereich
-    ImGui.BeginChild("bjb.chatlog", new Vector2(0, 0), true);
-
+    // Dump bauen (jede Zeile: Zeit + type int + sender/message + hex)
     var entries = _chatLog.Snapshot();
+
+    // String neu bauen (klein genug, 20 Zeilen)
+    var sb = new System.Text.StringBuilder(8192);
     foreach (var e in entries)
     {
-      // Format: [time] [chatType] sender: message
-      ImGui.TextUnformatted(
-      $"[{e.Timestamp:HH:mm:ss}] [{e.ChatType}] {e.Sender}: {e.Message}"
-      );
+      sb.Append('[').Append(e.Timestamp.ToString("HH:mm:ss")).Append("] ");
+      sb.Append('[').Append(e.ChatType).Append(" / ").Append(e.ChatTypeRaw).Append("] ");
+      sb.Append(e.SenderText).Append(": ").AppendLine(e.MessageText);
+
+      sb.Append("  sender.hex: ").AppendLine(e.SenderHex);
+      sb.Append("  msg.hex:    ").AppendLine(e.MessageHex);
+      sb.AppendLine();
     }
 
-    ImGui.EndChild();
-  }
+    _partyDump = sb.ToString();
 
+    // Kopierbares Textfeld (read-only)
+    ImGui.InputTextMultiline(
+    "##partyDump",
+    ref _partyDump,
+    20000,
+    new Vector2(-1, -1),
+    ImGuiInputTextFlags.ReadOnly
+    );
+  }
 
   private void DrawMessageBatches()
   {

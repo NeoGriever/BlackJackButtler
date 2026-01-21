@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Dalamud.Game.Command;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
@@ -66,24 +67,51 @@ public sealed class Plugin : IDalamudPlugin
     private void OnCommand(string command, string args) => mainWindow.OpenMain();
 
     private void OnChatMessage(
-        XivChatType type,
-        int timestamp,
-        ref SeString sender,
-        ref SeString message,
-        ref bool isHandled)
+      XivChatType type,
+      int timestamp,
+      ref SeString sender,
+      ref SeString message,
+      ref bool isHandled
+    )
     {
-        // ref-Parameter erst in Strings materialisieren
-        var senderText = sender.TextValue ?? string.Empty;
-        var messageText = message.TextValue ?? string.Empty;
+      // Nur Party-Chat loggen (Debug)
+      if (type != XivChatType.Party)
+      return;
 
-        chatLog.Add(new ChatLogEntry(
-            DateTime.Now,
-            type,
-            0,
-            senderText,
-            messageText
-        ));
+      // Textwerte (wie bisher)
+      var senderText = sender.TextValue ?? string.Empty;
+      var messageText = message.TextValue ?? string.Empty;
+
+      // Rohbytes (Payload-encoded)
+      var senderBytes = sender.Encode();
+      var messageBytes = message.Encode();
+
+      chatLog.Add(new ChatLogEntry(
+      DateTime.Now,
+      type,
+      (int)type,
+      senderText,
+      messageText,
+      ToHex(senderBytes),
+      ToHex(messageBytes)
+      ));
     }
+
+    private static string ToHex(byte[] bytes)
+    {
+      if (bytes.Length == 0)
+      return string.Empty;
+
+      // "00 02 41 ..." Format
+      var sb = new StringBuilder(bytes.Length * 3);
+      for (var i = 0; i < bytes.Length; i++)
+      {
+        if (i > 0) sb.Append(' ');
+        sb.Append(bytes[i].ToString("X2"));
+      }
+      return sb.ToString();
+    }
+
 
 
   }
