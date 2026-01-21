@@ -44,7 +44,9 @@ public sealed class ChatLogBuffer
 public sealed record ChatLogEntry(
     DateTime Timestamp,
     XivChatType ChatType,
-    uint SenderId,
-    string Sender,
-    string Message
+    int ChatTypeRaw,
+    string SenderText,
+    string MessageText,
+    string SenderHex,
+    string MessageHex
 );
