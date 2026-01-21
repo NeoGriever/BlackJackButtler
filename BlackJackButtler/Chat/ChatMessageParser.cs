@@ -1,7 +1,8 @@
 using System;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
+using Rx = System.Text.RegularExpressions.Regex;
+using RxOpt = System.Text.RegularExpressions.RegexOptions;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 
@@ -10,14 +11,38 @@ namespace BlackJackButtler.Chat;
 public static class ChatMessageParser
 {
 
-  private static readonly Regex DiceTextDe = new(
-    @"^Würfeln!\s*\(\d+\s*-\s*\d+\)\s*\d+\s*$",
-    RegexOptions.Compiled
+  private static readonly System.Collections.Generic.Dictionary<char, int> GroupIconMap = new()
+  {
+      [''] = 1,
+      [''] = 2,
+      [''] = 3,
+      [''] = 4,
+      [''] = 5,
+      [''] = 6,
+      [''] = 7,
+      [''] = 8,
+      [''] = 9,
+      [''] = 10,
+      [''] = 11,
+      [''] = 12,
+      [''] = 13,
+      [''] = 14,
+      [''] = 15,
+      [''] = 16,
+      [''] = 17,
+      [''] = 18,
+      [''] = 19,
+      [''] = 20,
+  };
+
+  private static readonly Rx DiceTextDe = new(
+    @"^Würfeln!\s*\(\d+\s*-\\s*\d+\)\s*\d+\s*$",
+    RxOpt.Compiled
   );
 
-  private static readonly Regex DiceTextEn = new(
+  private static readonly Rx DiceTextEn = new(
     @"\brolls?\s+a\s+\d+\b",
-    RegexOptions.Compiled | RegexOptions.IgnoreCase
+    RxOpt.Compiled | RxOpt.IgnoreCase
   );
 
   public static ParsedChatMessage Parse(DateTime timestamp, SeString sender, SeString message, string localPlayerName)
@@ -47,7 +72,6 @@ public static class ChatMessageParser
       isEvent,
       color
     );
-
   }
 
 
@@ -84,7 +108,7 @@ public static class ChatMessageParser
         var ch = t[0];
         var mapped = MapGroupIconToNumber(ch);
         if (mapped != 0)
-        return mapped;
+          return mapped;
       }
     }
 
@@ -93,14 +117,7 @@ public static class ChatMessageParser
 
   private static int MapGroupIconToNumber(char ch)
   {
-    const int start = '\uE08F';
-    const int end   = '\uE0A2';
-
-    var code = (int)ch;
-    if (code < start || code > end)
-    return 0;
-
-    return (code - start) + 1;
+      return GroupIconMap.TryGetValue(ch, out var n) ? n : 0;
   }
 
   private static bool ContainsLetter(string s)

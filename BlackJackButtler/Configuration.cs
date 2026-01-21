@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Configuration;
+using BlackJackButtler.Regex;
 
 namespace BlackJackButtler;
 
@@ -12,9 +13,12 @@ public sealed class Configuration : IPluginConfiguration
 
   public List<MessageBatch> MessageBatches { get; set; } = new();
 
+  public bool AllowEditingStandardRegex { get; set; } = false;
+
+  public List<UserRegexEntry> UserRegexes { get; set; } = new();
+
   public void EnsureDefaults()
   {
-    // Nur einmalig anwenden (oder bei künftigen Versionen erweitern).
     if (Version >= 1)
     return;
 
@@ -46,7 +50,7 @@ public sealed class Configuration : IPluginConfiguration
       MessageBatches.Add(new MessageBatch
       {
         Name = name,
-        IsExpanded = false, // eingeklappt
+        IsExpanded = false,
         Messages = new List<string>()
       });
     }

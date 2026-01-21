@@ -11,6 +11,8 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using BlackJackButtler.Chat;
 using BlackJackButtler.Windows;
+using BlackJackButtler.Regex;
+
 namespace BlackJackButtler;
 
 public sealed class Plugin : IDalamudPlugin
@@ -100,6 +102,7 @@ public sealed class Plugin : IDalamudPlugin
       var localName = ObjectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
       var parsed = ChatMessageParser.Parse(DateTime.Now, sender, message, localName);
       chatLog.Add(parsed);
+      RegexEngine.ProcessIncoming(parsed, Configuration);
     }
 
     private static string DumpPayloads(SeString s)
