@@ -8,7 +8,7 @@ namespace BlackJackButtler.Windows;
 
 public sealed class BlackJackButtlerWindow : Window, IDisposable
 {
-  private enum Page { Main, Messages, Settings }
+  private enum Page { Main, Regexes, Messages, Settings }
   private Page _page = Page.Main;
 
   private readonly Configuration _config;
@@ -29,13 +29,14 @@ public sealed class BlackJackButtlerWindow : Window, IDisposable
   public override void Draw()
   {
     var avail = ImGui.GetContentRegionAvail();
-    var sidebarWidth = 200f;
+    var sidebarWidth = 250f;
 
     ImGui.BeginChild("bjb.sidebar", new Vector2(sidebarWidth, avail.Y), true);
     ImGui.TextUnformatted("BlackJack Buttler");
     ImGui.Separator();
 
     NavButton(Page.Main, "Main");
+    NavButton(Page.Regexes, "Regular Expressions");
     NavButton(Page.Messages, "Message Batches");
     NavButton(Page.Settings, "Settings");
 
@@ -49,6 +50,9 @@ public sealed class BlackJackButtlerWindow : Window, IDisposable
     {
       case Page.Main:
       DrawMain();
+      break;
+      case Page.Regexes:
+      DrawRegexes();
       break;
       case Page.Messages:
       DrawMessageBatches();
@@ -77,14 +81,21 @@ public sealed class BlackJackButtlerWindow : Window, IDisposable
   {
     ImGui.TextUnformatted("Main");
     ImGui.Separator();
-    ImGui.TextWrapped("Main Window");
+    ImGui.TextWrapped("WIP ...");
   }
 
   private void DrawSettings()
   {
     ImGui.TextUnformatted("Settings");
     ImGui.Separator();
-    ImGui.TextWrapped("Configurations");
+    ImGui.TextWrapped("WIP ...");
+  }
+
+  private void DrawRegexes()
+  {
+    ImGui.TextUnformatted("Regular Expressions");
+    ImGui.Separator();
+    ImGui.TextWrapped("WIP ...");
   }
 
   private void DrawMessageBatches()
@@ -114,10 +125,15 @@ public sealed class BlackJackButtlerWindow : Window, IDisposable
 
       // Persisted expand state
       var flags = batch.IsExpanded ? ImGuiTreeNodeFlags.DefaultOpen : ImGuiTreeNodeFlags.None;
-      var open = ImGui.CollapsingHeader(headerLabel, flags);
+      ImGui.SetNextItemOpen(batch.IsExpanded, ImGuiCond.Always);
+      var open = ImGui.CollapsingHeader(headerLabel);
 
-      // Sync expand state (best-effort)
-      batch.IsExpanded = open;
+
+      if (open != batch.IsExpanded)
+      {
+        batch.IsExpanded = open;
+        _save();
+      }
 
       if (open)
       {
@@ -170,14 +186,27 @@ public sealed class BlackJackButtlerWindow : Window, IDisposable
         ImGui.Spacing();
         ImGui.Separator();
 
-        // Delete batch
-        if (ImGui.Button("Delete Batch"))
+        var io = ImGui.GetIO();
+
+        if (!io.KeyCtrl)
         {
-          _config.MessageBatches.RemoveAt(i);
-          _save();
-          ImGui.PopID();
-          break;
+          ImGui.BeginDisabled(true);
+          ImGui.Button("Delete Batch (hold CTRL)");
+          ImGui.EndDisabled();
+          if (ImGui.IsItemHovered())
+          ImGui.SetTooltip("Hold CTRL while clicking to delete this batch.");
         }
+        else
+        {
+          if (ImGui.Button("Delete Batch"))
+          {
+            _config.MessageBatches.RemoveAt(i);
+            _save();
+            ImGui.PopID();
+            break;
+          }
+        }
+
       }
 
       ImGui.PopID();
