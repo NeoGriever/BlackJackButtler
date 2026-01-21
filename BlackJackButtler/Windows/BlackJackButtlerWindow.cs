@@ -3,6 +3,7 @@ using System.Numerics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
 using BlackJackButtler;
+using BlackJackButtler.Chat;
 
 namespace BlackJackButtler.Windows;
 
@@ -13,11 +14,13 @@ public sealed class BlackJackButtlerWindow : Window, IDisposable
 
   private readonly Configuration _config;
   private readonly Action _save;
+  private readonly ChatLogBuffer _chatLog;
 
-  public BlackJackButtlerWindow(Configuration config, Action save) : base("BlackJack Buttler")
+  public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog) : base("BlackJack Buttler")
   {
     _config = config;
     _save = save;
+    _chatLog = chatLog;
 
     Size = new Vector2(900, 600);
     SizeCondition = ImGuiCond.FirstUseEver;
@@ -95,8 +98,30 @@ public sealed class BlackJackButtlerWindow : Window, IDisposable
   {
     ImGui.TextUnformatted("Regular Expressions");
     ImGui.Separator();
-    ImGui.TextWrapped("WIP ...");
+
+    if (ImGui.Button("Clear Chat Log"))
+    _chatLog.Clear();
+
+    ImGui.SameLine();
+    ImGui.TextDisabled("Showing last 20 chat messages (debug).");
+
+    ImGui.Spacing();
+
+    // Scrollbarer Bereich
+    ImGui.BeginChild("bjb.chatlog", new Vector2(0, 0), true);
+
+    var entries = _chatLog.Snapshot();
+    foreach (var e in entries)
+    {
+      // Format: [time] [chatType] sender: message
+      ImGui.TextUnformatted(
+      $"[{e.Timestamp:HH:mm:ss}] [{e.ChatType}] {e.Sender}: {e.Message}"
+      );
+    }
+
+    ImGui.EndChild();
   }
+
 
   private void DrawMessageBatches()
   {
