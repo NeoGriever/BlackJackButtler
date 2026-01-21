@@ -24,7 +24,7 @@ public sealed class Plugin : IDalamudPlugin
   {
     Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
-    mainWindow = new BlackJackButtlerWindow();
+    mainWindow = new BlackJackButtlerWindow(Configuration, () => Configuration.Save());
     windowSystem.AddWindow(mainWindow);
 
     CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
