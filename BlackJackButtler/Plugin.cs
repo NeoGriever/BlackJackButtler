@@ -1,15 +1,16 @@
 using System;
 using System.Linq;
+using System.Text;
 using Dalamud.Game.Command;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
+using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.IoC;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using BlackJackButtler.Chat;
 using BlackJackButtler.Windows;
-
 namespace BlackJackButtler;
 
 public sealed class Plugin : IDalamudPlugin
@@ -74,27 +75,52 @@ public sealed class Plugin : IDalamudPlugin
       ref bool isHandled
     )
     {
-      // Nur Party-Chat loggen (Debug)
       if (type != XivChatType.Party)
       return;
 
-      // Textwerte (wie bisher)
       var senderText = sender.TextValue ?? string.Empty;
       var messageText = message.TextValue ?? string.Empty;
 
-      // Rohbytes (Payload-encoded)
       var senderBytes = sender.Encode();
       var messageBytes = message.Encode();
 
-      chatLog.Add(new ChatLogEntry(
-      DateTime.Now,
-      type,
-      (int)type,
-      senderText,
-      messageText,
-      ToHex(senderBytes),
-      ToHex(messageBytes)
-      ));
+      // PlayerPayload aus Sender extrahieren (Name/WorldId)
+      var pp = sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
+      var playerName = pp?.PlayerName ?? string.Empty;
+      var worldId = pp?.World.RowId ?? 0u;
+
+      // Payloads als Debug-Text auflisten
+      var senderPayloadDump = DumpPayloads(sender);
+
+      if (type != XivChatType.Party)
+        return;
+
+      var parsed = ChatMessageParser.Parse(DateTime.Now, sender, message);
+      chatLog.Add(parsed);
+
+    }
+
+    private static string DumpPayloads(SeString s)
+    {
+      var sb = new StringBuilder(1024);
+
+      for (var i = 0; i < s.Payloads.Count; i++)
+      {
+        var p = s.Payloads[i];
+        sb.Append(i).Append(": ").Append(p.GetType().Name);
+
+        // Ein paar hilfreiche Spezialfälle:
+        if (p is TextPayload tp)
+          sb.Append(" -> \"").Append(tp.Text).Append('"');
+        else if (p is PlayerPayload pp)
+          sb.Append($" -> PlayerName=\"{pp.PlayerName}\", WorldId={pp.World}");
+        else
+          sb.Append(" -> ").Append(p.ToString());
+
+        sb.AppendLine();
+      }
+
+      return sb.ToString();
     }
 
     private static string ToHex(byte[] bytes)
@@ -102,7 +128,6 @@ public sealed class Plugin : IDalamudPlugin
       if (bytes.Length == 0)
       return string.Empty;
 
-      // "00 02 41 ..." Format
       var sb = new StringBuilder(bytes.Length * 3);
       for (var i = 0; i < bytes.Length; i++)
       {
@@ -111,7 +136,5 @@ public sealed class Plugin : IDalamudPlugin
       }
       return sb.ToString();
     }
-
-
 
   }

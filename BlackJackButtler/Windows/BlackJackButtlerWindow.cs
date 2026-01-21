@@ -101,44 +101,30 @@ public sealed class BlackJackButtlerWindow : Window, IDisposable
     ImGui.TextUnformatted("Regular Expressions");
     ImGui.Separator();
 
-    if (ImGui.Button("Clear Party Log"))
-    _chatLog.Clear();
-
-    ImGui.SameLine();
-    if (ImGui.Button("Copy All"))
-    ImGui.SetClipboardText(_partyDump);
-
-    ImGui.SameLine();
-    ImGui.TextDisabled("Capturing Party only (max 20). Showing text + hex bytes.");
-
-    ImGui.Spacing();
-
-    // Dump bauen (jede Zeile: Zeit + type int + sender/message + hex)
     var entries = _chatLog.Snapshot();
+    var sb = new System.Text.StringBuilder(4096);
 
-    // String neu bauen (klein genug, 20 Zeilen)
-    var sb = new System.Text.StringBuilder(8192);
     foreach (var e in entries)
     {
-      sb.Append('[').Append(e.Timestamp.ToString("HH:mm:ss")).Append("] ");
-      sb.Append('[').Append(e.ChatType).Append(" / ").Append(e.ChatTypeRaw).Append("] ");
-      sb.Append(e.SenderText).Append(": ").AppendLine(e.MessageText);
+        sb.Append('[').Append(e.Timestamp.ToString("HH:mm:ss")).Append("] ");
+        sb.Append('[').Append(e.GroupIndexNumber).Append("] ");
 
-      sb.Append("  sender.hex: ").AppendLine(e.SenderHex);
-      sb.Append("  msg.hex:    ").AppendLine(e.MessageHex);
-      sb.AppendLine();
+        if (!e.Event)
+        {
+            sb.Append(e.Name);
+            if (e.WorldId != -1)
+                sb.Append(" (WorldId ").Append(e.WorldId).Append(')');
+            sb.Append(": ");
+            sb.AppendLine(e.Message);
+        }
+        else
+        {
+            sb.Append("[EVENT] ").AppendLine(e.Message);
+        }
     }
 
     _partyDump = sb.ToString();
-
-    // Kopierbares Textfeld (read-only)
-    ImGui.InputTextMultiline(
-    "##partyDump",
-    ref _partyDump,
-    20000,
-    new Vector2(-1, -1),
-    ImGuiInputTextFlags.ReadOnly
-    );
+    ImGui.InputTextMultiline("##partyDump", ref _partyDump, 20000, new Vector2(-1, -1), ImGuiInputTextFlags.ReadOnly);
   }
 
   private void DrawMessageBatches()
