@@ -96,35 +96,170 @@ public sealed class BlackJackButtlerWindow : Window, IDisposable
     ImGui.TextWrapped("WIP ...");
   }
 
+  private bool _showRegexWarningPopup;
+  private bool _pendingEnableStandardEdit;
+
   private void DrawRegexes()
   {
     ImGui.TextUnformatted("Regular Expressions");
     ImGui.Separator();
 
-    var entries = _chatLog.Snapshot();
+    // --- Standard Regex (locked) ---
+    ImGui.TextUnformatted("Standard Algorithms");
+    ImGui.Spacing();
 
-    foreach (var e in entries)
+    // Checkbox "unlock" mit Warn-Popup
+    var allow = _config.AllowEditingStandardRegex;
+    if (ImGui.Checkbox("Allow editing standard regular expressions", ref allow))
     {
-      var sb = new System.Text.StringBuilder(4096);
-      sb.Append('[').Append(e.Timestamp.ToString("HH:mm:ss")).Append("] ");
-      sb.Append('[').Append(e.GroupIndexNumber).Append("] ");
+      if (allow && !_config.AllowEditingStandardRegex)
+      {
+        // erst Popup zeigen, noch nicht freischalten
+        _pendingEnableStandardEdit = true;
+        _showRegexWarningPopup = true;
+        ImGui.OpenPopup("bjb.regex.warning");
+      }
+      else if (!allow && _config.AllowEditingStandardRegex)
+      {
+        _config.AllowEditingStandardRegex = false;
+        _save();
+      }
+    }
 
-      if (!e.Event)
+    if (ImGui.BeginPopupModal("bjb.regex.warning", ref _showRegexWarningPopup, ImGuiWindowFlags.AlwaysAutoResize))
+    {
+      ImGui.TextWrapped("Editing the regular expression is for advanced users. Please make sure, that you know, what you're doing.");
+      ImGui.Spacing();
+
+      if (ImGui.Button("I understand"))
       {
-        sb.Append(e.Name);
-        if (e.WorldId != -1)
-        sb.Append(" (WorldId ").Append(e.WorldId).Append(')');
-        sb.Append(": ");
-        sb.AppendLine(e.Message);
+        if (_pendingEnableStandardEdit)
+        {
+          _config.AllowEditingStandardRegex = true;
+          _save();
+        }
+        _pendingEnableStandardEdit = false;
+        _showRegexWarningPopup = false;
+        ImGui.CloseCurrentPopup();
       }
-      else
+
+      ImGui.SameLine();
+
+      if (ImGui.Button("Cancel"))
       {
-        sb.Append("[EVENT] ").AppendLine(e.Message);
+        _pendingEnableStandardEdit = false;
+        _showRegexWarningPopup = false;
+        ImGui.CloseCurrentPopup();
       }
-      _partyDump = sb.ToString();
-      ImGui.PushStyleColor(ImGuiCol.Text, e.ColorU32);
-      ImGui.TextUnformatted($"{_partyDump}");
-      ImGui.PopStyleColor();
+
+      ImGui.EndPopup();
+    }
+
+    // Standard: Dice->Card mapping Anzeige (editierbar erst bei Unlock)
+    ImGui.Separator();
+    ImGui.TextUnformatted("Dice → Card value (Blackjack)");
+    ImGui.TextDisabled("Applied only to your own dice events.");
+
+    // Wir lassen das Pattern fürs Erste fest (UI-Text), später kannst du es als editierbares Pattern hinterlegen.
+    var standardPattern = @"(\d+)\s*$";
+    ImGui.BeginDisabled(!_config.AllowEditingStandardRegex);
+    ImGui.InputText("Dice value pattern", ref standardPattern, 128, ImGuiInputTextFlags.ReadOnly);
+    ImGui.EndDisabled();
+
+    ImGui.Spacing();
+    ImGui.TextUnformatted("Mapping:");
+    ImGui.BulletText("1 → 11");
+    ImGui.BulletText("2–9 → 2–9");
+    ImGui.BulletText("10–13 → 10");
+
+    ImGui.Spacing();
+    ImGui.Separator();
+
+    // --- User Regexes ---
+    ImGui.TextUnformatted("Custom Regex Entries");
+    ImGui.Spacing();
+
+    if (ImGui.Button("+ Add Regex Entry"))
+    {
+      _config.UserRegexes.Add(new BlackJackButtler.Regex.UserRegexEntry());
+      _save();
+    }
+
+    ImGui.SameLine();
+    ImGui.TextDisabled($"Entries: {_config.UserRegexes.Count}");
+
+    ImGui.Spacing();
+
+    for (var i = 0; i < _config.UserRegexes.Count; i++)
+    {
+      var e = _config.UserRegexes[i];
+      ImGui.PushID(i);
+
+      var header = string.IsNullOrWhiteSpace(e.Name) ? $"Entry {i + 1}" : e.Name;
+      if (ImGui.CollapsingHeader(header, ImGuiTreeNodeFlags.DefaultOpen))
+      {
+        var enabled = e.Enabled;
+        if (ImGui.Checkbox("Enabled", ref enabled))
+        {
+          e.Enabled = enabled;
+          _save();
+        }
+
+        // Mode (nur SetVariable jetzt sinnvoll)
+        var mode = (int)e.Mode;
+        if (ImGui.Combo("Mode", ref mode, "Set Variable\0Reaction (later)\0"))
+        {
+          e.Mode = (BlackJackButtler.Regex.RegexEntryMode)mode;
+          _save();
+        }
+
+        // Variable name
+        var name = e.Name ?? "";
+        if (ImGui.InputText("Name", ref name, 64))
+        {
+          e.Name = name;
+          _save();
+        }
+
+        // Case sensitive
+        var cs = e.CaseSensitive;
+        if (ImGui.Checkbox("Case sensitive", ref cs))
+        {
+          e.CaseSensitive = cs;
+          _save();
+        }
+
+        // Pattern
+        var pat = e.Pattern ?? "";
+        if (ImGui.InputTextMultiline("Pattern", ref pat, 2048, new Vector2(-1, 80)))
+        {
+          e.Pattern = pat;
+          _save();
+        }
+
+        ImGui.Spacing();
+
+        // Delete (CTRL required)
+        var io = ImGui.GetIO();
+        if (!io.KeyCtrl)
+        {
+          ImGui.BeginDisabled(true);
+          ImGui.Button("Delete (hold CTRL)");
+          ImGui.EndDisabled();
+        }
+        else
+        {
+          if (ImGui.Button("Delete"))
+          {
+            _config.UserRegexes.RemoveAt(i);
+            _save();
+            ImGui.PopID();
+            break;
+          }
+        }
+      }
+
+      ImGui.PopID();
     }
   }
 
