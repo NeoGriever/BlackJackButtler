@@ -1,0 +1,15 @@
+{
+  "Author": "Valenth Siveria",
+  "Name": "BlackJack Buttler",
+  "Punchline": "Good evening. I’m your BlackJack Buttler—quietly tracking the table and offering the right hint at the right time.",
+  "Description": "/buttler - opens the blackjack buttler tool",
+  "ApplicableVersion": "any",
+  "IconUrl": "images/icon.png",
+  "IconPath": "images/icon.png",
+  "Icon": "images/icon.png",
+  "Tags": [
+    "BlackJack",
+    "Helper",
+    "Chat"
+  ]
+}
