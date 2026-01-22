@@ -54,11 +54,9 @@ public static class ChatMessageParser
 
     var tag = ExtractGroupTag(sender, name);
 
-    // Nur eigener Character darf Event triggern
     var isSelf = !string.IsNullOrWhiteSpace(localPlayerName)
     && string.Equals(name, localPlayerName, StringComparison.Ordinal);
 
-    // Event = ausschließlich eigener Würfelwurf
     var isEvent = isSelf && IsDiceRoll(message, messageText);
     var color = ColorFromIdentity(name, worldId);
 
@@ -76,8 +74,6 @@ public static class ChatMessageParser
 
   private static string ExtractNameFromTextPayloads(SeString sender)
   {
-    // Heuristik: Der Name ist typischerweise der längste "normale" TextPayload,
-    // der Buchstaben enthält. (Bei dir: "Valenth Siveria")
     var candidates = sender.Payloads
     .OfType<TextPayload>()
     .Select(t => t.Text ?? string.Empty)
@@ -85,13 +81,11 @@ public static class ChatMessageParser
     .Where(ContainsLetter)
     .ToList();
 
-    // In deinen Dumps ist der Name oft der letzte passende TextPayload.
     return candidates.LastOrDefault() ?? string.Empty;
   }
 
   private static int ExtractGroupTag(SeString sender, string name)
   {
-    // Wir suchen nach einem einzelnen Glyph-TextPayload, das nicht der Name ist.
     foreach (var tp in sender.Payloads.OfType<TextPayload>())
     {
       var t = tp.Text ?? string.Empty;
@@ -101,7 +95,6 @@ public static class ChatMessageParser
       if (!string.IsNullOrWhiteSpace(name) && string.Equals(t, name, StringComparison.Ordinal))
       continue;
 
-      // Kandidat: sehr kurz und keine normalen Zeichen
       if (t.Length <= 2 && !ContainsLetterOrDigit(t))
       {
         var ch = t[0];

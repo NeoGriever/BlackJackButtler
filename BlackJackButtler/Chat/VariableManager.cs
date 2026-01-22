@@ -5,7 +5,6 @@ namespace BlackJackButtler.Chat;
 
 public class SessionVariable
 {
-    // Als Felder definiert für ref-Zugriff
     public string Name = "";
     public string Value = "";
     public bool IsManual = false;
@@ -30,7 +29,6 @@ public static class VariableManager
 
         string result = message;
 
-        // 1. $${var} (Wert einsetzen + danach leeren)
         foreach (var v in Variables)
         {
             string placeholder = "$${" + v.Name + "}";
@@ -41,7 +39,6 @@ public static class VariableManager
             }
         }
 
-        // 2. ${var} (Nur Wert einsetzen)
         foreach (var v in Variables)
         {
             string placeholder = "${" + v.Name + "}";

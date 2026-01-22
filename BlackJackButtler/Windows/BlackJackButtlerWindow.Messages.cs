@@ -18,11 +18,9 @@ public partial class BlackJackButtlerWindow
         var io = ImGui.GetIO();
         bool keysDown = io.KeyCtrl && io.KeyShift;
 
-        // Button zeichnen
         if (!keysDown) ImGui.BeginDisabled();
         if (keysDown) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
 
-        // ##hard_reset sorgt für eine konstante ID, egal ob disabled oder nicht
         if (ImGui.Button("Hard Reset Standard Batches##hard_reset"))
         {
             _openForceDefaultsPopup = true;
@@ -72,7 +70,6 @@ public partial class BlackJackButtlerWindow
 
             bool open = ImGui.CollapsingHeader(isStd ? $"● {batch.Name}" : batch.Name);
 
-            // Selection Mode Combo Rechts
             ImGui.SameLine(ImGui.GetContentRegionAvail().X - 120);
             ImGui.SetNextItemWidth(120);
             int mode = (int)batch.Mode;

@@ -9,21 +9,19 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow : Window, IDisposable
 {
-    private enum Page { Main, Regexes, Messages, Vars, Settings }
+    private enum Page { Main, Regexes, Messages, Vars, Settings , Debug }
     private Page _page = Page.Main;
 
     private readonly Configuration _config;
     private readonly Action _save;
     private readonly ChatLogBuffer _chatLog;
+    private readonly List<string> _debugLog = new();
 
-    // Status für Main
     private bool _isRecognitionActive = false;
     private List<PlayerState> _players = new();
 
-    // Status für Regex
     private bool _showRegexWarningPopup;
-
-    // Status für Messages
+    private bool _openRegexResetPopup = false;
     private bool _openForceDefaultsPopup = false;
 
     public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog) : base("BlackJack Buttler")
@@ -55,6 +53,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         NavButton(Page.Messages, "Messages");
         NavButton(Page.Vars, "Variables");
         NavButton(Page.Settings, "Settings");
+        NavButton(Page.Debug, "DEBUG");
 
         ImGui.EndChild();
         ImGui.SameLine();
@@ -67,6 +66,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Messages:     DrawMessagesPage(); break;
             case Page.Vars:         DrawVarsPage(); break;
             case Page.Settings:     DrawSettingsPage(); break;
+            case Page.Debug:        DrawDebugPage(); break;
         }
         ImGui.EndChild();
     }
@@ -84,5 +84,11 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         ImGui.TextUnformatted("Settings");
         ImGui.Separator();
         ImGui.TextDisabled("Work in Progress...");
+    }
+
+    public void AddDebugLog(string msg)
+    {
+        _debugLog.Insert(0, msg);
+        if (_debugLog.Count > 100) _debugLog.RemoveAt(100);
     }
 }
