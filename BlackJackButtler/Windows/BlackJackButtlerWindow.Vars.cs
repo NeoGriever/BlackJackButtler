@@ -27,7 +27,6 @@ public partial class BlackJackButtlerWindow
                 var v = VariableManager.Variables[i];
                 ImGui.TableNextRow();
 
-                // 1. Name
                 ImGui.TableNextColumn();
                 if (v.IsManual)
                 {
@@ -39,26 +38,22 @@ public partial class BlackJackButtlerWindow
                     ImGui.TextUnformatted(v.Name);
                 }
 
-                // 2. Value
                 ImGui.TableNextColumn();
                 ImGui.SetNextItemWidth(-1);
                 ImGui.InputText($"##vval_{i}", ref v.Value, 256);
 
-                // 3. Copy ${}
                 ImGui.TableNextColumn();
                 if (ImGui.Button($"Copy##c1_{i}", new Vector2(-1, 0)))
                 {
                     ImGui.SetClipboardText("${" + v.Name + "}");
                 }
 
-                // 4. Copy $${}
                 ImGui.TableNextColumn();
                 if (ImGui.Button($"Copy##c2_{i}", new Vector2(-1, 0)))
                 {
                     ImGui.SetClipboardText("$${" + v.Name + "}");
                 }
 
-                // 5. Delete
                 ImGui.TableNextColumn();
                 if (ImGui.Button($"X##del_{i}", new Vector2(-1, 0)))
                 {

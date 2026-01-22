@@ -81,28 +81,35 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         private void OnChatMessage(
-        XivChatType type,
-        int timestamp,
-        ref SeString sender,
-        ref SeString message,
-        ref bool isHandled
+            XivChatType type,
+            int timestamp,
+            ref SeString sender,
+            ref SeString message,
+            ref bool isHandled
         )
         {
-            if (type != XivChatType.Party)
-            return;
-
             var senderText = sender.TextValue ?? string.Empty;
             var messageText = message.TextValue ?? string.Empty;
 
             var senderBytes = sender.Encode();
             var messageBytes = message.Encode();
 
-            // PlayerPayload aus Sender extrahieren (Name/WorldId)
             var pp = sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
             var playerName = pp?.PlayerName ?? string.Empty;
             var worldId = pp?.World.RowId ?? 0u;
 
-            // Payloads als Debug-Text auflisten
+            mainWindow.AddDebugLog($"[{timestamp}] [{worldId}] [{playerName}] [{senderText}] [{type}] {messageText}");
+
+            if (
+                type != XivChatType.Party &&
+                type != XivChatType.SystemMessage &&
+                (int)type != 569 &&
+                (int)type != 2105 &&
+                (int)type != 4153 &&
+                (int)type != 8249
+            )
+                return;
+
             var senderPayloadDump = DumpPayloads(sender);
 
             if (type != XivChatType.Party)
@@ -125,13 +132,12 @@ public sealed class Plugin : IDalamudPlugin
                 var p = s.Payloads[i];
                 sb.Append(i).Append(": ").Append(p.GetType().Name);
 
-                // Ein paar hilfreiche Spezialfälle:
                 if (p is TextPayload tp)
-                sb.Append(" -> \"").Append(tp.Text).Append('"');
+                    sb.Append(" -> \"").Append(tp.Text).Append('"');
                 else if (p is PlayerPayload pp)
-                sb.Append($" -> PlayerName=\"{pp.PlayerName}\", WorldId={pp.World}");
+                    sb.Append($" -> PlayerName=\"{pp.PlayerName}\", WorldId={pp.World}");
                 else
-                sb.Append(" -> ").Append(p.ToString());
+                    sb.Append(" -> ").Append(p.ToString());
 
                 sb.AppendLine();
             }

@@ -11,13 +11,11 @@ public class PlayerState
     public bool IsInParty = true;
     public bool IsCurrentTurn = false;
 
-    // WICHTIG: Als öffentliche Felder definieren für ImGui ref-Zugriff
     public long Bank = 0;
     public long CurrentBet = 0;
 
     public List<int> Cards = new();
 
-    // Flags für optische Hervorhebungen
     public bool HighlightBet = false;
     public bool HighlightHit = false;
     public bool HighlightStand = false;
