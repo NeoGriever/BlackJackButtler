@@ -2,24 +2,33 @@ using System;
 
 namespace BlackJackButtler.Regex;
 
+// Das hat in meinem letzten Snippet gefehlt:
 public enum RegexEntryMode
 {
-  SetVariable,
-  Reaction, // später
+    SetVariable,
+    Trigger
+}
+
+public enum RegexAction
+{
+    None,
+    BetInformationChange,
+    WantHit,
+    WantStand,
+    WantDD,
+    WantSplit,
+    BankOut,
+    TakeBatch
 }
 
 [Serializable]
 public sealed class UserRegexEntry
 {
-  public bool Enabled { get; set; } = true;
-  public RegexEntryMode Mode { get; set; } = RegexEntryMode.SetVariable;
-
-  public string Name { get; set; } = "card";          // Variablenname (für SetVariable)
-  public string Pattern { get; set; } = "";           // Regex
-  public bool CaseSensitive { get; set; } = false;
-
-  // später:
-  // public string TargetBatchId { get; set; } = "";
-  // public int DelayTenths { get; set; } = 0;
-  // public bool Unique { get; set; } = true;
+    public bool Enabled = true;
+    public RegexEntryMode Mode = RegexEntryMode.SetVariable;
+    public RegexAction Action = RegexAction.None;
+    public string ActionParam = "";
+    public string Name = "new_variable"; // Wird für SetVariable genutzt
+    public string Pattern = "";
+    public bool CaseSensitive = false;
 }

@@ -10,7 +10,6 @@ namespace BlackJackButtler.Chat;
 
 public static class ChatMessageParser
 {
-
   private static readonly System.Collections.Generic.Dictionary<char, int> GroupIconMap = new()
   {
       [''] = 1,
