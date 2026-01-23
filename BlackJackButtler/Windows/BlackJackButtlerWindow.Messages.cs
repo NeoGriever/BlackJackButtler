@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using System.Linq;
 using Dalamud.Bindings.ImGui;
@@ -119,5 +120,9 @@ public partial class BlackJackButtlerWindow
         }
     }
 
-    private bool IsStandardBatch(string name) => Configuration.StandardBatchNames.Contains(name, System.StringComparer.OrdinalIgnoreCase);
+    private bool IsStandardBatch(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return false;
+        return Configuration.StandardBatchNames.Contains(name, StringComparer.OrdinalIgnoreCase);
+    }
 }

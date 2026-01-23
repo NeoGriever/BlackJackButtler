@@ -247,7 +247,7 @@ public partial class BlackJackButtlerWindow
     private bool IsStandardRegex(string name)
     {
         if (string.IsNullOrEmpty(name)) return false;
-        return Configuration.DefaultTradeRegexes.Any(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        return Configuration.StandardRegexNames.Contains(name, StringComparer.OrdinalIgnoreCase);
     }
 
     private void DrawRegexWarningPopup()
