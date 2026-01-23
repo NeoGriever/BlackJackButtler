@@ -8,6 +8,7 @@ public class PlayerState
     public bool IsDebugPlayer = false;
 
     public string Name = string.Empty;
+    public string Alias = string.Empty;
     public uint WorldId;
     public bool IsActivePlayer = false;
     public bool IsInParty = true;
@@ -28,6 +29,9 @@ public class PlayerState
     public bool HighlightSplit = false;
     public bool HighlightPay = false;
     public bool IsInDebt => Bank < 0;
+
+    public string DisplayName => !string.IsNullOrWhiteSpace(Alias) ? Alias : Name;
+    public string UIID => $"{Name}_{WorldId}";
 
     public int GetBestScore(int handIndex)
     {

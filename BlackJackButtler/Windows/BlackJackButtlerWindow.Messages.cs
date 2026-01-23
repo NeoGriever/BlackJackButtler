@@ -74,7 +74,7 @@ public partial class BlackJackButtlerWindow
             ImGui.SameLine(ImGui.GetContentRegionAvail().X - 120);
             ImGui.SetNextItemWidth(120);
             int mode = (int)batch.Mode;
-            if (ImGui.Combo($"##mode_{i}", ref mode, "Random\0First\0Iterative\0")) { batch.Mode = (SelectionMode)mode; _save(); }
+            if (ImGui.Combo($"##mode_{batch.Name}", ref mode, "Random\0First\0Iterative\0")) { batch.Mode = (SelectionMode)mode; _save(); }
 
             if (isStd) ImGui.PopStyleColor();
 
@@ -86,9 +86,9 @@ public partial class BlackJackButtlerWindow
                 {
                     var msg = batch.Messages[m];
                     ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 40);
-                    if (ImGui.InputText($"##msg_{i}_{m}", ref msg, 256)) { batch.Messages[m] = msg; _save(); }
+                    if (ImGui.InputText($"##msg_{batch.Name}_{m}", ref msg, 256)) { batch.Messages[m] = msg; _save(); }
                     ImGui.SameLine();
-                    if (ImGui.Button($"X##{i}_{m}")) { batch.Messages.RemoveAt(m); _save(); break; }
+                    if (ImGui.Button($"X##{batch.Name}_{m}")) { batch.Messages.RemoveAt(m); _save(); break; }
                 }
                 if (ImGui.Button("+ Line")) { batch.Messages.Add(""); _save(); }
 

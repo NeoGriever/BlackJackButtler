@@ -42,6 +42,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly DebugLogWindow debugLogWindow;
 
     public void OpenDebugPopout() => debugLogWindow.IsOpen = true;
+    public BlackJackButtlerWindow GetMainWindow() => mainWindow;
 
     public Plugin()
     {

@@ -168,7 +168,6 @@ public static partial class GameEngine
             try { await CommandExecutor.ExecuteGroup("DD", p.Name, cfg); }
             finally { ClearForcedRecipient(); }
             hand.IsStand = true;
-            NextTurn(players, cfg);
         });
     }
 
