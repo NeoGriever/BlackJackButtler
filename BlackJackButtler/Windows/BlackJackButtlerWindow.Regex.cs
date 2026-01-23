@@ -105,14 +105,14 @@ public partial class BlackJackButtlerWindow
                 bool disableEditing = isStd && !_config.AllowEditingStandardRegex;
                 if (disableEditing) ImGui.BeginDisabled();
 
-                if (ImGui.Checkbox($"##enabled{i}", ref e.Enabled)) _save();
+                if (ImGui.Checkbox($"##enabled{e.Name}", ref e.Enabled)) _save();
 
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     ImGui.SetTooltip("Enabled");
 
                 ImGui.SameLine();
 
-                if (ImGui.Checkbox($"##caseSensitive{i}", ref e.CaseSensitive)) _save();
+                if (ImGui.Checkbox($"##caseSensitive{e.Name}", ref e.CaseSensitive)) _save();
 
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     ImGui.SetTooltip("Case sensitive");
@@ -123,7 +123,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.SetNextItemWidth(300f);
 
                 if (isStd) ImGui.BeginDisabled();
-                if (ImGui.InputText($"##entryName{i}", ref entryName, 64))
+                if (ImGui.InputText($"##entryName{e.Name}", ref entryName, 64))
                 {
                     e.Name = entryName;
                     _save();
@@ -133,7 +133,7 @@ public partial class BlackJackButtlerWindow
                 int modeInt = (int)e.Mode;
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(250f);
-                if (ImGui.Combo($"##opMode{i}", ref modeInt, "Regex-To-Variable\0Regex-Trigger\0"))
+                if (ImGui.Combo($"##opMode{e.Name}", ref modeInt, "Regex-To-Variable\0Regex-Trigger\0"))
                 {
                     e.Mode = (RegexEntryMode)modeInt;
                     _save();

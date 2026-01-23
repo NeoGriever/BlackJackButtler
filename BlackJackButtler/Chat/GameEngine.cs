@@ -215,6 +215,13 @@ public static partial class GameEngine
                     });
                     return;
                 }
+                if (hand.IsDoubleDown) {
+                    hand.IsStand = true;
+                    Task.Run(async () => {
+                        await CommandExecutor.ExecuteGroup("PlayerDDForcedStand", target.Name, cfg);
+                        NextTurn(players, cfg);
+                    });
+                }
             }
         }
     }
@@ -241,11 +248,6 @@ public static partial class GameEngine
 
     public static async Task EvaluateFinalResults(List<PlayerState> players, PlayerState dealer, Configuration cfg)
     {
-        /*
-        if(Plugin.IsDebugMode)
-            ChatCommandRouter.Send("End Result", cfg);
-        */
-
         CurrentPhase = GamePhase.Payout;
 
         int dealerScore = dealer.GetBestScore(0);
@@ -261,23 +263,23 @@ public static partial class GameEngine
 
                 if (hand.IsBust)
                 {
-                    await CommandExecutor.ExecuteGroup("ResultPlayerBusted", p.Name, cfg);
+                    await CommandExecutor.ExecuteGroup("ResultPlayerBusted", p.DisplayName, cfg);
                 }
                 else if (dealerBust || pScore > dealerScore)
                 {
                     float mult = hand.IsNaturalBlackJack ? cfg.MultiplierBlackjackWin : cfg.MultiplierNormalWin;
                     long winAmount = (long)(hand.Bet * mult);
                     p.Bank += (hand.Bet + winAmount);
-                    await CommandExecutor.ExecuteGroup("ResultPlayerWin", p.Name, cfg);
+                    await CommandExecutor.ExecuteGroup("ResultPlayerWin", p.DisplayName, cfg);
                 }
                 else if (pScore == dealerScore)
                 {
                     p.Bank += hand.Bet;
-                    await CommandExecutor.ExecuteGroup("ResultPlayerPush", p.Name, cfg);
+                    await CommandExecutor.ExecuteGroup("ResultPlayerPush", p.DisplayName, cfg);
                 }
                 else
                 {
-                    await CommandExecutor.ExecuteGroup("ResultPlayerLost", p.Name, cfg);
+                    await CommandExecutor.ExecuteGroup("ResultPlayerLost", p.DisplayName, cfg);
                 }
             }
         }

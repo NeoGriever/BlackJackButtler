@@ -12,6 +12,8 @@ public static class CommandExecutor
 {
     private static readonly RRX.Regex StackTokenRegex = new(@"#\{([^}]+)\}", RRX.RegexOptions.Compiled);
     private static readonly RRX.Regex DicePartyRegex = new(@"^/dice\s+party\s+(\d+)\s*$", RRX.RegexOptions.Compiled | RRX.RegexOptions.IgnoreCase);
+    private static bool _isRunning = false;
+    public static bool IsRunning => _isRunning;
 
     private static string ReplacePlayerScoreFirst(string text)
     {
@@ -24,7 +26,7 @@ public static class CommandExecutor
         return text.Replace("+{PlayerScore}", score.ToString(CultureInfo.InvariantCulture));
     }
 
-    private static string ReplaceMessageStacks(string text, Configuration cfg, string targetPlayerName)
+    private static string ReplaceMessageStacks(string text, Configuration cfg, string targetPlayerName, PlayerState? pState)
     {
         return StackTokenRegex.Replace(text, m =>
         {
@@ -41,6 +43,12 @@ public static class CommandExecutor
             var msg = batch.GetNextMessage() ?? string.Empty;
 
             msg = msg.Replace("<t>", targetPlayerName);
+            if (msg.Contains("<points>") && pState != null)
+            {
+                var result = pState.CalculatePoints(pState.CurrentHandIndex);
+                string pointsStr = result.Max.HasValue ? $"{result.Min}/{result.Max}" : $"{result.Min}";
+                msg = msg.Replace("<points>", pointsStr);
+            }
             msg = ReplacePlayerScoreFirst(msg);
 
             msg = VariableManager.ProcessMessage(msg);
@@ -51,8 +59,20 @@ public static class CommandExecutor
 
     public static async Task ExecuteGroup(string groupName, string targetPlayerName, Configuration cfg)
     {
+
+        var window = Plugin.Instance.GetMainWindow();
+        var players = window.GetPlayers();
+        var dealer = window.GetDealer();
+
+        var pState = targetPlayerName.Equals(dealer.Name, StringComparison.OrdinalIgnoreCase)
+            ? dealer
+            : players.FirstOrDefault(p => p.DisplayName.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase));
+
         var group = cfg.CommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+
         if (group == null) return;
+
+        _isRunning = true;
 
         foreach (var cmd in group.Commands)
         {
@@ -60,8 +80,15 @@ public static class CommandExecutor
 
             string processedText = cmd.Text.Replace("<t>", targetPlayerName);
 
+            if (processedText.Contains("<points>") && pState != null)
+            {
+                var (min, max) = pState.CalculatePoints(pState.CurrentHandIndex);
+                string pointsStr = max.HasValue ? $"{min}/{max}" : $"{min}";
+                processedText = processedText.Replace("<points>", pointsStr);
+            }
+
             processedText = ReplacePlayerScoreFirst(processedText);
-            processedText = ReplaceMessageStacks(processedText, cfg, targetPlayerName);
+            processedText = ReplaceMessageStacks(processedText, cfg, targetPlayerName, pState);
             processedText = VariableManager.ProcessMessage(processedText);
 
             ChatCommandRouter.Send(processedText, cfg, $"{groupName}:{targetPlayerName}");
@@ -71,9 +98,11 @@ public static class CommandExecutor
                 await Task.Delay(TimeSpan.FromSeconds(cmd.Delay));
             }
         }
+
+        _isRunning = false;
     }
 
-    private static string ResolveCommandText(string text, string targetPlayerName, Configuration cfg)
+    private static string ResolveCommandText(string text, string targetPlayerName, Configuration cfg, PlayerState? pState)
     {
         if (string.IsNullOrWhiteSpace(text))
             return text;
@@ -103,6 +132,12 @@ public static class CommandExecutor
             var msg = batch.GetNextMessage() ?? string.Empty;
 
             msg = msg.Replace("<t>", targetPlayerName);
+            if (msg.Contains("<points>") && pState != null)
+            {
+                var (min, max) = pState.CalculatePoints(pState.CurrentHandIndex);
+                string pointsStr = max.HasValue ? $"{min}/{max}" : $"{min}";
+                msg = msg.Replace("<points>", pointsStr);
+            }
 
             if (msg.Contains("+{PlayerScore}", StringComparison.Ordinal))
             {

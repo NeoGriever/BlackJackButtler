@@ -27,6 +27,9 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private DateTime _lastSync = DateTime.MinValue;
 
     private PlayerState _dealer = new() { Name = "Dealer", IsActivePlayer = true };
+    private PlayerState? _editingAliasPlayer;
+    private string _aliasInputBuffer = string.Empty;
+    private bool _isAliasModalOpen = false;
 
     public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog) : base("BlackJack Buttler")
     {
@@ -62,9 +65,9 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         NavButton(Page.Main, "Main");
         NavButton(Page.Regexes, "Regex");
         NavButton(Page.Messages, "Messages");
-        NavButton(Page.Vars, "Variables");
         NavButton(Page.Commands, "Commands");
         NavButton(Page.Settings, "Settings");
+        NavButton(Page.Vars, "Variables");
         NavButton(Page.Debug, "DEBUG");
 
         ImGui.EndChild();
