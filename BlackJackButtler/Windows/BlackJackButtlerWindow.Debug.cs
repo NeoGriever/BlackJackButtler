@@ -10,22 +10,27 @@ public partial class BlackJackButtlerWindow
 {
     private void DrawDebugPage()
     {
-        ImGui.TextUnformatted("Chat Debug Logger");
-        ImGui.SameLine();
-        if (ImGui.SmallButton("Clear Log"))
-            _debugLog.Clear();
+        if (ImGui.Checkbox("##DebugModeSwitch", ref Plugin.IsDebugMode))
+        {
+            if (Plugin.IsDebugMode)
+                CreateTestData();
+            else
+                _players.RemoveAll(p => p.IsDebugPlayer);
+        }
 
         ImGui.SameLine();
         if (ImGui.SmallButton("Popout"))
             Plugin.Instance.OpenDebugPopout();
 
         ImGui.SameLine();
-        if (ImGui.Checkbox("DEBUG MODE (Session Only)", ref Plugin.IsDebugMode))
+        if (ImGui.SmallButton("Clear Log"))
+            _debugLog.Clear();
+
+        ImGui.SameLine();
+        if (ImGui.Button("XLLog"))
         {
-            if (Plugin.IsDebugMode)
-                CreateTestData();
-            else
-                _players.RemoveAll(p => p.IsDebugPlayer);
+            // Dies führt den Befehl intern aus, als hätte der User ihn getippt
+            Plugin.CommandManager.ProcessCommand("/xllog");
         }
 
         ImGui.Separator();
