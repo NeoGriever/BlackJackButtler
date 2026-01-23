@@ -10,43 +10,73 @@ public static class RegexEngine
 {
     public static int? LastDetectedCardValue { get; private set; }
 
-    public static void ProcessIncoming(ParsedChatMessage msg, Configuration cfg, List<PlayerState> players)
+    public static bool TryConsumeDetectedCard(out int cardValue)
+    {
+        if (LastDetectedCardValue.HasValue)
+        {
+            cardValue = LastDetectedCardValue.Value;
+            LastDetectedCardValue = null;
+            return true;
+        }
+        cardValue = 0;
+        return false;
+    }
+
+    public static int? MapRollToCard(int rolled) => MapValue(rolled);
+
+    public static void ProcessIncoming(ParsedChatMessage msg, Configuration cfg, List<PlayerState> players, PlayerState dealer)
     {
         foreach (var entry in cfg.UserRegexes)
         {
-            if (!entry.Enabled || string.IsNullOrWhiteSpace(entry.Pattern)) continue;
-            var options = entry.CaseSensitive ? RRX.RegexOptions.Compiled : (RRX.RegexOptions.Compiled | RRX.RegexOptions.IgnoreCase);
+            if (!entry.Enabled || entry.Patterns == null || entry.Patterns.Count == 0) continue;
 
-            RRX.Regex rx;
-            try { rx = new RRX.Regex(entry.Pattern, options); } catch { continue; }
-
-            if (rx.IsMatch(msg.Message))
+            foreach (var pattern in entry.Patterns)
             {
-                if (entry.Mode == RegexEntryMode.Trigger)
+                if (string.IsNullOrWhiteSpace(pattern)) continue;
+
+                var options = entry.CaseSensitive ? RRX.RegexOptions.Compiled : (RRX.RegexOptions.Compiled | RRX.RegexOptions.IgnoreCase);
+                RRX.Regex rx;
+                try { rx = new RRX.Regex(pattern, options); } catch { continue; }
+
+                if (rx.IsMatch(msg.Message))
                 {
-                    ExecuteAction(entry, msg, players, cfg);
-                }
-                else if (entry.Mode == RegexEntryMode.SetVariable)
-                {
-                    VariableManager.SetVariable(entry.Name, msg.Message);
+                    if (entry.Mode == RegexEntryMode.Trigger)
+                    {
+                        // Wir übergeben das PATTERN mit, damit ExecuteAction weiß, welches Match es prüfen soll
+                        ExecuteAction(entry, pattern, msg, players, dealer, cfg);
+                    }
+                    else if (entry.Mode == RegexEntryMode.SetVariable)
+                    {
+                        VariableManager.SetVariable(entry.Name, msg.Message);
+                    }
+                    break; // Ein Treffer pro Entry reicht
                 }
             }
         }
     }
 
-    private static void ExecuteAction(UserRegexEntry entry, ParsedChatMessage msg, List<PlayerState> players, Configuration cfg)
+    private static void ExecuteAction(UserRegexEntry entry, string matchedPattern, ParsedChatMessage msg, List<PlayerState> players, PlayerState dealer, Configuration cfg)
     {
         var p = players.FirstOrDefault(x => x.Name.Equals(msg.Name, StringComparison.OrdinalIgnoreCase));
-        var match = RRX.Regex.Match(msg.Message, entry.Pattern, RRX.RegexOptions.IgnoreCase);
+
+        // Nutze das übergebene matchedPattern für die Gruppen-Erkennung
+        var options = entry.CaseSensitive ? RRX.RegexOptions.None : RRX.RegexOptions.IgnoreCase;
+        var match = RRX.Regex.Match(msg.Message, matchedPattern, options);
 
         switch (entry.Action)
         {
             case RegexAction.DiceRollValue:
-                if (msg.Event && match.Success && match.Groups.Count >= 2)
+                if ((msg.Event || Plugin.IsDebugMode) && match.Success && match.Groups.Count >= 2)
                 {
                     if (int.TryParse(match.Groups[1].Value, out var rolled))
                     {
-                        LastDetectedCardValue = MapValue(rolled);
+                        var card = MapValue(rolled);
+                        if (card.HasValue)
+                        {
+                            LastDetectedCardValue = card.Value;
+                            GameEngine.ApplyCardToCurrentTarget(card.Value, players, dealer);
+                            GameEngine.HandlePostCardEvents(cfg, players, dealer);
+                        }
                     }
                 }
                 break;
@@ -104,22 +134,8 @@ public static class RegexEngine
                 {
                     string rawText = batch.GetNextMessage().Replace("<t>", msg.Name);
                     string processedText = VariableManager.ProcessMessage(rawText);
-                    Plugin.CommandManager.ProcessCommand($"/p {processedText}");
+                    ChatCommandRouter.Send($"/p {processedText}", cfg, $"Batch:{batch.Name}->{msg.Name}");
                 }
-                break;
-
-            case RegexAction.PartyJoin:
-                if (match.Success && match.Groups.Count >= 2)
-                    PartyManager.HandleJoin(match.Groups[1].Value, players);
-                break;
-
-            case RegexAction.PartyLeave:
-                if (match.Success && match.Groups.Count >= 2)
-                    PartyManager.HandleLeave(match.Groups[1].Value, players);
-                break;
-
-            case RegexAction.PartyDisband:
-                PartyManager.HandleDisband(players);
                 break;
         }
     }

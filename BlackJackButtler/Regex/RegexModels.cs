@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace BlackJackButtler.Regex;
 
@@ -24,9 +25,6 @@ public enum RegexAction
     TradeCancel,
     TakeBatch,
     DiceRollValue,
-    PartyJoin,
-    PartyLeave,
-    PartyDisband
 }
 
 [Serializable]
@@ -36,7 +34,7 @@ public sealed class UserRegexEntry
     public RegexEntryMode Mode = RegexEntryMode.SetVariable;
     public RegexAction Action = RegexAction.None;
     public string ActionParam = "";
-    public string Name = "new_variable";
-    public string Pattern = "";
+    public string Name = "new_entry";
+    public List<string> Patterns = new() { "" };
     public bool CaseSensitive = false;
 }
