@@ -23,17 +23,29 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
+    [PluginService] internal static IPartyList PartyList { get; private set; } = null!;
+    [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
+    [PluginService] internal static IFramework Framework { get; private set; } = null!;
+    internal static Plugin Instance { get; private set; } = null!;
+
+    internal static Action<string>? DebugCommandSink { get; private set; }
 
     private const string CommandName = "/bjb";
 
     public Configuration Configuration { get; }
 
+    public static bool IsDebugMode = false;
+
     private readonly WindowSystem windowSystem = new("BlackJackButtler");
     private readonly BlackJackButtlerWindow mainWindow;
     private readonly ChatLogBuffer chatLog = new(20);
+    private readonly DebugLogWindow debugLogWindow;
+
+    public void OpenDebugPopout() => debugLogWindow.IsOpen = true;
 
     public Plugin()
     {
+        Instance = this;
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         var changed = false;
         Configuration.EnsureDefaultBatchesOnce();
@@ -42,6 +54,11 @@ public sealed class Plugin : IDalamudPlugin
         Configuration.Save();
 
         mainWindow = new BlackJackButtlerWindow(Configuration, () => Configuration.Save(), chatLog);
+
+        debugLogWindow = new DebugLogWindow(mainWindow.GetDebugLog());
+        windowSystem.AddWindow(debugLogWindow);
+
+        DebugCommandSink = mainWindow.AddDebugLog;
         windowSystem.AddWindow(mainWindow);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
@@ -70,6 +87,7 @@ public sealed class Plugin : IDalamudPlugin
 
             windowSystem.RemoveAllWindows();
             mainWindow.Dispose();
+            DebugCommandSink = null;
         }
 
         private void OnCommand(
@@ -80,45 +98,47 @@ public sealed class Plugin : IDalamudPlugin
             mainWindow.OpenMain();
         }
 
-        private void OnChatMessage(
-            XivChatType type,
-            int timestamp,
-            ref SeString sender,
-            ref SeString message,
-            ref bool isHandled
-        )
+        private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
         {
             var senderText = sender.TextValue ?? string.Empty;
             var messageText = message.TextValue ?? string.Empty;
-
-            var senderBytes = sender.Encode();
-            var messageBytes = message.Encode();
-
             var pp = sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
             var playerName = pp?.PlayerName ?? string.Empty;
             var worldId = pp?.World.RowId ?? 0u;
 
-            mainWindow.AddDebugLog($"[{timestamp}] [{worldId}] [{playerName}] [{senderText}] [{type}] {messageText}");
+            InjectChatMessage((int)type, worldId, playerName, senderText, messageText, sender, message);
+        }
 
-            if (
-                type != XivChatType.Party &&
-                type != XivChatType.SystemMessage &&
-                (int)type != 569 &&
-                (int)type != 2105 &&
-                (int)type != 4153 &&
-                (int)type != 8249
-            )
+        public void InjectChatMessage(int type, uint worldId, string playerName, string senderText, string messageText, SeString? rawSender = null, SeString? rawMessage = null)
+        {
+            mainWindow.AddDebugLog($"[{DateTime.Now:T}] [{type}] [{senderText}]: {messageText}");
+
+            if (type != (int)XivChatType.Party && type != (int)XivChatType.SystemMessage && type != 569 && type != 2105 && type != 4153 && type != 8249)
                 return;
 
-            var senderPayloadDump = DumpPayloads(sender);
-
-            if (type != XivChatType.Party)
-            return;
-
             var localName = ObjectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
-            var parsed = ChatMessageParser.Parse(DateTime.Now, sender, message, localName);
-            chatLog.Add(parsed);
-            RegexEngine.ProcessIncoming(parsed, Configuration, mainWindow.GetPlayers());
+
+            var s = rawSender ?? new SeString(new TextPayload(senderText));
+            var m = rawMessage ?? new SeString(new TextPayload(messageText));
+
+            var parsed = ChatMessageParser.Parse(DateTime.Now, s, m, localName);
+
+            var finalParsed = parsed;
+            if (IsDebugMode && messageText.Contains("Würfeln!"))
+            {
+                finalParsed = new ParsedChatMessage(
+                    parsed.Timestamp,
+                    parsed.GroupIndexNumber,
+                    parsed.Name,
+                    parsed.WorldId,
+                    parsed.Message,
+                    true,
+                    parsed.ColorU32
+                );
+            }
+
+            chatLog.Add(finalParsed);
+            RegexEngine.ProcessIncoming(finalParsed, Configuration, mainWindow.GetPlayers(), mainWindow.GetDealer());
         }
 
         private static string DumpPayloads(

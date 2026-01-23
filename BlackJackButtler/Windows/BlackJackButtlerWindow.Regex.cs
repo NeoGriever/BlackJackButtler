@@ -105,15 +105,25 @@ public partial class BlackJackButtlerWindow
                 bool disableEditing = isStd && !_config.AllowEditingStandardRegex;
                 if (disableEditing) ImGui.BeginDisabled();
 
-                if (ImGui.Checkbox("Enabled", ref e.Enabled)) _save();
+                if (ImGui.Checkbox($"##enabled{i}", ref e.Enabled)) _save();
+
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    ImGui.SetTooltip("Enabled");
+
                 ImGui.SameLine();
-                if (ImGui.Checkbox("Case Sensitive", ref e.CaseSensitive)) _save();
+
+                if (ImGui.Checkbox($"##caseSensitive{i}", ref e.CaseSensitive)) _save();
+
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    ImGui.SetTooltip("Case sensitive");
 
                 var entryName = e.Name ?? "";
+
+                ImGui.SameLine();
                 ImGui.SetNextItemWidth(300f);
 
                 if (isStd) ImGui.BeginDisabled();
-                if (ImGui.InputText("Entry Name / Variable Name", ref entryName, 64))
+                if (ImGui.InputText($"##entryName{i}", ref entryName, 64))
                 {
                     e.Name = entryName;
                     _save();
@@ -121,8 +131,9 @@ public partial class BlackJackButtlerWindow
                 if (isStd) ImGui.EndDisabled();
 
                 int modeInt = (int)e.Mode;
-                ImGui.SetNextItemWidth(200f);
-                if (ImGui.Combo("Operation Mode", ref modeInt, "Regex-To-Variable\0Regex-Trigger\0"))
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(250f);
+                if (ImGui.Combo($"##opMode{i}", ref modeInt, "Regex-To-Variable\0Regex-Trigger\0"))
                 {
                     e.Mode = (RegexEntryMode)modeInt;
                     _save();
@@ -130,21 +141,44 @@ public partial class BlackJackButtlerWindow
 
                 ImGui.Separator();
 
-                var pat = e.Pattern ?? "";
-                if (ImGui.InputTextMultiline("Pattern (Regex)", ref pat, 1024, new Vector2(-1, 60)))
+                for (int pIdx = 0; pIdx < e.Patterns.Count; pIdx++)
                 {
-                    e.Pattern = pat;
-                    _save();
+                    ImGui.PushID(pIdx);
+                    var pStr = e.Patterns[pIdx] ?? "";
+
+                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 70f);
+                    if (ImGui.InputText("##pat", ref pStr, 512))
+                    {
+                        e.Patterns[pIdx] = pStr;
+                        _save();
+                    }
+
+                    ImGui.SameLine();
+                    if (ImGui.Button("+"))
+                    {
+                        e.Patterns.Insert(pIdx + 1, "");
+                        _save();
+                    }
+
+                    ImGui.SameLine();
+
+                    bool canDeletePattern = e.Patterns.Count > 1;
+                    if (!canDeletePattern) ImGui.BeginDisabled();
+                    if (ImGui.Button("X"))
+                    {
+                        e.Patterns.RemoveAt(pIdx);
+                        _save();
+                        ImGui.PopID();
+                        break;
+                    }
+                    if (!canDeletePattern) ImGui.EndDisabled();
+
+                    ImGui.PopID();
                 }
 
                 ImGui.Spacing();
 
-                if (e.Mode == RegexEntryMode.SetVariable)
-                {
-                    ImGui.TextColored(new Vector4(0.4f, 0.8f, 1f, 1f), "Info: Set Variable Mode");
-                    ImGui.TextWrapped("The match of this regex will be stored in the variable name defined above.");
-                }
-                else if (e.Mode == RegexEntryMode.Trigger)
+                if (e.Mode == RegexEntryMode.Trigger)
                 {
                     ImGui.TextColored(new Vector4(0.4f, 1f, 0.4f, 1f), "Action Settings");
                     var action = (int)e.Action;

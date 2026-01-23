@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using System.Collections.Generic;
+using System.Linq;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
 using BlackJackButtler.Chat;
@@ -9,7 +10,7 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow : Window, IDisposable
 {
-    private enum Page { Main, Regexes, Messages, Vars, Settings , Debug }
+    private enum Page { Main, Regexes, Messages, Vars, Commands , Settings , Debug }
     private Page _page = Page.Main;
 
     private readonly Configuration _config;
@@ -23,6 +24,9 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _showRegexWarningPopup;
     private bool _openRegexResetPopup = false;
     private bool _openForceDefaultsPopup = false;
+    private DateTime _lastSync = DateTime.MinValue;
+
+    private PlayerState _dealer = new() { Name = "Dealer", IsActivePlayer = true };
 
     public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog) : base("BlackJack Buttler")
     {
@@ -38,9 +42,16 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     public void OpenMain() { _page = Page.Main; IsOpen = true; }
     public void OpenSettings() { _page = Page.Settings; IsOpen = true; }
     public List<PlayerState> GetPlayers() => _players;
+    public PlayerState GetDealer() => _dealer;
 
     public override void Draw()
     {
+        if (_isRecognitionActive && (DateTime.Now - _lastSync).TotalMilliseconds > 1000)
+        {
+            SyncParty();
+            _lastSync = DateTime.Now;
+        }
+
         var avail = ImGui.GetContentRegionAvail();
         var sidebarWidth = 200f;
 
@@ -52,6 +63,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         NavButton(Page.Regexes, "Regex");
         NavButton(Page.Messages, "Messages");
         NavButton(Page.Vars, "Variables");
+        NavButton(Page.Commands, "Commands");
         NavButton(Page.Settings, "Settings");
         NavButton(Page.Debug, "DEBUG");
 
@@ -65,6 +77,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Regexes:      DrawRegexPage(); break;
             case Page.Messages:     DrawMessagesPage(); break;
             case Page.Vars:         DrawVarsPage(); break;
+            case Page.Commands:     DrawCommandsPage(); break;
             case Page.Settings:     DrawSettingsPage(); break;
             case Page.Debug:        DrawDebugPage(); break;
         }
@@ -77,18 +90,5 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         if (selected) ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 2f);
         if (ImGui.Button(label, new Vector2(-1, 40))) _page = page;
         if (selected) ImGui.PopStyleVar();
-    }
-
-    private void DrawSettingsPage()
-    {
-        ImGui.TextUnformatted("Settings");
-        ImGui.Separator();
-        ImGui.TextDisabled("Work in Progress...");
-    }
-
-    public void AddDebugLog(string msg)
-    {
-        _debugLog.Insert(0, msg);
-        if (_debugLog.Count > 100) _debugLog.RemoveAt(100);
     }
 }
