@@ -13,14 +13,11 @@ public partial class BlackJackButtlerWindow
 {
     private void DrawMainPage()
     {
-        GameEngine.SetDebugMode(Plugin.IsDebugMode);
-        GameEngine.SetRuntimeContext(_players, _dealer);
-
         DrawMainHeader();
         ImGui.Separator();
 
         ImGui.TextColored(new Vector4(1, 0.5f, 0, 1), $"DEALER - Phase: {GameEngine.CurrentPhase}");
-        if (ImGui.BeginTable("bjb_dealer_table", 8, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+        if (ImGui.BeginTable("bjb_dealer_table", 9, ImGuiTableFlags.Borders))
         {
             SetupTableColumns();
             ImGui.TableNextRow();
@@ -33,7 +30,7 @@ public partial class BlackJackButtlerWindow
         ImGui.Spacing();
 
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1, 1), "PLAYERS");
-        if (ImGui.BeginTable("bjb_main_table", 8, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable | ImGuiTableFlags.ScrollY))
+        if (ImGui.BeginTable("bjb_main_table", 9, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable | ImGuiTableFlags.ScrollY))
         {
             SetupTableColumns();
             ImGui.TableHeadersRow();
@@ -47,7 +44,13 @@ public partial class BlackJackButtlerWindow
             ImGui.EndTable();
         }
 
-        // Modal MUSS absolut außerhalb von Tabellen-Logik stehen
+        if (_triggerAliasPopup)
+        {
+            ImGui.OpenPopup("bjb_alias_popup");
+            _isAliasModalOpen = true;
+            _triggerAliasPopup = false;
+        }
+
         DrawAliasModal();
     }
 
@@ -96,12 +99,13 @@ public partial class BlackJackButtlerWindow
     private void SetupTableColumns()
     {
         ImGui.TableSetupColumn("A", ImGuiTableColumnFlags.WidthFixed, 40);
-        ImGui.TableSetupColumn("+", ImGuiTableColumnFlags.WidthFixed, 40);
-        ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, 150);
+        ImGui.TableSetupColumn("J", ImGuiTableColumnFlags.WidthFixed, 40);
+        ImGui.TableSetupColumn("P", ImGuiTableColumnFlags.WidthFixed, 40);
+        ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, 100);
         ImGui.TableSetupColumn("Bank", ImGuiTableColumnFlags.WidthStretch, 1.0f);
         ImGui.TableSetupColumn("Bet", ImGuiTableColumnFlags.WidthStretch, 1.0f);
         ImGui.TableSetupColumn("Cards", ImGuiTableColumnFlags.WidthFixed, 120);
-        ImGui.TableSetupColumn("Points", ImGuiTableColumnFlags.WidthFixed, 140);
+        ImGui.TableSetupColumn("Points", ImGuiTableColumnFlags.WidthFixed, 80);
         ImGui.TableSetupColumn("Controls", ImGuiTableColumnFlags.WidthFixed, 330);
     }
 
@@ -112,7 +116,7 @@ public partial class BlackJackButtlerWindow
 
         if (!_isRecognitionActive)
         {
-            if (ImGui.Button("Start Recognition", new Vector2(150, 0)))
+            if (ImGui.Button("Start Recognition", new Vector2(200, 0)))
             {
                 _isRecognitionActive = true;
                 SyncParty();
@@ -121,7 +125,9 @@ public partial class BlackJackButtlerWindow
         else
         {
             if (!canStop) ImGui.BeginDisabled();
-            if (ImGui.Button("Stop Recognition (Ctrl+Shift)", new Vector2(200, 0))) _isRecognitionActive = false;
+            if (ImGui.Button("Stop Recognition", new Vector2(200, 0))) _isRecognitionActive = false;
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                ImGui.SetTooltip("Hold down CTRL + Shift");
             if (!canStop) ImGui.EndDisabled();
         }
         ImGui.SameLine();
@@ -130,9 +136,24 @@ public partial class BlackJackButtlerWindow
 
     private void DrawPlayerRow(PlayerState p, bool isDealer)
     {
+        uint bgColor;
+        if (isDealer)
+            bgColor = ImGui.GetColorU32(new Vector4(0.05f, 0.05f, 0.05f, 1f));
+        else if (!p.IsActivePlayer)
+            bgColor = ImGui.GetColorU32(new Vector4(0, 0, 0, 1));
+        else if (p.IsCurrentTurn)
+            bgColor = ImGui.GetColorU32(new Vector4(0.0f, 0.25f, 0.0f, 1f));
+        else if (p.IsActivePlayer && !p.IsInParty && !p.IsDebugPlayer)
+            bgColor = ImGui.GetColorU32(new Vector4(0.25f, 0.1f, 0.05f, 1f));
+        else if (p.IsOnHold)
+            bgColor = ImGui.GetColorU32(new Vector4(0.15f, 0.15f, 0.15f, 1f));
+        else
+            bgColor = ImGui.GetColorU32(new Vector4(0.0f, 0.0f, 0.2f, 1f));
+
+        ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, bgColor);
+
         ImGui.PushID(isDealer ? "dealer" : p.Name);
 
-        // --- Spalte 1: Alias ---
         ImGui.TableNextColumn();
         if (!isDealer && p.IsActivePlayer)
         {
@@ -140,12 +161,10 @@ public partial class BlackJackButtlerWindow
             {
                 _editingAliasPlayer = p;
                 _aliasInputBuffer = !string.IsNullOrWhiteSpace(p.Alias) ? p.Alias : p.Name;
-                _isAliasModalOpen = true;
-                ImGui.OpenPopup("bjb_alias_popup");
+                _triggerAliasPopup = true;
             }
         }
 
-        // --- Spalte 2: Join/Leave ---
         ImGui.TableNextColumn();
         if (!isDealer)
         {
@@ -153,9 +172,24 @@ public partial class BlackJackButtlerWindow
             else { if (ImGui.Button($"X##{p.UIID}", new Vector2(-1, 0))) { p.IsActivePlayer = false; p.IsCurrentTurn = false; if (!p.IsInParty && p.Bank == 0) _players.Remove(p); } }
         }
 
-        // --- Spalte 3: Name ---
+        ImGui.TableNextColumn();
+        if (!isDealer && p.IsActivePlayer) {
+            var phase = GameEngine.CurrentPhase;
+            bool canToggleHold = phase == GamePhase.Waiting || phase == GamePhase.Payout;
+            canToggleHold = true;
+
+            if (!canToggleHold) ImGui.BeginDisabled();
+
+            if (p.IsOnHold) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.2f, 0.2f, 1f));
+            if (ImGui.Button($"H##hold_{p.UIID}")) { p.IsOnHold = !p.IsOnHold; _save(); }
+            if (p.IsOnHold) ImGui.PopStyleColor();
+
+            if (!canToggleHold) ImGui.EndDisabled();
+        }
+
         ImGui.TableNextColumn();
         var nameColor = p.IsActivePlayer ? new Vector4(1, 1, 1, 1) : new Vector4(0.5f, 0.5f, 0.5f, 1f);
+        if (p.IsOnHold) nameColor = new Vector4(0.5f, 0.5f, 0.5f, 0.8f);
         if (p.IsCurrentTurn) nameColor = new Vector4(1f, 1f, 0.2f, 1f);
         ImGui.TextColored(nameColor, p.DisplayName);
         if (!p.IsDebugPlayer && !p.IsInParty && p.IsActivePlayer && !isDealer)
@@ -163,7 +197,6 @@ public partial class BlackJackButtlerWindow
 
         if (p.IsActivePlayer)
         {
-            // --- Spalte 4: Bank ---
             ImGui.TableNextColumn();
             if (isDealer) { ImGui.Text("-"); }
             else
@@ -172,9 +205,11 @@ public partial class BlackJackButtlerWindow
                 if (ImGui.InputLong($"##bank_{p.UIID}", ref p.Bank, 1000, 10000)) _save();
             }
 
-            // --- Spalte 5: Bet ---
             ImGui.TableNextColumn();
-            if (isDealer) { ImGui.Text("-"); }
+            if (isDealer)
+            {
+                ImGui.Text("-");
+            }
             else
             {
                 ImGui.SetNextItemWidth(-1);
@@ -205,13 +240,20 @@ public partial class BlackJackButtlerWindow
         {
             var cards = p.Hands[i].Cards;
             if (cards.Count == 0) {
-                if (p.IsCurrentTurn && p.CurrentHandIndex == i) ImGui.TextColored(new Vector4(1, 1, 0, 1), "> -");
-                else ImGui.Text("-");
+                if (p.IsCurrentTurn && p.CurrentHandIndex == i) ImGui.TextColored(new Vector4(1, 1, 0, 1), "[-]");
+                else ImGui.Text(" - ");
                 continue;
             }
-            var cardStr = string.Join("", cards.Select(c => c == 1 ? "A" : (c >= 10 ? "X" : c.ToString())));
-            if (p.IsCurrentTurn && p.CurrentHandIndex == i) ImGui.TextColored(new Vector4(1, 1, 0, 1), $"> {cardStr}");
-            else ImGui.Text(cardStr);
+            var cardStr = string.Join("", cards.Select(c => c switch {
+                1 => "A",
+                11 => "J",
+                12 => "Q",
+                13 => "K",
+                _ => c.ToString()
+            }));
+
+            if (p.IsCurrentTurn && p.CurrentHandIndex == i) ImGui.TextColored(new Vector4(1, 1, 0, 1), $"[{cardStr}]");
+            else ImGui.Text($" {cardStr} ");
         }
     }
 
@@ -227,13 +269,12 @@ public partial class BlackJackButtlerWindow
         }
     }
 
-    // --- FIX: Stack-Management-Wrapper ---
     private void DrawPlayerControls(PlayerState p)
     {
         bool globalLock = CommandExecutor.IsRunning;
         if (globalLock) ImGui.BeginDisabled();
 
-        InnerPlayerControls(p); // Logik in Sub-Funktion, damit EndDisabled immer kommt
+        InnerPlayerControls(p);
 
         if (globalLock) ImGui.EndDisabled();
     }
@@ -246,7 +287,11 @@ public partial class BlackJackButtlerWindow
         {
             bool shouldHighlight = p.HighlightPay;
             if (shouldHighlight) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1, 0.5f, 0, 1));
-            if (ImGui.SmallButton($"Pay Out##{p.UIID}")) { p.HighlightPay = false; }
+            if (ImGui.SmallButton($"Pay Out##{p.UIID}"))
+            {
+                p.HighlightPay = false;
+                DropboxIntegration.PayOut(p);
+            }
             if (shouldHighlight) ImGui.PopStyleColor();
             return;
         }
@@ -272,9 +317,22 @@ public partial class BlackJackButtlerWindow
             var currentHand = p.Hands[p.CurrentHandIndex];
             var (min, max) = p.CalculatePoints(p.CurrentHandIndex);
 
+            bool isSplitHand = p.Hands.Count > 1;
+
             bool canHit = min < 21 && !currentHand.IsDoubleDown && !currentHand.IsStand;
+
             bool canDD = canHit && currentHand.Cards.Count == 2;
-            bool canSplit = canHit && currentHand.Cards.Count == 2 && currentHand.Cards[0] == currentHand.Cards[1] && p.Hands.Count < _config.MaxHandsPerPlayer;
+            if (isSplitHand && !_config.AllowDoubleDownAfterSplit) canDD = false;
+
+            bool canSplit = false;
+            if (canHit && currentHand.Cards.Count == 2 && p.Hands.Count < _config.MaxHandsPerPlayer)
+            {
+                if (_config.IdenticalSplitOnly)
+                canSplit = currentHand.Cards[0] == currentHand.Cards[1];
+                else
+                canSplit = PlayerState.GetCardScoreValue(currentHand.Cards[0]) == PlayerState.GetCardScoreValue(currentHand.Cards[1]);
+            }
+
             bool canStand = !currentHand.IsStand && !currentHand.IsBust;
 
             HighlightActionButton(p, "Draw", ref p.HighlightHit, canHit, () =>
@@ -294,7 +352,7 @@ public partial class BlackJackButtlerWindow
             HighlightActionButton(p, "Spl", ref p.HighlightSplit, canSplit, () =>
             {
                 BlackJackButtler.Chat.GameLog.PushSnapshot(_players, _dealer, phase, $"PlayerSplit:{p.Name}");
-                Task.Run(() => GameEngine.ActionSplit(p, _config));
+                Task.Run(() => GameEngine.ActionSplit(p, _config, _players));
             });
             ImGui.SameLine();
 
@@ -306,7 +364,6 @@ public partial class BlackJackButtlerWindow
         }
     }
 
-    // --- FIX: Stack-Management-Wrapper ---
     private void DrawDealerControls()
     {
         bool globalLock = CommandExecutor.IsRunning;
@@ -367,17 +424,28 @@ public partial class BlackJackButtlerWindow
 
     public void SyncParty()
     {
-        if (Plugin.IsDebugMode)
-        {
-            foreach (var p in _players) if (p.IsDebugPlayer) p.IsInParty = true;
-            return;
-        }
+        if (Plugin.IsDebugMode) return;
         foreach (var p in _players) p.IsInParty = false;
-        foreach (var member in Plugin.PartyList)
+
+        var leaderIndex = Plugin.PartyList.PartyLeaderIndex;
+
+        for (int i = 0; i < Plugin.PartyList.Length; i++)
         {
+            var member = Plugin.PartyList[i];
+            if (member == null) continue;
+
             var name = member.Name.TextValue;
+            if (string.IsNullOrEmpty(name)) continue;
+
+            if (i == leaderIndex)
+            {
+                _dealer.Name = name;
+                _dealer.WorldId = member.World.RowId;
+                continue;
+            }
+
             var existing = _players.FirstOrDefault(x => x.Name == name);
-            if (existing != null) { existing.IsInParty = true; existing.WorldId = member.World.RowId; }
+            if (existing != null) { existing.IsInParty = true; }
             else { _players.Add(new PlayerState { Name = name, WorldId = member.World.RowId, IsInParty = true }); }
         }
         _players.RemoveAll(x => !x.IsInParty && !x.IsActivePlayer && x.Bank == 0);

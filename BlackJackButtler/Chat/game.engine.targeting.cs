@@ -43,13 +43,22 @@ public static partial class GameEngine
     {
         _virtualTargetName = name;
 
-        if (_debugMode)
-            return;
+        if (_debugMode) return;
 
-        var obj = Plugin.ObjectTable.FirstOrDefault(o =>
-            o.Name.TextValue.Equals(name, StringComparison.OrdinalIgnoreCase));
+        Plugin.Framework.RunOnTick(() =>
+        {
+            var obj = Plugin.ObjectTable.FirstOrDefault(o =>
+                o.Name.TextValue.Equals(name, StringComparison.OrdinalIgnoreCase));
 
-        if (obj != null)
-            Plugin.TargetManager.Target = obj;
+            if (obj != null)
+            {
+                Plugin.TargetManager.Target = obj;
+                Plugin.Instance.GetMainWindow().AddDebugLog($"[Targeting] Focused: {name}");
+            }
+            else
+            {
+                Plugin.Instance.GetMainWindow().AddDebugLog($"[Targeting] Could not find: {name}");
+            }
+        });
     }
 }

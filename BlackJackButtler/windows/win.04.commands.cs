@@ -78,7 +78,11 @@ public partial class BlackJackButtlerWindow
 
                         ImGui.TableNextColumn();
                         ImGui.SetNextItemWidth(-1);
-                        if (ImGui.SliderFloat("##delay", ref cmd.Delay, 0.1f, 5.0f, "%.1fs")) _save();
+                        if (ImGui.SliderFloat("##delay", ref cmd.Delay, 0.5f, 8.0f, "%.1fs"))
+                        {
+                            if (cmd.Delay < 0.5f) cmd.Delay = 0.5f;
+                            _save();
+                        }
 
                         ImGui.TableNextColumn();
                         if (ImGui.Button("X##del"))

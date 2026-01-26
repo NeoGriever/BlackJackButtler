@@ -83,11 +83,11 @@ public static partial class GameEngine
                 var nextToDeal = activePlayers.FirstOrDefault(p => !p.HasInitialHandDealt);
                 if (nextToDeal != null)
                 {
-                    SwitchTurnTo(nextToDeal, activePlayers);
+                    SwitchTurnTo(nextToDeal, activePlayers, cfg);
                     return;
                 }
                 CurrentPhase = GamePhase.PlayersTurn;
-                SwitchTurnTo(activePlayers[0], activePlayers);
+                SwitchTurnTo(activePlayers[0], activePlayers, cfg);
             }
             else
             {
@@ -111,27 +111,44 @@ public static partial class GameEngine
             var next = activePlayers[currentIndex + 1];
             if (cfg.FirstDealThenPlay)
             {
-                SwitchTurnTo(next, activePlayers);
+                SwitchTurnTo(next, activePlayers, cfg);
             }
             else
             {
                 CurrentPhase = GamePhase.InitialDeal;
-                SwitchTurnTo(next, activePlayers);
+                SwitchTurnTo(next, activePlayers, cfg);
             }
         }
         else
         {
-            CurrentPhase = GamePhase.DealerTurn;
-            if (_ctxDealer != null) TargetPlayer(_ctxDealer.Name);
+            var anyPlayerAlive = activePlayers.Any(p => p.Hands.Any(h => !h.IsBust));
+
+            if (!anyPlayerAlive)
+            {
+                Plugin.Instance.GetMainWindow().AddDebugLog("[Engine] All players busted. Skipping Dealer turn.");
+                CurrentPhase = GamePhase.Payout;
+                Task.Run(async () => await EvaluateFinalResults(players, _ctxDealer!, cfg));
+            }
+            else
+            {
+                CurrentPhase = GamePhase.DealerTurn;
+                if (_ctxDealer != null) TargetPlayer(_ctxDealer.Name);
+            }
         }
+
     }
 
-    private static void SwitchTurnTo(PlayerState target, List<PlayerState> allActive)
+    private static void SwitchTurnTo(PlayerState target, List<PlayerState> allActive, Configuration cfg)
     {
         foreach (var pl in allActive) pl.IsCurrentTurn = false;
         target.IsCurrentTurn = true;
         target.CurrentHandIndex = 0;
         TargetPlayer(target.Name);
+        if (target.Hands.Count > 0 && target.Hands[target.CurrentHandIndex].Cards.Count >= 2)
+        {
+            string promptGroup = GetStatePromptGroup(target, cfg);
+            Task.Run(async () => await CommandExecutor.ExecuteGroup(promptGroup, target.DisplayName, cfg));
+        }
     }
 
     public static async Task ActionHit(PlayerState p, Configuration cfg, List<PlayerState> players)
@@ -171,9 +188,20 @@ public static partial class GameEngine
         });
     }
 
-    public static async Task ActionSplit(PlayerState p, Configuration cfg)
+    public static async Task ActionSplit(PlayerState p, Configuration cfg, List<PlayerState> players)
     {
         if (p.Hands.Count >= cfg.MaxHandsPerPlayer) return;
+
+        Chat.GameLog.PushSnapshot(players, _ctxDealer!, CurrentPhase, $"Split:{p.Name}");
+
+        if (p.Bank < p.CurrentBet)
+        {
+            /*
+            TODO: game.engine.dealing.cs - ActionSplit - Einbau eines blockierenden Popups für den Dealer, welches anzeigt, wieviel Gil fehlen. - Wenn dann währenddessen ein Trade vom aktuellen Spieler kommt und den Betrag ausgleicht (oder mehr), wird nicht abgebrochen und das Popup schließt sich selbstständig. Andernfalls kann der Dealer das Popup schließen und der Vorgang wird abgebrochen.
+            */
+            return;
+        }
+        p.Bank -= p.CurrentBet;
 
         var currentHand = p.Hands[p.CurrentHandIndex];
         if (currentHand.Cards.Count != 2) return;
@@ -217,5 +245,29 @@ public static partial class GameEngine
         SetForcedRecipient(dealer.Name);
         try { await CommandExecutor.ExecuteGroup("DealStand", dealer.Name, cfg); }
         finally { ClearForcedRecipient(); }
+    }
+
+    private static string GetStatePromptGroup(PlayerState p, Configuration cfg)
+    {
+        if (p.Hands.Count == 0) return string.Empty;
+        var hand = p.Hands[p.CurrentHandIndex];
+
+        bool canSplit = false;
+        if (hand.Cards.Count == 2 && p.Hands.Count < cfg.MaxHandsPerPlayer)
+        {
+            if (cfg.IdenticalSplitOnly)
+                canSplit = hand.Cards[0] == hand.Cards[1];
+            else
+                canSplit = PlayerState.GetCardScoreValue(hand.Cards[0]) == PlayerState.GetCardScoreValue(hand.Cards[1]); // Nach Score (z.B. J & K)
+        }
+
+        bool isSplitHand = p.Hands.Count > 1;
+        bool canDD = hand.Cards.Count == 2;
+        if (isSplitHand && !cfg.AllowDoubleDownAfterSplit)
+            canDD = false;
+
+        if (canSplit) return "StateHSDS";
+        if (canDD)    return "StateHSD";
+        return "StateHS";
     }
 }

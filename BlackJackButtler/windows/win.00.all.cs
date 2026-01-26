@@ -19,6 +19,11 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private readonly List<string> _debugLog = new();
 
     private bool _isRecognitionActive = false;
+
+    public bool IsRecognitionActive = false;
+
+    public void SyncPartyPublic() => SyncParty();
+
     private List<PlayerState> _players = new();
 
     private bool _showRegexWarningPopup;
@@ -30,6 +35,11 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private PlayerState? _editingAliasPlayer;
     private string _aliasInputBuffer = string.Empty;
     private bool _isAliasModalOpen = false;
+    private bool _triggerAliasPopup = false;
+
+    private Configuration? _tempImportConfig;
+    private bool _showImportModal = false;
+    private bool _isSidebarVisible = true;
 
     public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog) : base("BlackJack Buttler")
     {
@@ -51,29 +61,46 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     {
         if (_isRecognitionActive && (DateTime.Now - _lastSync).TotalMilliseconds > 1000)
         {
-            SyncParty();
             _lastSync = DateTime.Now;
         }
 
         var avail = ImGui.GetContentRegionAvail();
-        var sidebarWidth = 200f;
+        var sidebarWidth = _isSidebarVisible ? 200f : 0f;
 
-        ImGui.BeginChild("bjb.sidebar", new Vector2(sidebarWidth, avail.Y), true);
-        ImGui.TextUnformatted("BlackJack Buttler");
-        ImGui.Separator();
+        if (_isSidebarVisible)
+        {
+            ImGui.BeginChild("bjb.sidebar", new Vector2(sidebarWidth, avail.Y), true);
+            ImGui.TextUnformatted("BlackJack Buttler");
+            ImGui.SameLine(ImGui.GetWindowWidth() - 30);
+            if (ImGui.SmallButton("<##hide_sidebar")) _isSidebarVisible = false;
 
-        NavButton(Page.Main, "Main");
-        NavButton(Page.Regexes, "Regex");
-        NavButton(Page.Messages, "Messages");
-        NavButton(Page.Commands, "Commands");
-        NavButton(Page.Settings, "Settings");
-        NavButton(Page.Vars, "Variables");
-        NavButton(Page.Debug, "DEBUG");
+            ImGui.Separator();
+            NavButton(Page.Main, "Main");
 
-        ImGui.EndChild();
-        ImGui.SameLine();
+            ImGui.Separator();
+            NavButton(Page.Regexes, "Regex");
+            NavButton(Page.Messages, "Messages");
+            NavButton(Page.Commands, "Commands");
+            NavButton(Page.Settings, "Settings");
+
+            ImGui.Separator();
+            NavButton(Page.Vars, "Variables");
+            NavButton(Page.Debug, "DEBUG");
+
+            ImGui.EndChild();
+            ImGui.SameLine();
+        }
 
         ImGui.BeginChild("bjb.content", new Vector2(0, avail.Y), true);
+
+        if (!_isSidebarVisible)
+        {
+            if (ImGui.SmallButton(">##show_sidebar")) _isSidebarVisible = true;
+            ImGui.SameLine();
+            ImGui.TextDisabled($"Page: {_page}");
+            ImGui.Separator();
+        }
+
         switch (_page)
         {
             case Page.Main:         DrawMainPage(); break;
@@ -85,13 +112,27 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Debug:        DrawDebugPage(); break;
         }
         ImGui.EndChild();
+        DropboxIntegration.DrawHelperWindow();
     }
 
     private void NavButton(Page page, string label)
     {
         var selected = _page == page;
-        if (selected) ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 2f);
+
+        if (selected)
+        {
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 1f);
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.15f, 0.35f, 0.65f, 0.9f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.2f, 0.4f, 0.75f, 1f));
+        }
+
         if (ImGui.Button(label, new Vector2(-1, 40))) _page = page;
-        if (selected) ImGui.PopStyleVar();
+
+        if (selected)
+        {
+            ImGui.PopStyleColor(2);
+            ImGui.PopStyleVar();
+        }
     }
+
 }

@@ -116,8 +116,6 @@ public static partial class GameEngine
 
     public static int MapDice13ToCardValue(int rolled)
     {
-        if (rolled <= 1) return 11;
-        if (rolled >= 10) return 10;
         return rolled;
     }
 
@@ -156,14 +154,20 @@ public static partial class GameEngine
         {
             if (best == 21)
             {
-                Task.Run(async () => await CommandExecutor.ExecuteGroup("DealerBJ", dealer.Name, cfg));
+                Task.Run(async () => {
+                    await CommandExecutor.ExecuteGroup("DealerBJ", dealer.Name, cfg);
+                    await EvaluateFinalResults(players, dealer, cfg);
+                });
                 CurrentPhase = GamePhase.Payout;
                 return;
             }
 
             if (best > 21 || hand.IsBust)
             {
-                Task.Run(async () => await CommandExecutor.ExecuteGroup("DealerBust", dealer.Name, cfg));
+                Task.Run(async () => {
+                    await CommandExecutor.ExecuteGroup("DealerBust", dealer.Name, cfg);
+                    await EvaluateFinalResults(players, dealer, cfg);
+                });
                 CurrentPhase = GamePhase.Payout;
                 return;
             }
@@ -221,6 +225,12 @@ public static partial class GameEngine
                         await CommandExecutor.ExecuteGroup("PlayerDDForcedStand", target.Name, cfg);
                         NextTurn(players, cfg);
                     });
+                    return;
+                }
+                if (!hand.IsBust && best < 21 && !hand.IsStand)
+                {
+                    string promptGroup = GetStatePromptGroup(target, cfg);
+                    Task.Run(async () => await CommandExecutor.ExecuteGroup(promptGroup, target.DisplayName, cfg));
                 }
             }
         }
@@ -267,7 +277,10 @@ public static partial class GameEngine
                 }
                 else if (dealerBust || pScore > dealerScore)
                 {
-                    float mult = hand.IsNaturalBlackJack ? cfg.MultiplierBlackjackWin : cfg.MultiplierNormalWin;
+                    float mult = cfg.MultiplierNormalWin;
+                    if (hand.IsNaturalBlackJack) mult = cfg.MultiplierBlackjackWin;
+                    else if (pScore == 21) mult = cfg.MultiplierDirtyBlackjackWin;
+
                     long winAmount = (long)(hand.Bet * mult);
                     p.Bank += (hand.Bet + winAmount);
                     await CommandExecutor.ExecuteGroup("ResultPlayerWin", p.DisplayName, cfg);
