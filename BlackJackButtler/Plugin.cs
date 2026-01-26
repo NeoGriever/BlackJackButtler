@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Dalamud.Game.Command;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
@@ -67,7 +68,7 @@ public sealed class Plugin : IDalamudPlugin
 
         mainWindow = new BlackJackButtlerWindow(Configuration, () => Configuration.Save(), chatLog);
 
-        debugLogWindow = new DebugLogWindow(mainWindow.GetDebugLog());
+        debugLogWindow = new DebugLogWindow(mainWindow);
         windowSystem.AddWindow(debugLogWindow);
 
         DebugCommandSink = mainWindow.AddDebugLog;
@@ -100,6 +101,19 @@ public sealed class Plugin : IDalamudPlugin
             {
                 mainWindow.SyncPartyPublic();
                 _lastSync = DateTime.Now;
+            }
+        }
+
+        if (Configuration.AutoInitialDeal && GameEngine.CurrentPhase == GamePhase.InitialDeal)
+        {
+            if (!CommandExecutor.IsRunning)
+            {
+                var players = mainWindow.GetPlayers();
+                var currentPlayer = players.FirstOrDefault(p => p.IsCurrentTurn);
+                if (currentPlayer != null && currentPlayer.IsActivePlayer && !currentPlayer.HasInitialHandDealt)
+                {
+                    Task.Run(() => GameEngine.ActionDealHand(currentPlayer, Configuration, players));
+                }
             }
         }
 
@@ -140,33 +154,25 @@ public sealed class Plugin : IDalamudPlugin
 
     public void InjectChatMessage(int type, uint worldId, string playerName, string senderText, string messageText, SeString? rawSender = null, SeString? rawMessage = null)
     {
-        mainWindow.AddDebugLog($"[{DateTime.Now:T}] [{type}] [{senderText}]: {messageText}");
-
-        if (
-            type != (int)XivChatType.Party &&
-            type != (int)XivChatType.SystemMessage &&
-            type != 569 &&
-            type != 2105 &&
-            type != 4153 &&
-            type != 8249 &&
-            type != 313 &&
-            type != 57
-        )
+        if (type != (int)XivChatType.Party && type != (int)XivChatType.SystemMessage &&
+            type != 569 && type != 2105 && type != 4153 && type != 8249 && type != 313 && type != 57 && type != 64)
         {
             return;
         }
 
-        var localName = _cachedLocalName;
+        string logName = !string.IsNullOrEmpty(playerName) ? playerName : senderText;
+        string logLine = string.IsNullOrEmpty(logName) ? messageText : $"{logName}: {messageText}";
 
+        mainWindow.AddDebugLog($"[{DateTime.Now:T}] {logLine}", true);
+
+        var localName = _cachedLocalName;
         var s = rawSender ?? new SeString(new TextPayload(senderText));
         var m = rawMessage ?? new SeString(new TextPayload(messageText));
 
         var parsed = ChatMessageParser.Parse(DateTime.Now, s, m, localName);
 
-        var finalParsed = parsed;
-
-        chatLog.Add(finalParsed);
-        RegexEngine.ProcessIncoming(finalParsed, Configuration, mainWindow.GetPlayers(), mainWindow.GetDealer());
+        chatLog.Add(parsed);
+        RegexEngine.ProcessIncoming(parsed, Configuration, mainWindow.GetPlayers(), mainWindow.GetDealer());
     }
 
     private static string DumpPayloads(SeString s)

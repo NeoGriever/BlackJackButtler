@@ -86,12 +86,22 @@ public static partial class GameEngine
                     SwitchTurnTo(nextToDeal, activePlayers, cfg);
                     return;
                 }
+
                 CurrentPhase = GamePhase.PlayersTurn;
-                SwitchTurnTo(activePlayers[0], activePlayers, cfg);
+
+                foreach (var pl in activePlayers) pl.IsCurrentTurn = false;
+                activePlayers[0].IsCurrentTurn = true;
+
+                if (IsPlayerFinished(activePlayers[0])) {
+                    NextTurn(players, cfg);
+                } else {
+                    SwitchTurnTo(activePlayers[0], activePlayers, cfg);
+                }
             }
             else
             {
                 CurrentPhase = GamePhase.PlayersTurn;
+                if (current != null && IsPlayerFinished(current)) NextTurn(players, cfg);
             }
             return;
         }
@@ -99,7 +109,14 @@ public static partial class GameEngine
         if (current != null)
         {
             current.CurrentHandIndex++;
-            if (current.CurrentHandIndex < current.Hands.Count) return;
+            if (current.CurrentHandIndex < current.Hands.Count)
+            {
+                if (current.Hands[current.CurrentHandIndex].IsStand || current.Hands[current.CurrentHandIndex].IsBust)
+                {
+                    NextTurn(players, cfg);
+                }
+                return;
+            }
 
             current.CurrentHandIndex = 0;
             current.IsCurrentTurn = false;
@@ -109,13 +126,14 @@ public static partial class GameEngine
         if (currentIndex + 1 < activePlayers.Count)
         {
             var next = activePlayers[currentIndex + 1];
-            if (cfg.FirstDealThenPlay)
+            next.IsCurrentTurn = true;
+
+            if (IsPlayerFinished(next))
             {
-                SwitchTurnTo(next, activePlayers, cfg);
+                NextTurn(players, cfg);
             }
             else
             {
-                CurrentPhase = GamePhase.InitialDeal;
                 SwitchTurnTo(next, activePlayers, cfg);
             }
         }
@@ -135,7 +153,6 @@ public static partial class GameEngine
                 if (_ctxDealer != null) TargetPlayer(_ctxDealer.Name);
             }
         }
-
     }
 
     private static void SwitchTurnTo(PlayerState target, List<PlayerState> allActive, Configuration cfg)
@@ -256,9 +273,9 @@ public static partial class GameEngine
         if (hand.Cards.Count == 2 && p.Hands.Count < cfg.MaxHandsPerPlayer)
         {
             if (cfg.IdenticalSplitOnly)
-                canSplit = hand.Cards[0] == hand.Cards[1];
+                canSplit = hand.Cards[0].Value == hand.Cards[1].Value;
             else
-                canSplit = PlayerState.GetCardScoreValue(hand.Cards[0]) == PlayerState.GetCardScoreValue(hand.Cards[1]); // Nach Score (z.B. J & K)
+                canSplit = PlayerState.GetCardScoreValue(hand.Cards[0].Value) == PlayerState.GetCardScoreValue(hand.Cards[1].Value);
         }
 
         bool isSplitHand = p.Hands.Count > 1;
@@ -269,5 +286,10 @@ public static partial class GameEngine
         if (canSplit) return "StateHSDS";
         if (canDD)    return "StateHSD";
         return "StateHS";
+    }
+
+    private static bool IsPlayerFinished(PlayerState p)
+    {
+        return p.Hands.Count > 0 && p.Hands.All(h => h.IsStand || h.IsBust || h.IsNaturalBlackJack);
     }
 }

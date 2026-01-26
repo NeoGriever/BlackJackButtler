@@ -96,7 +96,7 @@ public partial class BlackJackButtlerWindow
             var headerLabel = isStd ? $"● {e.Name}" : e.Name;
             if (string.IsNullOrWhiteSpace(e.Name)) headerLabel = $"Entry {i + 1}";
 
-            bool open = ImGui.CollapsingHeader(headerLabel);
+            bool open = ImGui.CollapsingHeader($"{headerLabel}###regex_{i}");
 
             if (isStd) ImGui.PopStyleColor();
 

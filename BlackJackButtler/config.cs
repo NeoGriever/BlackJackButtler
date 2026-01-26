@@ -31,6 +31,9 @@ public sealed class Configuration : IPluginConfiguration
     public bool DefaultRegexSeeded = false;
     public bool DefaultCommandsSeeded = false;
 
+    public bool AutoInitialDeal = false;
+    public bool SmallResult = false;
+
     public static string[] StandardBatchNames => DefaultsManager.GetDefaultMessages().Select(m => m.Name).ToArray();
     public static string[] StandardRegexNames => DefaultsManager.GetDefaultRegex().Select(r => r.Name).ToArray();
 
