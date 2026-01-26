@@ -42,14 +42,13 @@ public static class RegexEngine
                 {
                     if (entry.Mode == RegexEntryMode.Trigger)
                     {
-                        // Wir übergeben das PATTERN mit, damit ExecuteAction weiß, welches Match es prüfen soll
                         ExecuteAction(entry, pattern, msg, players, dealer, cfg);
                     }
                     else if (entry.Mode == RegexEntryMode.SetVariable)
                     {
                         VariableManager.SetVariable(entry.Name, msg.Message);
                     }
-                    break; // Ein Treffer pro Entry reicht
+                    break;
                 }
             }
         }
@@ -59,14 +58,13 @@ public static class RegexEngine
     {
         var p = players.FirstOrDefault(x => x.Name.Equals(msg.Name, StringComparison.OrdinalIgnoreCase));
 
-        // Nutze das übergebene matchedPattern für die Gruppen-Erkennung
         var options = entry.CaseSensitive ? RRX.RegexOptions.None : RRX.RegexOptions.IgnoreCase;
         var match = RRX.Regex.Match(msg.Message, matchedPattern, options);
 
         switch (entry.Action)
         {
             case RegexAction.DiceRollValue:
-                if ((msg.Event || Plugin.IsDebugMode) && match.Success && match.Groups.Count >= 2)
+                if (match.Success && match.Groups.Count >= 2)
                 {
                     if (int.TryParse(match.Groups[1].Value, out var rolled))
                     {
@@ -142,12 +140,7 @@ public static class RegexEngine
 
     private static int? MapValue(int rolled)
     {
-        return rolled switch
-        {
-            1 => 11,
-            >= 2 and <= 9 => rolled,
-            >= 10 and <= 13 => 10,
-            _ => null
-        };
+        if (rolled >= 1 && rolled <= 13) return rolled;
+        return null;
     }
 }

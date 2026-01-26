@@ -42,7 +42,7 @@ public static class CommandExecutor
 
             var msg = batch.GetNextMessage() ?? string.Empty;
 
-            msg = msg.Replace("<t>", targetPlayerName);
+            msg = msg.Replace("<t>", pState?.DisplayName ?? targetPlayerName);
             if (msg.Contains("<points>") && pState != null)
             {
                 var result = pState.CalculatePoints(pState.CurrentHandIndex);
@@ -61,6 +61,7 @@ public static class CommandExecutor
     {
 
         var window = Plugin.Instance.GetMainWindow();
+        window.AddDebugLog($"[Executor] Start Chain: {groupName} -> {targetPlayerName}");
         var players = window.GetPlayers();
         var dealer = window.GetDealer();
 
@@ -73,33 +74,51 @@ public static class CommandExecutor
         if (group == null) return;
 
         _isRunning = true;
+        int step = 0;
 
         foreach (var cmd in group.Commands)
         {
-            if (!cmd.Enabled || string.IsNullOrWhiteSpace(cmd.Text)) continue;
-
-            string processedText = cmd.Text.Replace("<t>", targetPlayerName);
-
-            if (processedText.Contains("<points>") && pState != null)
+            step++;
+            if (!cmd.Enabled || string.IsNullOrWhiteSpace(cmd.Text))
             {
-                var (min, max) = pState.CalculatePoints(pState.CurrentHandIndex);
-                string pointsStr = max.HasValue ? $"{min}/{max}" : $"{min}";
-                processedText = processedText.Replace("<points>", pointsStr);
+                window.AddDebugLog($"[Executor] Skip Step {step} (Disabled or Empty)");
+                continue;
             }
 
-            processedText = ReplacePlayerScoreFirst(processedText);
-            processedText = ReplaceMessageStacks(processedText, cfg, targetPlayerName, pState);
-            processedText = VariableManager.ProcessMessage(processedText);
-
-            ChatCommandRouter.Send(processedText, cfg, $"{groupName}:{targetPlayerName}");
-
-            if (cmd.Delay > 0)
+            try
             {
-                await Task.Delay(TimeSpan.FromSeconds(cmd.Delay));
+                window.AddDebugLog($"[Executor] Processing Step {step}: {cmd.Text}");
+                string processedText = cmd.Text.Replace("<t>", pState?.DisplayName ?? targetPlayerName);
+
+                if (processedText.Contains("<points>") && pState != null)
+                {
+                    var (min, max) = pState.CalculatePoints(pState.CurrentHandIndex);
+                    string pointsStr = max.HasValue ? $"{min}/{max}" : $"{min}";
+                    processedText = processedText.Replace("<points>", pointsStr);
+                }
+
+                processedText = ReplacePlayerScoreFirst(processedText);
+                processedText = ReplaceMessageStacks(processedText, cfg, targetPlayerName, pState);
+                processedText = VariableManager.ProcessMessage(processedText);
+
+                window.AddDebugLog($"[Executor] Final Text Step {step}: {processedText}");
+
+                ChatCommandRouter.Send(processedText, cfg, $"{groupName}:{step}");
+
+                if (cmd.Delay > 0)
+                {
+                    window.AddDebugLog($"[Executor] Delaying {cmd.Delay}s...");
+                    await Task.Delay(TimeSpan.FromSeconds(cmd.Delay));
+                }
+            }
+            catch (Exception ex)
+            {
+                window.AddDebugLog($"[Executor-Step-Error] Step {step} failed: {ex.Message}");
             }
         }
 
         _isRunning = false;
+        window.AddDebugLog($"[Executor] Chain End: {groupName}");
     }
 
     private static string ResolveCommandText(string text, string targetPlayerName, Configuration cfg, PlayerState? pState)
@@ -107,7 +126,7 @@ public static class CommandExecutor
         if (string.IsNullOrWhiteSpace(text))
             return text;
 
-        text = text.Replace("<t>", targetPlayerName);
+        text = text.Replace("<t>", pState?.DisplayName ?? targetPlayerName);
 
         if (text.Contains("+{PlayerScore}", StringComparison.Ordinal))
         {
@@ -131,7 +150,7 @@ public static class CommandExecutor
 
             var msg = batch.GetNextMessage() ?? string.Empty;
 
-            msg = msg.Replace("<t>", targetPlayerName);
+            msg = msg.Replace("<t>", pState?.DisplayName ?? targetPlayerName);
             if (msg.Contains("<points>") && pState != null)
             {
                 var (min, max) = pState.CalculatePoints(pState.CurrentHandIndex);

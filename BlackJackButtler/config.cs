@@ -11,15 +11,17 @@ public sealed class Configuration : IPluginConfiguration
 {
     public int Version { get; set; } = 0;
 
-    // WICHTIG: Felder (Fields) für ImGui ref Zugriff
     public bool HideStandardBatches = true;
     public bool AllowEditingStandardRegex = false;
-    public bool FirstDealThenPlay = true;
 
+    public bool FirstDealThenPlay = true;
+    public bool IdenticalSplitOnly = true;
+    public bool AllowDoubleDownAfterSplit = false;
     public int MaxHandsPerPlayer = 2;
     public float MultiplierNormalWin = 1.0f;
     public float MultiplierBlackjackWin = 1.5f;
-    public bool RefundFullDoubleDownOnPush = true;
+    public float MultiplierDirtyBlackjackWin = 1.0f;
+    public bool RefundFullDoubleDownOnPush = false;
 
     public List<CommandGroup> CommandGroups = new();
     public List<MessageBatch> MessageBatches = new();
@@ -29,7 +31,6 @@ public sealed class Configuration : IPluginConfiguration
     public bool DefaultRegexSeeded = false;
     public bool DefaultCommandsSeeded = false;
 
-    // Statische Helfer für die UI-Erkennung
     public static string[] StandardBatchNames => DefaultsManager.GetDefaultMessages().Select(m => m.Name).ToArray();
     public static string[] StandardRegexNames => DefaultsManager.GetDefaultRegex().Select(r => r.Name).ToArray();
 
@@ -62,7 +63,6 @@ public sealed class Configuration : IPluginConfiguration
         return changed;
     }
 
-    // Kompatibilität für Plugin.cs
     public bool EnsureDefaultBatchesOnce() => EnsureDefaultsOnce();
 
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);

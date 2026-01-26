@@ -11,6 +11,9 @@ public class PlayerState
     public string Alias = string.Empty;
     public uint WorldId;
     public bool IsActivePlayer = false;
+
+    public bool IsOnHold = false;
+
     public bool IsInParty = true;
     public bool IsCurrentTurn = false;
     public bool HasInitialHandDealt = false;
@@ -80,6 +83,12 @@ public class PlayerState
         return Hands[index].IsStand || Hands[index].IsBust || min >= 21 || (max.HasValue && max == 21);
     }
 
+    public static int GetCardScoreValue(int cardRawValue)
+    {
+        if (cardRawValue >= 10) return 10;
+        return cardRawValue;
+    }
+
     public PlayerState Clone()
     {
         return new PlayerState
@@ -87,6 +96,9 @@ public class PlayerState
             Name = Name,
             WorldId = WorldId,
             IsActivePlayer = IsActivePlayer,
+
+            IsOnHold = IsOnHold,
+
             IsInParty = IsInParty,
             IsCurrentTurn = IsCurrentTurn,
 

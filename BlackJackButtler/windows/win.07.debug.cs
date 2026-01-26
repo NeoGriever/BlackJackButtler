@@ -29,8 +29,17 @@ public partial class BlackJackButtlerWindow
         ImGui.SameLine();
         if (ImGui.Button("XLLog"))
         {
-            // Dies führt den Befehl intern aus, als hätte der User ihn getippt
             Plugin.CommandManager.ProcessCommand("/xllog");
+        }
+
+        ImGui.SameLine();
+        if (ImGui.Button("GilTransferTest"))
+        {
+            DropboxIntegration.PayOut(new PlayerState
+            {
+                Bank = 10,
+                Name = "Rinnah Okami"
+            });
         }
 
         ImGui.Separator();
