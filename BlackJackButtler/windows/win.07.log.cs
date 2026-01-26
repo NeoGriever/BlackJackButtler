@@ -100,16 +100,21 @@ public partial class BlackJackButtlerWindow
         GameLog.ApplySnapshot(index, _players, ref _dealer, ref phase);
         GameEngine.CurrentPhase = phase;
 
+        AddDebugLog($"[Timeline] Jumped to Snapshot #{index} for player '{targetName}'. State restored.", false);
+
         var player = _players.FirstOrDefault(p => p.Name == targetName);
         if (player != null)
         {
             foreach (var p in _players) p.IsCurrentTurn = false;
+            player.IsActivePlayer = true;
             player.IsCurrentTurn = true;
 
-            if (GameEngine.CurrentPhase >= GamePhase.DealerTurn)
-            {
+            if (player.Hands.Count > 0 && player.Hands[0].Cards.Count >= 2)
+                player.HasInitialHandDealt = true;
+
+            if (GameEngine.CurrentPhase != GamePhase.InitialDeal)
                 GameEngine.CurrentPhase = GamePhase.PlayersTurn;
-            }
+
             GameEngine.TargetPlayer(player.Name);
         }
 
