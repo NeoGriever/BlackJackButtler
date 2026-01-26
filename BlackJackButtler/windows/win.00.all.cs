@@ -10,15 +10,12 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow : Window, IDisposable
 {
-    private enum Page { Main, Regexes, Messages, Vars, Commands , Settings , Debug }
+    private enum Page { Main, Regexes, Messages, Commands , Settings , Vars , RoundLog , Debug }
     private Page _page = Page.Main;
 
     private readonly Configuration _config;
     private readonly Action _save;
     private readonly ChatLogBuffer _chatLog;
-    private readonly List<string> _debugLog = new();
-
-    private bool _isRecognitionActive = false;
 
     public bool IsRecognitionActive = false;
 
@@ -59,7 +56,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     public override void Draw()
     {
-        if (_isRecognitionActive && (DateTime.Now - _lastSync).TotalMilliseconds > 1000)
+        if (IsRecognitionActive && (DateTime.Now - _lastSync).TotalMilliseconds > 1000)
         {
             _lastSync = DateTime.Now;
         }
@@ -81,10 +78,13 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             NavButton(Page.Regexes, "Regex");
             NavButton(Page.Messages, "Messages");
             NavButton(Page.Commands, "Commands");
+
+            ImGui.Separator();
             NavButton(Page.Settings, "Settings");
 
             ImGui.Separator();
             NavButton(Page.Vars, "Variables");
+            NavButton(Page.RoundLog, "Round History");
             NavButton(Page.Debug, "DEBUG");
 
             ImGui.EndChild();
@@ -106,9 +106,10 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Main:         DrawMainPage(); break;
             case Page.Regexes:      DrawRegexPage(); break;
             case Page.Messages:     DrawMessagesPage(); break;
-            case Page.Vars:         DrawVarsPage(); break;
             case Page.Commands:     DrawCommandsPage(); break;
             case Page.Settings:     DrawSettingsPage(); break;
+            case Page.Vars:         DrawVarsPage(); break;
+            case Page.RoundLog:     DrawRoundLogPage(); break;
             case Page.Debug:        DrawDebugPage(); break;
         }
         ImGui.EndChild();

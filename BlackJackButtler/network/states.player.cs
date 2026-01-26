@@ -36,6 +36,18 @@ public class PlayerState
     public string DisplayName => !string.IsNullOrWhiteSpace(Alias) ? Alias : Name;
     public string UIID => $"{Name}_{WorldId}";
 
+    public string GetCardsString(int handIndex)
+    {
+        if (handIndex < 0 || handIndex >= Hands.Count) return string.Empty;
+        var cards = Hands[handIndex].Cards;
+        if (cards.Count == 0) return string.Empty;
+
+        if (cards.Count == 1) return cards[0].ToString();
+
+        var allButLast = string.Join(", ", cards.Take(cards.Count - 1).Select(c => c.ToString()));
+        return $"{allButLast} and {cards.Last()}";
+    }
+
     public int GetBestScore(int handIndex)
     {
         var (min, max) = CalculatePoints(handIndex);
@@ -65,9 +77,9 @@ public class PlayerState
         int aces = 0;
         foreach (var c in cards)
         {
-            if (c == 1) { total += 1; aces++; }
-            else if (c >= 10) total += 10;
-            else total += c;
+            if (c.Value == 1) { total += 1; aces++; }
+            else if (c.Value >= 10) total += 10;
+            else total += c.Value;
         }
 
         if (aces > 0 && total + 10 <= 21)
@@ -115,5 +127,46 @@ public class PlayerState
             HighlightSplit = HighlightSplit,
             HighlightPay = HighlightPay
         };
+    }
+
+    public string GetShortName(List<PlayerState> allActivePlayers)
+    {
+        if (!string.IsNullOrWhiteSpace(Alias) && !Alias.Equals(Name, System.StringComparison.OrdinalIgnoreCase))
+            return Alias;
+
+        if (string.IsNullOrWhiteSpace(Name)) return "Unknown";
+
+        var otherPlayers = allActivePlayers.Where(p => p != this).ToList();
+        var nameParts = Name.Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+        for (int count = 1; count <= nameParts.Length; count++)
+        {
+            string candidate = string.Join(" ", nameParts.Take(count));
+
+            bool hasConflict = false;
+            foreach (var other in otherPlayers)
+            {
+                string otherIdentity = (!string.IsNullOrWhiteSpace(other.Alias) && !other.Alias.Equals(other.Name))
+                    ? other.Alias
+                    : other.Name;
+
+                if (otherIdentity.StartsWith(candidate, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!Name.Equals(other.Name, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasConflict = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hasConflict) return candidate;
+        }
+
+        int indexInDuplicates = allActivePlayers
+            .Where(p => p.Name.Equals(Name, System.StringComparison.OrdinalIgnoreCase))
+            .ToList().IndexOf(this);
+
+        return indexInDuplicates > 0 ? $"{Name} ({indexInDuplicates + 1})" : Name;
     }
 }

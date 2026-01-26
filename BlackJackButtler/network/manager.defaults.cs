@@ -131,6 +131,9 @@ public static class DefaultsManager
             ],
             "StateHS":   [
                 { "Text": "/p #{Player State Messages HS} <se.7>", "Delay": 0.8 }
+            ],
+            "ResultSmall": [
+                { "Text": "/p  Results: <results> ", "Delay": 0.9 }
             ]
         },
         "Messages": {
@@ -147,15 +150,15 @@ public static class DefaultsManager
             ],
 
             "Player State Messages HSDS":      [
-                " <t> - You have splittable <points>. Do you want to [Hit], [Stand], [Double Down] or [Split]? "
+                " <t> - You have splittable <points> with ${playerCards}. Do you want to [Hit], [Stand], [Double Down] or [Split]? "
             ],
 
             "Player State Messages HSD":       [
-                " <t> - You have <points>. Do you want to [Hit], [Stand] or [Double Down]? "
+                " <t> - You have <points> with ${playerCards}. Do you want to [Hit], [Stand] or [Double Down]? "
             ],
 
             "Player State Messages HS":        [
-                " <t> - You have <points>. Do you want to [Hit] or [Stand]? "
+                " <t> - You have <points> with ${playerCards}. Do you want to [Hit] or [Stand]? "
             ],
 
             "Player Draw Messages":            [

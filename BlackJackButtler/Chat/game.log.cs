@@ -4,114 +4,92 @@ using System.Linq;
 
 namespace BlackJackButtler.Chat;
 
-public sealed class GameLogEntry
-{
-    public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
-    public string Reason { get; init; } = string.Empty;
-    public GamePhase Phase { get; init; }
-    public int SnapshotIndex { get; init; }
-}
-
 public sealed class GameSnapshot
 {
     public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
     public string Reason { get; init; } = string.Empty;
     public GamePhase Phase { get; init; }
-
     public PlayerState Dealer { get; init; } = new();
     public List<PlayerState> Players { get; init; } = new();
+    public List<DeckCard> ShoeState { get; init; } = new();
 }
 
 public static class GameLog
 {
     private static readonly object _lock = new();
-
     private static readonly List<GameSnapshot> _snapshots = new();
-    private static readonly List<GameLogEntry> _entries = new();
 
-    public static int SnapshotCount
-    {
-        get { lock (_lock) return _snapshots.Count; }
-    }
+    private static int _currentIndex = -1;
 
-    public static IReadOnlyList<GameLogEntry> Entries
-    {
-        get { lock (_lock) return _entries.ToList(); }
-    }
+    public static int CurrentIndex => _currentIndex;
+    public static int SnapshotCount => _snapshots.Count;
 
     public static void Clear()
     {
         lock (_lock)
         {
             _snapshots.Clear();
-            _entries.Clear();
+            _currentIndex = -1;
         }
     }
 
-    public static void PushSnapshot(List<PlayerState> players, PlayerState dealer, GamePhase phase, string reason, int maxSnapshots = 25)
+    public static void PushSnapshot(List<PlayerState> players, PlayerState dealer, GamePhase phase, string reason)
     {
-        if (players == null) return;
-        if (dealer == null) return;
-
         lock (_lock)
         {
+            if (_currentIndex < _snapshots.Count - 1)
+            {
+                _snapshots.RemoveRange(_currentIndex + 1, _snapshots.Count - (_currentIndex + 1));
+            }
+
             var snap = new GameSnapshot
             {
                 TimestampUtc = DateTime.UtcNow,
-                Reason = reason ?? string.Empty,
+                Reason = reason ?? "Manual Sync",
                 Phase = phase,
                 Dealer = dealer.Clone(),
+                ShoeState = DeckManager.GetShoeSnapshot(),
                 Players = players.Select(p => p.Clone()).ToList()
             };
 
+
             _snapshots.Add(snap);
-            if (_snapshots.Count > maxSnapshots)
-                _snapshots.RemoveAt(0);
+            if (_snapshots.Count > 100) _snapshots.RemoveAt(0);
 
-            _entries.Insert(0, new GameLogEntry
-            {
-                TimestampUtc = snap.TimestampUtc,
-                Reason = snap.Reason,
-                Phase = snap.Phase,
-                SnapshotIndex = _snapshots.Count - 1
-            });
-
-            if (_entries.Count > 200)
-                _entries.RemoveAt(200);
+            _currentIndex = _snapshots.Count - 1;
         }
     }
 
-    public static bool TryPopSnapshot(out GameSnapshot snapshot)
+    public static GameSnapshot? GetSnapshot(int index)
     {
         lock (_lock)
         {
-            if (_snapshots.Count == 0)
-            {
-                snapshot = null!;
-                return false;
-            }
-
-            var idx = _snapshots.Count - 1;
-            snapshot = _snapshots[idx];
-            _snapshots.RemoveAt(idx);
-            return true;
+            if (index < 0 || index >= _snapshots.Count) return null;
+            return _snapshots[index];
         }
     }
 
-    public static void UndoLast(List<PlayerState> players, ref PlayerState dealer, ref GamePhase phase)
+    public static List<(int Index, GameSnapshot Snapshot)> GetAllSnapshots()
     {
         lock (_lock)
         {
-            if (_snapshots.Count == 0) return;
+            return _snapshots.Select((s, i) => (i, s)).ToList();
+        }
+    }
 
-            var lastSnap = _snapshots.Last();
-            _snapshots.RemoveAt(_snapshots.Count - 1);
-            if (_entries.Count > 0) _entries.RemoveAt(0);
+    public static void ApplySnapshot(int index, List<PlayerState> players, ref PlayerState dealer, ref GamePhase phase)
+    {
+        lock (_lock)
+        {
+            var snap = GetSnapshot(index);
+            if (snap == null) return;
 
+            _currentIndex = index;
             players.Clear();
-            foreach (var p in lastSnap.Players) players.Add(p.Clone());
-            dealer = lastSnap.Dealer.Clone();
-            phase = lastSnap.Phase;
+            foreach (var p in snap.Players) players.Add(p.Clone());
+            dealer = snap.Dealer.Clone();
+            DeckManager.RestoreShoe(snap.ShoeState);
+            phase = snap.Phase;
         }
     }
 }

@@ -28,6 +28,10 @@ public partial class BlackJackButtlerWindow
         if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: If a player has DD and got pushed, the DD bet gets pushed too.\nInactive: If a player has DD and got pushed, the DD bet is loosed.");
 
         ImGui.Spacing();
+        if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Collects all results and sends a single compressed message.\nInactive: Sends individual result messages for every player hand.");
+
+        ImGui.Spacing();
         DrawMultiplierInput("Normal Win Multiplier", ref _config.MultiplierNormalWin);
 
         ImGui.Spacing();

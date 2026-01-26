@@ -17,11 +17,17 @@ public partial class BlackJackButtlerWindow
         ImGui.Separator();
 
         ImGui.TextColored(new Vector4(1, 0.5f, 0, 1), $"DEALER - Phase: {GameEngine.CurrentPhase}");
-        if (ImGui.BeginTable("bjb_dealer_table", 9, ImGuiTableFlags.Borders))
+
+        if (ImGui.BeginTable("bjb_dealer_table", 4, ImGuiTableFlags.Borders))
         {
-            SetupTableColumns();
+
+            ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, 150);
+            ImGui.TableSetupColumn("Cards", ImGuiTableColumnFlags.WidthStretch, 1.0f);
+            ImGui.TableSetupColumn("Points", ImGuiTableColumnFlags.WidthFixed, 80);
+            ImGui.TableSetupColumn("Controls", ImGuiTableColumnFlags.WidthFixed, 400);
+
             ImGui.TableNextRow();
-            DrawPlayerRow(_dealer, true);
+            DrawDealerRow();
             ImGui.EndTable();
         }
 
@@ -52,6 +58,28 @@ public partial class BlackJackButtlerWindow
         }
 
         DrawAliasModal();
+    }
+
+    private void DrawDealerRow()
+    {
+        ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, ImGui.GetColorU32(new Vector4(0.05f, 0.05f, 0.05f, 1f)));
+
+        ImGui.PushID("dealer_row");
+
+        ImGui.TableNextColumn();
+        var nameColor = new Vector4(1f, 1f, 0.2f, 1f);
+        ImGui.TextColored(nameColor, _dealer.DisplayName);
+
+        ImGui.TableNextColumn();
+        DrawMultiHandCards(_dealer);
+
+        ImGui.TableNextColumn();
+        DrawMultiHandPoints(_dealer);
+
+        ImGui.TableNextColumn();
+        DrawDealerControls();
+
+        ImGui.PopID();
     }
 
     private void DrawAliasModal()
@@ -114,51 +142,47 @@ public partial class BlackJackButtlerWindow
         var io = ImGui.GetIO();
         bool canStop = io.KeyCtrl && io.KeyShift;
 
-        if (!_isRecognitionActive)
+        var recon_text = IsRecognitionActive ? "● Group Detector" : "○ Group Detector";
+        var auto_deal_text = _config.AutoInitialDeal ? "● Auto Deal" : "○ Auto Deal";
+
+        if (ImGui.Button(recon_text, new Vector2(200, 0)))
         {
-            if (ImGui.Button("Start Recognition", new Vector2(200, 0)))
-            {
-                _isRecognitionActive = true;
-                SyncParty();
-            }
+            IsRecognitionActive = !IsRecognitionActive;
+            SyncParty();
         }
-        else
-        {
-            if (!canStop) ImGui.BeginDisabled();
-            if (ImGui.Button("Stop Recognition", new Vector2(200, 0))) _isRecognitionActive = false;
-            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                ImGui.SetTooltip("Hold down CTRL + Shift");
-            if (!canStop) ImGui.EndDisabled();
-        }
+
         ImGui.SameLine();
-        ImGui.TextDisabled(_isRecognitionActive ? "● Scanning Party..." : "○ Idle");
+
+        bool autoDealActive = _config.AutoInitialDeal;
+        if (autoDealActive) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
+
+        if (ImGui.Button(auto_deal_text))
+        {
+            _config.AutoInitialDeal = !_config.AutoInitialDeal;
+            _save();
+        }
+
+        if (autoDealActive) ImGui.PopStyleColor();
+
+
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Automatically deals the first two cards to players during the Initial Deal phase.");
     }
 
     private void DrawPlayerRow(PlayerState p, bool isDealer)
     {
         uint bgColor;
-        if (isDealer)
-            bgColor = ImGui.GetColorU32(new Vector4(0.05f, 0.05f, 0.05f, 1f));
-        else if (!p.IsActivePlayer)
-            bgColor = ImGui.GetColorU32(new Vector4(0, 0, 0, 1));
-        else if (p.IsCurrentTurn)
-            bgColor = ImGui.GetColorU32(new Vector4(0.0f, 0.25f, 0.0f, 1f));
-        else if (p.IsActivePlayer && !p.IsInParty && !p.IsDebugPlayer)
-            bgColor = ImGui.GetColorU32(new Vector4(0.25f, 0.1f, 0.05f, 1f));
-        else if (p.IsOnHold)
-            bgColor = ImGui.GetColorU32(new Vector4(0.15f, 0.15f, 0.15f, 1f));
-        else
-            bgColor = ImGui.GetColorU32(new Vector4(0.0f, 0.0f, 0.2f, 1f));
+        if (!p.IsActivePlayer) bgColor = ImGui.GetColorU32(new Vector4(0, 0, 0, 1));
+        else if (p.IsCurrentTurn) bgColor = ImGui.GetColorU32(new Vector4(0.0f, 0.25f, 0.0f, 1f));
+        else if (p.IsOnHold) bgColor = ImGui.GetColorU32(new Vector4(0.15f, 0.15f, 0.15f, 1f));
+        else bgColor = ImGui.GetColorU32(new Vector4(0.0f, 0.0f, 0.2f, 1f));
 
         ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, bgColor);
-
-        ImGui.PushID(isDealer ? "dealer" : p.Name);
+        ImGui.PushID(p.Name);
 
         ImGui.TableNextColumn();
-        if (!isDealer && p.IsActivePlayer)
-        {
-            if (ImGui.Button($"A##alias_btn_{p.UIID}"))
-            {
+        if (p.IsActivePlayer) {
+            if (ImGui.Button($"A##alias_btn_{p.UIID}")) {
                 _editingAliasPlayer = p;
                 _aliasInputBuffer = !string.IsNullOrWhiteSpace(p.Alias) ? p.Alias : p.Name;
                 _triggerAliasPopup = true;
@@ -166,69 +190,34 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.TableNextColumn();
-        if (!isDealer)
-        {
-            if (!p.IsActivePlayer) { if (ImGui.Button($">##{p.UIID}", new Vector2(-1, 0))) p.IsActivePlayer = true; }
-            else { if (ImGui.Button($"X##{p.UIID}", new Vector2(-1, 0))) { p.IsActivePlayer = false; p.IsCurrentTurn = false; if (!p.IsInParty && p.Bank == 0) _players.Remove(p); } }
-        }
+        if (!p.IsActivePlayer) { if (ImGui.Button($">##{p.UIID}", new Vector2(-1, 0))) p.IsActivePlayer = true; }
+        else { if (ImGui.Button($"X##{p.UIID}", new Vector2(-1, 0))) { p.IsActivePlayer = false; p.IsCurrentTurn = false; } }
 
         ImGui.TableNextColumn();
-        if (!isDealer && p.IsActivePlayer) {
-            var phase = GameEngine.CurrentPhase;
-            bool canToggleHold = phase == GamePhase.Waiting || phase == GamePhase.Payout;
-            canToggleHold = true;
-
-            if (!canToggleHold) ImGui.BeginDisabled();
-
+        if (p.IsActivePlayer) {
             if (p.IsOnHold) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.2f, 0.2f, 1f));
             if (ImGui.Button($"H##hold_{p.UIID}")) { p.IsOnHold = !p.IsOnHold; _save(); }
             if (p.IsOnHold) ImGui.PopStyleColor();
-
-            if (!canToggleHold) ImGui.EndDisabled();
         }
 
         ImGui.TableNextColumn();
-        var nameColor = p.IsActivePlayer ? new Vector4(1, 1, 1, 1) : new Vector4(0.5f, 0.5f, 0.5f, 1f);
-        if (p.IsOnHold) nameColor = new Vector4(0.5f, 0.5f, 0.5f, 0.8f);
-        if (p.IsCurrentTurn) nameColor = new Vector4(1f, 1f, 0.2f, 1f);
+        var nameColor = p.IsCurrentTurn ? new Vector4(1f, 1f, 0.2f, 1f) : new Vector4(1, 1, 1, 1);
         ImGui.TextColored(nameColor, p.DisplayName);
-        if (!p.IsDebugPlayer && !p.IsInParty && p.IsActivePlayer && !isDealer)
-            DrawOfflineUnderline();
 
-        if (p.IsActivePlayer)
-        {
-            ImGui.TableNextColumn();
-            if (isDealer) { ImGui.Text("-"); }
-            else
-            {
-                ImGui.SetNextItemWidth(-1);
-                if (ImGui.InputLong($"##bank_{p.UIID}", ref p.Bank, 1000, 10000)) _save();
-            }
+        ImGui.TableNextColumn();
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.InputLong($"##bank_{p.UIID}", ref p.Bank, 1000, 10000)) _save();
 
-            ImGui.TableNextColumn();
-            if (isDealer)
-            {
-                ImGui.Text("-");
-            }
-            else
-            {
-                ImGui.SetNextItemWidth(-1);
-                bool shouldHighlight = p.HighlightBet;
-                if (shouldHighlight) ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(0.6f, 0.4f, 0, 1));
-                if (ImGui.InputLong($"##bet_{p.UIID}", ref p.CurrentBet, 500, 5000)) { p.HighlightBet = false; _save(); }
-                if (shouldHighlight) ImGui.PopStyleColor();
-            }
+        ImGui.TableNextColumn();
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.InputLong($"##bet_{p.UIID}", ref p.CurrentBet, 500, 5000)) _save();
 
-            ImGui.TableNextColumn();
-            DrawMultiHandCards(p);
-            ImGui.TableNextColumn();
-            DrawMultiHandPoints(p);
-
-            ImGui.TableNextColumn();
-            if (isDealer) DrawDealerControls();
-            else DrawPlayerControls(p);
-        }
-        else { for (int i = 0; i < 5; i++) ImGui.TableNextColumn(); }
+        ImGui.TableNextColumn();
+        DrawMultiHandCards(p);
+        ImGui.TableNextColumn();
+        DrawMultiHandPoints(p);
+        ImGui.TableNextColumn();
+        DrawPlayerControls(p);
 
         ImGui.PopID();
     }
@@ -244,28 +233,69 @@ public partial class BlackJackButtlerWindow
                 else ImGui.Text(" - ");
                 continue;
             }
-            var cardStr = string.Join("", cards.Select(c => c switch {
-                1 => "A",
-                11 => "J",
-                12 => "Q",
-                13 => "K",
-                _ => c.ToString()
-            }));
 
-            if (p.IsCurrentTurn && p.CurrentHandIndex == i) ImGui.TextColored(new Vector4(1, 1, 0, 1), $"[{cardStr}]");
-            else ImGui.Text($" {cardStr} ");
+            foreach (var card in cards)
+            {
+                Vector4 color = (card.Suit == CardSuit.Diamonds || card.Suit == CardSuit.Hearts)
+                    ? new Vector4(1, 0.3f, 0.3f, 1)
+                    : new Vector4(0.9f, 0.9f, 0.9f, 1);
+
+                ImGui.TextColored(color, card.ToString());
+                ImGui.SameLine(0, 4);
+            }
+            ImGui.Text(" ");
         }
     }
 
     private void DrawMultiHandPoints(PlayerState p)
     {
         if (p.Hands.Count == 0) { ImGui.Text("-"); return; }
+
         for (int i = 0; i < p.Hands.Count; i++)
         {
-            if (p.Hands[i].Cards.Count == 0) { ImGui.Text("-"); continue; }
+            var hand = p.Hands[i];
+            if (hand.Cards.Count == 0) { ImGui.Text("-"); continue; }
+
             var (min, max) = p.CalculatePoints(i);
-            var display = max.HasValue ? $"{min}/{max}" : $"{min}";
-            ImGui.Text(display);
+            int best = max.HasValue ? max.Value : min;
+
+            if (best == 21)
+            {
+                if (hand.IsNaturalBlackJack)
+                {
+                    ImGui.TextColored(new Vector4(0.0f, 1.0f, 0.0f, 1.0f), "BJ");
+                    if (ImGui.IsItemHovered()) ImGui.SetTooltip("Natural BlackJack (2 Cards)");
+                }
+                else
+                {
+                    ImGui.TextColored(new Vector4(1.0f, 1.0f, 0.0f, 1.0f), "BJ");
+                    if (ImGui.IsItemHovered()) ImGui.SetTooltip("Dirty BlackJack (3+ Cards)");
+                }
+            }
+            else if (hand.IsBust)
+            {
+                var color = new Vector4(1.0f, 0.2f, 0.2f, 1.0f);
+                ImGui.TextColored(color, $"{best}");
+
+                Vector2 minPos = ImGui.GetItemRectMin();
+                Vector2 maxPos = ImGui.GetItemRectMax();
+
+                float midY = minPos.Y + (maxPos.Y - minPos.Y) * 0.5f;
+
+                ImGui.GetWindowDrawList().AddLine(
+                    new Vector2(minPos.X, midY),
+                    new Vector2(maxPos.X, midY),
+                    ImGui.GetColorU32(color),
+                    1.5f
+                );
+
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip("Bust!");
+            }
+            else
+            {
+                var display = max.HasValue ? $"{min}/{max}" : $"{min}";
+                ImGui.Text(display);
+            }
         }
     }
 
@@ -328,9 +358,9 @@ public partial class BlackJackButtlerWindow
             if (canHit && currentHand.Cards.Count == 2 && p.Hands.Count < _config.MaxHandsPerPlayer)
             {
                 if (_config.IdenticalSplitOnly)
-                canSplit = currentHand.Cards[0] == currentHand.Cards[1];
+                canSplit = currentHand.Cards[0].Value == currentHand.Cards[1].Value;
                 else
-                canSplit = PlayerState.GetCardScoreValue(currentHand.Cards[0]) == PlayerState.GetCardScoreValue(currentHand.Cards[1]);
+                canSplit = PlayerState.GetCardScoreValue(currentHand.Cards[0].Value) == PlayerState.GetCardScoreValue(currentHand.Cards[1].Value);
             }
 
             bool canStand = !currentHand.IsStand && !currentHand.IsBust;
@@ -461,14 +491,14 @@ public partial class BlackJackButtlerWindow
     private void CreateTestData()
     {
         _players.RemoveAll(p => p.IsDebugPlayer);
-        _players.Add(new PlayerState { Name = "[DBG] User 1", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 100 });
-        _players.Add(new PlayerState { Name = "[DBG] User 2", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 500 });
-        _players.Add(new PlayerState { Name = "[DBG] User 3", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 1000 });
-        _players.Add(new PlayerState { Name = "[DBG] User 4", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 2000 });
-        _players.Add(new PlayerState { Name = "[DBG] User 5", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 3000 });
-        _players.Add(new PlayerState { Name = "[DBG] User 6", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 4000 });
-        _players.Add(new PlayerState { Name = "[DBG] User 7", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 5000 });
-        _players.Add(new PlayerState { Name = "[DBG] User 8", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 6000 });
-        _players.Add(new PlayerState { Name = "[DBG] User 9", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 7000 });
+        _players.Add(new PlayerState { Name = "Test Player A", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 100 });
+        _players.Add(new PlayerState { Name = "Test Player B", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 500 });
+        _players.Add(new PlayerState { Name = "Test Player C", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 1000 });
+        _players.Add(new PlayerState { Name = "Test Player D", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 2000 });
+        _players.Add(new PlayerState { Name = "Test Player E", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 3000 });
+        _players.Add(new PlayerState { Name = "Test Player F", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 4000 });
+        _players.Add(new PlayerState { Name = "Test Player G", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 5000 });
+        _players.Add(new PlayerState { Name = "Test Player H", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 6000 });
+        _players.Add(new PlayerState { Name = "Test Player I", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 7000 });
     }
 }

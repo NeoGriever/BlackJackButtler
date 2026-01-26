@@ -15,6 +15,35 @@ public static class CommandExecutor
     private static bool _isRunning = false;
     public static bool IsRunning => _isRunning;
 
+    private static string ProcessContextTokens(string text, PlayerState? pState, string targetName)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+
+        string[] resVars = { "winners", "pushed", "loosers", "busted", "results" };
+        foreach (var varName in resVars)
+        {
+            var v = VariableManager.Variables.FirstOrDefault(x => x.Name.Equals(varName, StringComparison.OrdinalIgnoreCase));
+            if (v != null) text = text.Replace($"<{varName}>", v.Value);
+        }
+
+        text = text.Replace("<t>", pState?.DisplayName ?? targetName);
+
+        if (pState != null)
+        {
+            if (text.Contains("<points>"))
+            {
+                var (min, max) = pState.CalculatePoints(pState.CurrentHandIndex);
+                text = text.Replace("<points>", max.HasValue ? $"{min}/{max}" : $"{min}");
+            }
+
+            string cardString = pState.GetCardsString(pState.CurrentHandIndex);
+            text = text.Replace("<cards>", cardString);
+            text = text.Replace("${playerCards}", cardString);
+        }
+
+        return text;
+    }
+
     private static string ReplacePlayerScoreFirst(string text)
     {
         if (!text.Contains("+{PlayerScore}", StringComparison.Ordinal))
@@ -42,15 +71,8 @@ public static class CommandExecutor
 
             var msg = batch.GetNextMessage() ?? string.Empty;
 
-            msg = msg.Replace("<t>", pState?.DisplayName ?? targetPlayerName);
-            if (msg.Contains("<points>") && pState != null)
-            {
-                var result = pState.CalculatePoints(pState.CurrentHandIndex);
-                string pointsStr = result.Max.HasValue ? $"{result.Min}/{result.Max}" : $"{result.Min}";
-                msg = msg.Replace("<points>", pointsStr);
-            }
+            msg = ProcessContextTokens(msg, pState, targetPlayerName);
             msg = ReplacePlayerScoreFirst(msg);
-
             msg = VariableManager.ProcessMessage(msg);
 
             return msg;
@@ -59,7 +81,6 @@ public static class CommandExecutor
 
     public static async Task ExecuteGroup(string groupName, string targetPlayerName, Configuration cfg)
     {
-
         var window = Plugin.Instance.GetMainWindow();
         window.AddDebugLog($"[Executor] Start Chain: {groupName} -> {targetPlayerName}");
         var players = window.GetPlayers();
@@ -88,27 +109,24 @@ public static class CommandExecutor
             try
             {
                 window.AddDebugLog($"[Executor] Processing Step {step}: {cmd.Text}");
-                string processedText = cmd.Text.Replace("<t>", pState?.DisplayName ?? targetPlayerName);
 
-                if (processedText.Contains("<points>") && pState != null)
-                {
-                    var (min, max) = pState.CalculatePoints(pState.CurrentHandIndex);
-                    string pointsStr = max.HasValue ? $"{min}/{max}" : $"{min}";
-                    processedText = processedText.Replace("<points>", pointsStr);
-                }
+                string processedText = ProcessContextTokens(cmd.Text, pState, targetPlayerName);
 
                 processedText = ReplacePlayerScoreFirst(processedText);
                 processedText = ReplaceMessageStacks(processedText, cfg, targetPlayerName, pState);
+
                 processedText = VariableManager.ProcessMessage(processedText);
 
                 window.AddDebugLog($"[Executor] Final Text Step {step}: {processedText}");
 
                 ChatCommandRouter.Send(processedText, cfg, $"{groupName}:{step}");
 
-                if (cmd.Delay > 0)
+                float effectiveDelay = Plugin.IsDebugMode ? 0.2f : cmd.Delay;
+
+                if (effectiveDelay > 0)
                 {
-                    window.AddDebugLog($"[Executor] Delaying {cmd.Delay}s...");
-                    await Task.Delay(TimeSpan.FromSeconds(cmd.Delay));
+                    window.AddDebugLog($"[Executor] Delaying {effectiveDelay}s...");
+                    await Task.Delay(TimeSpan.FromSeconds(effectiveDelay));
                 }
             }
             catch (Exception ex)
@@ -126,50 +144,9 @@ public static class CommandExecutor
         if (string.IsNullOrWhiteSpace(text))
             return text;
 
-        text = text.Replace("<t>", pState?.DisplayName ?? targetPlayerName);
-
-        if (text.Contains("+{PlayerScore}", StringComparison.Ordinal))
-        {
-            if (GameEngine.TryGetBestScoreForCurrentTarget(out var best))
-                text = text.Replace("+{PlayerScore}", best.ToString(CultureInfo.InvariantCulture));
-            else
-                text = text.Replace("+{PlayerScore}", string.Empty);
-        }
-
-        text = StackTokenRegex.Replace(text, m =>
-        {
-            var stackName = m.Groups[1].Value.Trim();
-            if (string.IsNullOrWhiteSpace(stackName))
-                return string.Empty;
-
-            var batch = cfg.MessageBatches
-                .FirstOrDefault(b => b.Name.Equals(stackName, StringComparison.OrdinalIgnoreCase));
-
-            if (batch == null)
-                return string.Empty;
-
-            var msg = batch.GetNextMessage() ?? string.Empty;
-
-            msg = msg.Replace("<t>", pState?.DisplayName ?? targetPlayerName);
-            if (msg.Contains("<points>") && pState != null)
-            {
-                var (min, max) = pState.CalculatePoints(pState.CurrentHandIndex);
-                string pointsStr = max.HasValue ? $"{min}/{max}" : $"{min}";
-                msg = msg.Replace("<points>", pointsStr);
-            }
-
-            if (msg.Contains("+{PlayerScore}", StringComparison.Ordinal))
-            {
-                if (GameEngine.TryGetBestScoreForCurrentTarget(out var best2))
-                    msg = msg.Replace("+{PlayerScore}", best2.ToString(CultureInfo.InvariantCulture));
-                else
-                    msg = msg.Replace("+{PlayerScore}", string.Empty);
-            }
-
-            msg = VariableManager.ProcessMessage(msg);
-            return msg;
-        });
-
+        text = ProcessContextTokens(text, pState, targetPlayerName);
+        text = ReplacePlayerScoreFirst(text);
+        text = ReplaceMessageStacks(text, cfg, targetPlayerName, pState);
         text = VariableManager.ProcessMessage(text);
 
         return text;

@@ -69,7 +69,7 @@ public partial class BlackJackButtlerWindow
             ImGui.PushID(i);
             if (isStd) ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.1f, 0.3f, 0.1f, 1f));
 
-            bool open = ImGui.CollapsingHeader(isStd ? $"● {batch.Name}" : batch.Name);
+            bool open = ImGui.CollapsingHeader($"{(isStd ? "● " : "")}{batch.Name}###batch_{i}");
 
             ImGui.SameLine(ImGui.GetContentRegionAvail().X - 120);
             ImGui.SetNextItemWidth(120);
