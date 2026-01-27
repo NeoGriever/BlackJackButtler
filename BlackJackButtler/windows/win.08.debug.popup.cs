@@ -1,8 +1,8 @@
 using System;
+using System.Text;
 using System.Numerics;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
 
@@ -21,10 +21,7 @@ public class DebugLogWindow : Window
 
     public override void Draw()
     {
-        if (ImGui.SmallButton("Clear Log"))
-        {
-            lock(_main.GetLogLock()) _main.GetDebugLog().Clear();
-        }
+        if (ImGui.SmallButton("Clear Log")) { lock(_main.GetLogLock()) _main.GetDebugLog().Clear(); }
 
         ImGui.SameLine();
         if (ImGui.SmallButton("Copy All"))
