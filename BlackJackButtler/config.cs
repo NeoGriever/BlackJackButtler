@@ -5,6 +5,7 @@ using Dalamud.Configuration;
 using BlackJackButtler.Regex;
 
 namespace BlackJackButtler;
+public enum UserLevel { Beginner, Advanced, Dev }
 
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
@@ -33,6 +34,8 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool AutoInitialDeal = false;
     public bool SmallResult = false;
+
+    public UserLevel CurrentLevel = UserLevel.Beginner;
 
     public static string[] StandardBatchNames => DefaultsManager.GetDefaultMessages().Select(m => m.Name).ToArray();
     public static string[] StandardRegexNames => DefaultsManager.GetDefaultRegex().Select(r => r.Name).ToArray();

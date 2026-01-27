@@ -132,6 +132,10 @@ public static class DefaultsManager
             "StateHS":   [
                 { "Text": "/p #{Player State Messages HS} <se.7>", "Delay": 0.8 }
             ],
+            "PlayerDDForcedStand": [
+                { "Text": "/p #{Player DD Forced Stand Messages}", "Delay": 1.2 },
+                { "Text": "/p #{Dividor}", "Delay": 0.8 }
+            ],
             "ResultSmall": [
                 { "Text": "/p  Results: <results> ", "Delay": 0.9 }
             ]
@@ -150,17 +154,18 @@ public static class DefaultsManager
             ],
 
             "Player State Messages HSDS":      [
-                " <t> - You have splittable <points> with ${playerCards}. Do you want to [Hit], [Stand], [Double Down] or [Split]? "
+                " <t> - You have splittable <points> with ${playerCards}. Dealer has <dealerpoints>. Do you want to [Hit], [Stand], [Double Down] or [Split]? "
             ],
 
             "Player State Messages HSD":       [
-                " <t> - You have <points> with ${playerCards}. Do you want to [Hit], [Stand] or [Double Down]? "
+                " <t> - You have <points> with ${playerCards}. Dealer has <dealerpoints>. Do you want to [Hit], [Stand] or [Double Down]? "
             ],
-
             "Player State Messages HS":        [
-                " <t> - You have <points> with ${playerCards}. Do you want to [Hit] or [Stand]? "
+                " <t> - You have <points> with ${playerCards}. Dealer has <dealerpoints>. Do you want to [Hit] or [Stand]? "
             ],
-
+            "Player DD Forced Stand Messages": [
+                " Now you have <points> with ${playerCards}. Since it was a Double Down, this hand is now locked. "
+            ],
             "Player Draw Messages":            [
                 " <t> want another card? Then <t> will get another card~. ",
                 " <t> want a card - here it is. ",

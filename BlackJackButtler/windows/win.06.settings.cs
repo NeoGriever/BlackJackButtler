@@ -12,6 +12,19 @@ public partial class BlackJackButtlerWindow
         ImGui.TextUnformatted("Gameplay Settings");
         ImGui.Separator();
 
+        ImGui.TextUnformatted("User Level");
+        ImGui.SetNextItemWidth(200f);
+        int level = (int)_config.CurrentLevel;
+        if (ImGui.Combo("##user_level", ref level, "Beginner\0Advanced\0Dev\0"))
+        {
+            _config.CurrentLevel = (UserLevel)level;
+            _save();
+        }
+        ImGui.Separator();
+
+        ImGui.TextUnformatted("Gameplay Settings");
+        ImGui.Spacing();
+
         if (ImGui.Checkbox("First Deal, then Play", ref _config.FirstDealThenPlay)) _save();
         if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: First deal every player their hands.\nInactive: Deal hand and direct play per player.");
 

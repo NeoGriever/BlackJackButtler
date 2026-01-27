@@ -71,7 +71,7 @@ public static partial class GameEngine
 
     public static void NextTurn(List<PlayerState> players, Configuration cfg)
     {
-        var activePlayers = players.Where(p => p.IsActivePlayer).ToList();
+        var activePlayers = players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
         if (activePlayers.Count == 0) { CurrentPhase = GamePhase.Waiting; return; }
 
         var current = activePlayers.FirstOrDefault(p => p.IsCurrentTurn);

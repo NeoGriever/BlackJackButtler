@@ -110,7 +110,7 @@ public sealed class Plugin : IDalamudPlugin
             {
                 var players = mainWindow.GetPlayers();
                 var currentPlayer = players.FirstOrDefault(p => p.IsCurrentTurn);
-                if (currentPlayer != null && currentPlayer.IsActivePlayer && !currentPlayer.HasInitialHandDealt)
+                if (currentPlayer != null && currentPlayer.IsActivePlayer && !currentPlayer.IsOnHold && !currentPlayer.HasInitialHandDealt)
                 {
                     Task.Run(() => GameEngine.ActionDealHand(currentPlayer, Configuration, players));
                 }
