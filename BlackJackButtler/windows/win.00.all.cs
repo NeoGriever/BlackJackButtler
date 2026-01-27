@@ -49,6 +49,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         Size = new Vector2(1150, 650);
         SizeCondition = ImGuiCond.FirstUseEver;
 
+        RespectCloseHotkey = false;
+
         TitleBarButtons.Add(new TitleBarButton
         {
             Icon = FontAwesomeIcon.Globe,
@@ -70,12 +72,24 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     public List<PlayerState> GetPlayers() => _players;
     public PlayerState GetDealer() => _dealer;
 
-    public override void Draw()
+    /// <summary>
+    /// Called continuously by Framework.Update, regardless of which tab is active.
+    /// This ensures game logic (like party sync) runs even when the Main tab isn't visible.
+    /// </summary>
+    public void OnUpdate()
     {
+        // Party sync runs continuously when recognition is active
         if (IsRecognitionActive && (DateTime.Now - _lastSync).TotalMilliseconds > 1000)
         {
             _lastSync = DateTime.Now;
+            SyncParty();
         }
+    }
+
+    public override void Draw()
+    {
+        // NOTE: Moved sync logic to OnUpdate() to ensure it runs regardless of active tab
+        // Draw() should ONLY handle UI rendering, not game logic
 
         var avail = ImGui.GetContentRegionAvail();
         var sidebarWidth = _isSidebarVisible ? 200f : 0f;
