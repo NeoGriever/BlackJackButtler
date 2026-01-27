@@ -2,8 +2,10 @@ using System;
 using System.Numerics;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using BlackJackButtler.Chat;
 
 namespace BlackJackButtler.Windows;
@@ -46,6 +48,20 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
         Size = new Vector2(1150, 650);
         SizeCondition = ImGuiCond.FirstUseEver;
+
+        TitleBarButtons.Add(new TitleBarButton
+        {
+            Icon = FontAwesomeIcon.Globe,
+            Priority = 0,
+            Click = _ =>
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://google.com/",
+                    UseShellExecute = true
+                });
+            }
+        });
     }
 
     public void Dispose() { }
@@ -71,21 +87,17 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             ImGui.SameLine(ImGui.GetWindowWidth() - 30);
             if (ImGui.SmallButton("<##hide_sidebar")) _isSidebarVisible = false;
 
-            ImGui.Separator();
-            NavButton(Page.Main, "Main");
+            var level = _config.CurrentLevel;
 
+            ImGui.Separator();                  NavButton(Page.Main, "Main");
             ImGui.Separator();
-            NavButton(Page.Regexes, "Regex");
-            NavButton(Page.Messages, "Messages");
-            NavButton(Page.Commands, "Commands");
-
-            ImGui.Separator();
-            NavButton(Page.Settings, "Settings");
-
-            ImGui.Separator();
-            NavButton(Page.Vars, "Variables");
-            NavButton(Page.RoundLog, "Round History");
-            NavButton(Page.Debug, "DEBUG");
+            if(level >= UserLevel.Dev)          NavButton(Page.Regexes, "Regex");
+            if(level >= UserLevel.Advanced)     NavButton(Page.Messages, "Messages");
+            if(level >= UserLevel.Advanced)     NavButton(Page.Commands, "Commands");
+            ImGui.Separator();                  NavButton(Page.Settings, "Settings");
+            ImGui.Separator();                  NavButton(Page.RoundLog, "Round History");
+            if(level >= UserLevel.Dev)          NavButton(Page.Vars, "Variables");
+            if(level >= UserLevel.Advanced)     NavButton(Page.Debug, "DEBUG");
 
             ImGui.EndChild();
             ImGui.SameLine();

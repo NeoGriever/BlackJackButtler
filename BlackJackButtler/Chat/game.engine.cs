@@ -270,12 +270,12 @@ public static partial class GameEngine
             var pushList = new List<string>();
             var lossList = new List<string>();
             var bustList = new List<string>();
-            var activeList = players.Where(x => x.IsActivePlayer).ToList();
+            var activeList = players.Where(x => x.IsActivePlayer && !x.IsOnHold).ToList();
 
-            foreach (var p in players.Where(x => x.IsActivePlayer))
+            foreach (var p in players.Where(x => x.IsActivePlayer && !x.IsOnHold))
             {
                 p.IsCurrentTurn = false;
-                string shortName = p.GetShortName(activeList); 
+                string shortName = p.GetShortName(activeList);
 
                 foreach (var hand in p.Hands)
                 {
@@ -326,7 +326,7 @@ public static partial class GameEngine
         }
         else
         {
-            foreach (var p in players.Where(x => x.IsActivePlayer))
+            foreach (var p in players.Where(x => x.IsActivePlayer && !x.IsOnHold))
             {
                 p.IsCurrentTurn = false;
 
