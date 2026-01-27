@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Numerics;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +23,7 @@ public partial class BlackJackButtlerWindow
         {
             _debugLog.Add(new DebugEntry(line, isChat));
             while (_debugLog.Count > 15000)
-                _debugLog.RemoveAt(0);
+            _debugLog.RemoveAt(0);
         }
 
         if (!Plugin.IsDebugMode) return;
@@ -120,39 +121,35 @@ public partial class BlackJackButtlerWindow
     public object GetLogLock() => _logLock;
 
     private void CopyDebugLogToClipboard()
+    {
+        List<DebugEntry> logCopy;
+        lock (_logLock) logCopy = _debugLog.ToList();
+
+        // Filter based on verbose mode
+        var filteredLog = logCopy.Where(entry => _verboseMode || entry.IsChat).ToList();
+
+        if (filteredLog.Count == 0)
         {
-            List<DebugEntry> logCopy;
-            lock (_logLock) logCopy = _debugLog.ToList();
-
-            // Filter based on verbose mode
-            var filteredLog = logCopy.Where(entry => _verboseMode || entry.IsChat).ToList();
-
-            if (filteredLog.Count == 0)
-            {
-                ImGui.SetClipboardText("(No log entries to copy)");
-                return;
-            }
-
-            // Build string in chronological order (oldest first)
-            var sb = new System.Text.StringBuilder(filteredLog.Count * 100);
-            sb.AppendLine($"=== BlackJack Buttler Debug Log ===");
-            sb.AppendLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-            sb.AppendLine($"Total Entries: {filteredLog.Count}");
-            sb.AppendLine($"Verbose Mode: {(_verboseMode ? "ON" : "OFF")}");
-            sb.AppendLine($"=====================================");
-            sb.AppendLine();
-
-            foreach (var entry in filteredLog)
-            {
-                sb.AppendLine(entry.Text);
-            }
-
-            ImGui.SetClipboardText(sb.ToString());
-
-            AddDebugLog($"[DEBUG] Copied {filteredLog.Count} log entries to clipboard");
+            ImGui.SetClipboardText("(No log entries to copy)");
+            return;
         }
 
-        public List<DebugEntry> GetDebugLog() => _debugLog;
-        public object GetLogLock() => _logLock;
+        // Build string in chronological order (oldest first)
+        var sb = new StringBuilder(filteredLog.Count * 100);
+        sb.AppendLine($"=== BlackJack Buttler Debug Log ===");
+        sb.AppendLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine($"Total Entries: {filteredLog.Count}");
+        sb.AppendLine($"Verbose Mode: {(_verboseMode ? "ON" : "OFF")}");
+        sb.AppendLine($"=====================================");
+        sb.AppendLine();
+
+        foreach (var entry in filteredLog)
+        {
+            sb.AppendLine(entry.Text);
+        }
+
+        ImGui.SetClipboardText(sb.ToString());
+
+        AddDebugLog($"[DEBUG] Copied {filteredLog.Count} log entries to clipboard");
     }
 }
