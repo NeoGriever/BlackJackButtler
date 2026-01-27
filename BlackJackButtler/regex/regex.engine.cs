@@ -72,8 +72,9 @@ public static class RegexEngine
                         if (card.HasValue)
                         {
                             LastDetectedCardValue = card.Value;
-                            GameEngine.ApplyCardToCurrentTarget(card.Value, players, dealer);
-                            GameEngine.HandlePostCardEvents(cfg, players, dealer);
+                            // Use the new DiceResultHandler instead of calling GameEngine methods directly
+                            // This ensures proper synchronization with the CommandExecutor
+                            DiceResultHandler.HandleDiceResult(card.Value, cfg, players, dealer);
                         }
                     }
                 }

@@ -43,6 +43,14 @@ public static partial class GameEngine
         try
         {
             await CommandExecutor.ExecuteGroup("DealStart", dealer.Name, cfg);
+
+            // Initialize dealerpoints variable with dealer's opening card
+            if (dealer.Hands.Count > 0 && dealer.Hands[0].Cards.Count > 0)
+            {
+                var (min, max) = dealer.CalculatePoints(0);
+                int dealerScore = (max.HasValue && max.Value <= 21) ? max.Value : min;
+                VariableManager.SetVariable("dealerpoints", dealerScore.ToString());
+            }
         }
         finally
         {
@@ -150,7 +158,18 @@ public static partial class GameEngine
             else
             {
                 CurrentPhase = GamePhase.DealerTurn;
-                if (_ctxDealer != null) TargetPlayer(_ctxDealer.Name);
+                if (_ctxDealer != null)
+                {
+                    TargetPlayer(_ctxDealer.Name);
+
+                    // Update dealerpoints when dealer turn starts
+                    if (_ctxDealer.Hands.Count > 0)
+                    {
+                        var (min, max) = _ctxDealer.CalculatePoints(0);
+                        int dealerScore = (max.HasValue && max.Value <= 21) ? max.Value : min;
+                        VariableManager.SetVariable("dealerpoints", dealerScore.ToString());
+                    }
+                }
             }
         }
     }
@@ -264,7 +283,7 @@ public static partial class GameEngine
         finally { ClearForcedRecipient(); }
     }
 
-    private static string GetStatePromptGroup(PlayerState p, Configuration cfg)
+    public static string GetStatePromptGroup(PlayerState p, Configuration cfg)
     {
         if (p.Hands.Count == 0) return string.Empty;
         var hand = p.Hands[p.CurrentHandIndex];
