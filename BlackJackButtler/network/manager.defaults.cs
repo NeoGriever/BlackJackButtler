@@ -137,36 +137,62 @@ public static class DefaultsManager
                 { "Text": "/p #{Dividor}", "Delay": 0.8 }
             ],
             "ResultSmall": [
-                { "Text": "/p  Results: <results> ", "Delay": 0.9 }
+                { "Text": "/p #{Match Results}", "Delay": 0.9 }
             ]
         },
         "Messages": {
-            "Dividor":                         [
+            "Dividor": [
                 "========================="
             ],
 
-            "Player Deal Hand":                [
+            "Match Results": [
+                " Results: <results> ",
+                " This round is over. The battlefield looks like this: <results> ",
+                " After this round, we have the results: <results> ",
+                " Round complete. Here's how everyone fared: <results> ",
+                " The dust settles - time to count the chips: <results> ",
+                " Cards are down, wallets are open. Results: <results> ",
+                " That's a wrap on this round. Final standings: <results> ",
+                " Another round in the books. Here's the damage: <results> ",
+                " Alright, let's see who's celebrating and who's crying: <results> ",
+                " Round concluded. Winners and losers revealed: <results> ",
+                " The table speaks its verdict: <results> ",
+                " Fortune has made her decision this round: <results> ",
+                " Time to face the music. Round results: <results> ",
+                " Cards never lie - here's what happened: <results> ",
+                " The house has spoken. Results: <results> ",
+                " Round's over. Let's see who beat the odds: <results> ",
+                " Another spin of fate complete. Results: <results> ",
+                " Chips counted, tears shed. Here's the breakdown: <results> ",
+                " The verdict is in for this round: <results> ",
+                " Round finished. Time for the truth: <results> "
+            ],
+
+            "Player Deal Hand": [
                 " Here are your cards now, <t>. ",
                 " Let me deal your hand, <t>. ",
                 " Two cards for you, <t>. ",
-                " What does the cards say for <t>? ",
-                " <t> get's 2 cards. "
+                " What do the cards say for <t>? ",
+                " <t> gets 2 cards. "
             ],
 
-            "Player State Messages HSDS":      [
-                " <t> - You have splittable <points> with ${playerCards}. Dealer has <dealerpoints>. Do you want to [Hit], [Stand], [Double Down] or [Split]? "
+            "Player State Messages HSDS": [
+                " <t> - You have splittable <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Double Down] or [Split]? "
             ],
 
-            "Player State Messages HSD":       [
-                " <t> - You have <points> with ${playerCards}. Dealer has <dealerpoints>. Do you want to [Hit], [Stand] or [Double Down]? "
+            "Player State Messages HSD": [
+                " <t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand] or [Double Down]? "
             ],
-            "Player State Messages HS":        [
-                " <t> - You have <points> with ${playerCards}. Dealer has <dealerpoints>. Do you want to [Hit] or [Stand]? "
+
+            "Player State Messages HS": [
+                " <t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit] or [Stand]? "
             ],
+
             "Player DD Forced Stand Messages": [
                 " Now you have <points> with ${playerCards}. Since it was a Double Down, this hand is now locked. "
             ],
-            "Player Draw Messages":            [
+
+            "Player Draw Messages": [
                 " <t> want another card? Then <t> will get another card~. ",
                 " <t> want a card - here it is. ",
                 " <t> decides to hit. ",
@@ -174,12 +200,12 @@ public static class DefaultsManager
                 " I'll draw another card for <t>. "
             ],
 
-            "Player Stand Messages":           [
+            "Player Stand Messages": [
                 " <t> decides to keep the given hand. Good Luck. ",
                 " This hand stands now on <points> for <t>. "
             ],
 
-            "Player DD Messages":              [
+            "Player DD Messages": [
                 " <t> want to play a risky game? - DOUBLE DOWN! - Take this card and live with the consequences~. ",
                 " Double Down? Did you say DOUBLE DOWN, <t>? - Well, you want it, you get it! ",
                 " Double bet, double chance. Let's see, what fortuna wanna do with <t>'s hand now. ",
@@ -187,18 +213,18 @@ public static class DefaultsManager
                 " <t> wants another card. The last card for <t>'s hand. - Rolling drumsssss~. "
             ],
 
-            "Player DD Messages Stand":        [
-                " <t> wanna stand. Keep your hand now and good luck~. ",
-                " The choice is clear. This hand stays at <points> for <t>"
+            "Player DD Messages Stand": [
+                " <t> drew the DD card. Hand is now locked at <points>. ",
+                " Double Down complete. <t> stands automatically at <points>. "
             ],
 
-            "Player Split Messages":           [
+            "Player Split Messages": [
                 " <t> splits the hand. Okay let's see~. ",
-                " This two cards getting divided to 2 hands. What will <t> do with them? ",
-                " <t> want to split. Let's gooo~. "
+                " These two cards are getting divided into 2 hands. What will <t> do with them? ",
+                " <t> wants to split. Let's gooo~. "
             ],
 
-            "Player BlackJack Messages":       [
+            "Player BlackJack Messages": [
                 " Wohoo. <t> got a NATURAL BLACKJACK! Congrats! ",
                 " FANTASTIC. A NATURAL BLACKJACK FOR <t>! Congrats! "
             ],
@@ -212,9 +238,9 @@ public static class DefaultsManager
                 " Unbelievable. A BLACKJACK FOR <t>! CONGRATS! "
             ],
 
-            "Player Busts Messages":           [
+            "Player Busts Messages": [
                 " Oh no. <t> got busted with <points>. ",
-                " Thats bad luck. <t> busted with <points>. ",
+                " That's bad luck. <t> busted with <points>. ",
                 " Ouch! <t> busted at <points>. ",
                 " Bust! <t> pushed it to <points> and paid the price. ",
                 " Dealer smiles. <t> went over with <points>. ",
@@ -224,7 +250,7 @@ public static class DefaultsManager
                 " Over 21 alert: <t> landed on <points>. ",
                 " Greed got the best of <t> at <points>. ",
                 " One card too far - <t> ended on <points>. ",
-                " The cards said 'nope.” <t> busted with <points>. ",
+                " The cards said 'nope.' <t> busted with <points>. ",
                 " Risky business - <t> busted at <points>. ",
                 " <t> went full send… to <points>. Bust. ",
                 " The dealer thanks you, <t>: <points> is a bust. ",
@@ -234,7 +260,7 @@ public static class DefaultsManager
                 " <t> hit <points> and instantly regretted it. ",
                 " That last hit was spicy - <t> busted with <points>. ",
                 " Bold move, <t>. <points> is still a bust. ",
-                " Dealer: 'I'll allow it.” Rules: 'No.” <t> has <points>. ",
+                " Dealer: 'I'll allow it.' Rules: 'No.' <t> has <points>. ",
                 " <t> chased 21 and caught <points>. Bust. ",
                 " Congratulations, <t> - you found <points> the hard way. ",
                 " House wins this round: <t> busted with <points>. ",
@@ -295,7 +321,7 @@ public static class DefaultsManager
 
             "Dealer Stands Messages": [
                 " Dealer stands. No more cards - time to settle this. ",
-                " Dealer stays. Let's see who's smiling after this hand. ",
+                " Dealer stays. Let's see who'll be smiling after this hand. ",
                 " Dealer stands - final answer. Showdown time. ",
                 " That's enough for the dealer. Let's compare hands. ",
                 " Dealer stands. The rest is just math and regret. ",
@@ -316,7 +342,7 @@ public static class DefaultsManager
                 " Dealer has BLACKJACK. That escalated quickly. ",
                 " BLACKJACK! Dealer didn't even break a sweat. ",
                 " Dealer blackjack - lucky? maybe. painful? definitely. ",
-                " Dealer shows BLACKJACK. Round went from 'maybe” to 'nope.” ",
+                " Dealer shows BLACKJACK. Round went from 'maybe' to 'nope.' ",
                 " Dealer blackjack. The house always remembers your last bet. ",
                 " BLACKJACK for the dealer - short round, sharp sting. ",
                 " Dealer reveals a perfect 21 - BLACKJACK. ",
@@ -331,7 +357,7 @@ public static class DefaultsManager
                 " Too many hits - dealer explodes with <points>. ",
                 " Dealer drew one card too many and landed on <points>. ",
                 " Dealer busts with <points>. The deck finally fights back. ",
-                " Dealer went past 21 - <points>. That's what we call 'unfortunate.” ",
+                " Dealer went past 21 - <points>. That's what we call 'unfortunate.' ",
                 " Dealer busts at <points>. Suddenly, the table feels lucky. ",
                 " Dealer's confidence just turned into <points>. Bust. ",
                 " Dealer tried to be brave - ended up at <points>. ",
@@ -356,10 +382,10 @@ public static class DefaultsManager
             ],
 
             "Push Messages": [
-                " Push for <t> at <points>. Bet returned - except the DD bet. ",
-                " It's a push: <t> with <points>. Stake back (DD bet excluded). ",
-                " Standoff! <t> pushes with <points>. Refund applies, not the DD bet. ",
-                " No winner - push at <points> for <t>. Bet back, DD bet stays. "
+                " Push for <t> at <points>. Full bet returned. ",
+                " It's a push: <t> with <points>. All stakes back. ",
+                " Standoff! <t> pushes with <points>. Complete refund. ",
+                " No winner - push at <points> for <t>. Total bet returned. "
             ],
 
             "Bust Messages": [

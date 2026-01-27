@@ -75,6 +75,14 @@ public static partial class GameEngine
             if (hand.IsNaturalBlackJack)
                 hand.IsStand = true;
         }
+        bool isDealer = ReferenceEquals(target, dealer) ||
+                       target.Name.Equals(dealer.Name, StringComparison.OrdinalIgnoreCase);
+
+        if (isDealer)
+        {
+            int dealerScore = (max.HasValue && max.Value <= 21) ? max.Value : min;
+            VariableManager.SetVariable("dealerpoints", dealerScore.ToString());
+        }
     }
 
     public static bool TryApplyCardToCurrentTargetFromRuntime(int cardValue)
@@ -131,6 +139,12 @@ public static partial class GameEngine
 
     public static void HandlePostCardEvents(Configuration cfg, List<PlayerState> players, PlayerState dealer)
     {
+        // NOTE: This method is now primarily called by DiceResultHandler
+        // The old direct calls from this method have been moved to DiceResultHandler
+        // to prevent race conditions with the CommandExecutor.
+        // This method is kept for backwards compatibility and for any edge cases
+        // where it might still be called directly.
+
         var targetName = GetCurrentTargetName();
         PlayerState? target =
         (!string.IsNullOrWhiteSpace(targetName) && dealer.Name.Equals(targetName, StringComparison.OrdinalIgnoreCase))
@@ -144,97 +158,8 @@ public static partial class GameEngine
         if (target.CurrentHandIndex < 0 || target.CurrentHandIndex >= target.Hands.Count)
         target.CurrentHandIndex = 0;
 
-        var hand = target.Hands[target.CurrentHandIndex];
-
-        var (min, max) = target.CalculatePoints(target.CurrentHandIndex);
-        var best = (max.HasValue && max.Value <= 21) ? max.Value : min;
-
-        bool isDealer = ReferenceEquals(target, dealer) || target.Name.Equals(dealer.Name, StringComparison.OrdinalIgnoreCase);
-
-        if (isDealer && CurrentPhase == GamePhase.DealerTurn)
-        {
-            if (best == 21)
-            {
-                Task.Run(async () => {
-                    await CommandExecutor.ExecuteGroup("DealerBJ", dealer.Name, cfg);
-                    await EvaluateFinalResults(players, dealer, cfg);
-                });
-                CurrentPhase = GamePhase.Payout;
-                return;
-            }
-
-            if (best > 21 || hand.IsBust)
-            {
-                Task.Run(async () => {
-                    await CommandExecutor.ExecuteGroup("DealerBust", dealer.Name, cfg);
-                    await EvaluateFinalResults(players, dealer, cfg);
-                });
-                CurrentPhase = GamePhase.Payout;
-                return;
-            }
-            return;
-        }
-
-        if (!isDealer)
-        {
-            if (CurrentPhase == GamePhase.InitialDeal)
-            {
-                if (hand.Cards.Count == 2)
-                {
-                    target.HasInitialHandDealt = true;
-
-                    if (best == 21)
-                    {
-                        hand.IsStand = true;
-                        hand.IsNaturalBlackJack = true;
-                        Task.Run(async () => {
-                            await CommandExecutor.ExecuteGroup("PlayerBJ", target.Name, cfg);
-                            NextTurn(players, cfg);
-                        });
-                    }
-                    else
-                    {
-                        NextTurn(players, cfg);
-                    }
-                }
-                return;
-            }
-
-            if (CurrentPhase == GamePhase.PlayersTurn)
-            {
-                if (best > 21) {
-                    hand.IsBust = true;
-                    hand.IsStand = true;
-                    Task.Run(async () => {
-                        await CommandExecutor.ExecuteGroup("PlayerBust", target.Name, cfg);
-                        NextTurn(players, cfg);
-                    });
-                    return;
-                }
-                if (best == 21) {
-                    hand.IsStand = true;
-                    string group = (hand.Cards.Count == 2 && hand.IsNaturalBlackJack) ? "PlayerBJ" : "PlayerDirtyBJ";
-                    Task.Run(async () => {
-                        await CommandExecutor.ExecuteGroup(group, target.Name, cfg);
-                        NextTurn(players, cfg);
-                    });
-                    return;
-                }
-                if (hand.IsDoubleDown) {
-                    hand.IsStand = true;
-                    Task.Run(async () => {
-                        await CommandExecutor.ExecuteGroup("PlayerDDForcedStand", target.Name, cfg);
-                        NextTurn(players, cfg);
-                    });
-                    return;
-                }
-                if (!hand.IsBust && best < 21 && !hand.IsStand)
-                {
-                    string promptGroup = GetStatePromptGroup(target, cfg);
-                    Task.Run(async () => await CommandExecutor.ExecuteGroup(promptGroup, target.DisplayName, cfg));
-                }
-            }
-        }
+        // The actual event handling is now done in DiceResultHandler to ensure
+        // proper synchronization with CommandExecutor
     }
 
     private static async Task ExecutePlayerAction(PlayerState p, string actionName, Configuration cfg, List<PlayerState> players, Func<Task> logic)
