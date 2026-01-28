@@ -1,21 +1,24 @@
 [
-  {
-    "Author": "Valenth Siveria",
-    "Name": "BlackJack Buttler",
-    "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
-    "Description": "/bjb - opens the blackjack buttler tool",
-    "InternalName": "BlackJackButtler",
-    "AssemblyVersion": "1.0.0.1",
-    "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
-    "ApplicableVersion": "any",
-    "DalamudApiLevel": 10,
-    "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/plugins/BlackJackButtler/icon.png",
-    "DownloadLinkInstall": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
-    "DownloadLinkUpdate": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
-    "DownloadLinkTesting": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
-    "LoadPriority": 0,
-    "DownloadCount": 0,
-    "LastUpdate": "0",
-    "Tags": ["BlackJack", "Helper", "Chat"]
-  }
+    {
+        "Author": "Valenth Siveria",
+        "Name": "BlackJack Buttler",
+        "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
+        "Description": "/bjb - opens the blackjack buttler tool",
+        "InternalName": "BlackJackButtler",
+        "Tags": ["BlackJack", "Helper", "Chat"],
+        "AssemblyVersion": "1.0.0.1",
+        "TestingAssemblyVersion": "1.0.0.1",
+        "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
+        "ApplicableVersion": "any",
+        "DalamudApiLevel": 14,
+        "TestingDalamudApiLevel": 14,
+        "IsHide": "False",
+        "IsTestingExclusive": "False",
+        "DownloadCount": 10,
+        "LastUpdate": 0,
+        "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/plugins/BlackJackButtler/icon.png",
+        "DownloadLinkInstall": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
+        "DownloadLinkUpdate": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
+        "DownloadLinkTesting": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip"
+    }
 ]
