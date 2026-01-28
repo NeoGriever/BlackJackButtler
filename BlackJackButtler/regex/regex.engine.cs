@@ -129,7 +129,7 @@ public static class RegexEngine
                 var batch = cfg.MessageBatches.FirstOrDefault(b => b.Name == entry.ActionParam);
                 if (batch != null)
                 {
-                    string rawText = batch.GetNextMessage().Replace("<t>", msg.Name);
+                    string rawText = batch.GetNextMessage(); // Erstmal zum test auslassen ... .Replace("<t>", msg.Name);
                     string processedText = VariableManager.ProcessMessage(rawText);
                     ChatCommandRouter.Send($"/p {processedText}", cfg, $"Batch:{batch.Name}->{msg.Name}");
                 }

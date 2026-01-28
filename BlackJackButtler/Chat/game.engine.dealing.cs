@@ -8,6 +8,11 @@ namespace BlackJackButtler;
 
 public static partial class GameEngine
 {
+    private static PlayerState? _pendingSplitPlayer = null;
+    private static Configuration? _pendingSplitConfig = null;
+    private static List<PlayerState>? _pendingSplitPlayers = null;
+    private static PlayerState? _pendingDDPlayer = null;
+
     public static async Task StartInitialDeal(List<PlayerState> players, Configuration cfg)
     {
         PlayerState? dealer;
@@ -199,6 +204,7 @@ public static partial class GameEngine
                 }
             }
         }
+        SaveSessionIfNeeded(players);
     }
 
     private static void SwitchTurnTo(PlayerState target, List<PlayerState> allActive, Configuration cfg)
@@ -222,6 +228,7 @@ public static partial class GameEngine
             try { await CommandExecutor.ExecuteGroup("Hit", p.Name, cfg); }
             finally { ClearForcedRecipient(); }
         });
+        SaveSessionIfNeeded(players);
     }
 
     public static async Task ActionStand(PlayerState p, Configuration cfg, List<PlayerState> players)
@@ -235,9 +242,50 @@ public static partial class GameEngine
         finally { ClearForcedRecipient(); }
 
         NextTurn(players, cfg);
+        SaveSessionIfNeeded(players);
     }
 
     public static async Task ActionDD(PlayerState p, Configuration cfg, List<PlayerState> players)
+    {
+        if(p.Bank < p.CurrentBet)
+        {
+            long missingAmount = p.CurrentBet - p.Bank;
+            Plugin.Instance.GetMainWindow().OpenDDMoneyPopup(p, missingAmount);
+            _pendingDDPlayer = p;
+            return;
+        }
+
+        await ExecuteActualDD(p, cfg, players);
+    }
+
+    public static async void ContinueDDAfterPayment(PlayerState p, Configuration cfg, List<PlayerState> players)
+    {
+        if (p == null)
+        {
+            Plugin.Log.Error("[BJB] ContinueDDAfterPayment was called with a null player!");
+            return;
+        }
+
+        try
+        {
+            if (p.Bank < p.CurrentBet)
+            {
+                Plugin.Log.Warning($"[DD] Still not enough money for {p.Name}");
+                return;
+            }
+
+            await ExecuteActualDD(p, cfg, players);
+
+            _pendingDDPlayer = null;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[BJB] Error in ContinueDDAfterPayment: {ex}");
+        }
+    }
+
+
+    private static async Task ExecuteActualDD(PlayerState p, Configuration cfg, List<PlayerState> players)
     {
         await ExecutePlayerAction(p, "DD", cfg, players, async () => {
             var hand = p.Hands[p.CurrentHandIndex];
@@ -249,6 +297,7 @@ public static partial class GameEngine
             finally { ClearForcedRecipient(); }
             hand.IsStand = true;
         });
+        SaveSessionIfNeeded(players);
     }
 
     public static async Task ActionSplit(PlayerState p, Configuration cfg, List<PlayerState> players)
@@ -259,11 +308,52 @@ public static partial class GameEngine
 
         if (p.Bank < p.CurrentBet)
         {
-            /*
-            TODO: game.engine.dealing.cs - ActionSplit - Einbau eines blockierenden Popups für den Dealer, welches anzeigt, wieviel Gil fehlen. - Wenn dann währenddessen ein Trade vom aktuellen Spieler kommt und den Betrag ausgleicht (oder mehr), wird nicht abgebrochen und das Popup schließt sich selbstständig. Andernfalls kann der Dealer das Popup schließen und der Vorgang wird abgebrochen.
-            */
+            long missingAmount = p.CurrentBet - p.Bank;
+
+            Plugin.Instance.GetMainWindow().OpenSplitMoneyPopup(p, missingAmount);
+
+            _pendingSplitPlayer = p;
+            _pendingSplitConfig = cfg;
+            _pendingSplitPlayers = players;
+
             return;
         }
+
+        await ExecuteSplit(p, cfg, players);
+    }
+
+    public static async void ContinueSplitAfterPayment(PlayerState p, Configuration cfg, List<PlayerState> players)
+    {
+        if (p == null)
+        {
+            Plugin.Log.Error("[BJB] ContinueSplitAfterPayment: Player object is null!");
+            return;
+        }
+
+        try
+        {
+            if (p.Bank < p.CurrentBet)
+            {
+                Plugin.Log.Warning($"[Split] Still not enough money for {p.Name} after payment check. (Bank: {p.Bank}, Needed: {p.CurrentBet})");
+                return;
+            }
+
+            await ExecuteSplit(p, cfg, players);
+
+            _pendingSplitPlayer = null;
+            _pendingSplitConfig = null;
+            _pendingSplitPlayers = null;
+
+            Plugin.Log.Debug($"[Split] Continuation successful for {p.Name}");
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[BJB] CRITICAL ERROR in ContinueSplitAfterPayment: {ex}");
+        }
+    }
+
+    private static async Task ExecuteSplit(PlayerState p, Configuration cfg, List<PlayerState> players)
+    {
         p.Bank -= p.CurrentBet;
 
         var currentHand = p.Hands[p.CurrentHandIndex];
@@ -280,9 +370,13 @@ public static partial class GameEngine
         SetForcedRecipient(p.Name);
         try { await CommandExecutor.ExecuteGroup("Split", p.Name, cfg); }
         finally { ClearForcedRecipient(); }
+
+        SaveSessionIfNeeded(players);
+
+        Plugin.Instance.GetMainWindow().AddDebugLog($"[Split] {p.DisplayName} successfully split hand", false);
     }
 
-    public static async Task DealerHit(Configuration cfg)
+    public static async Task DealerHit(Configuration cfg, List<PlayerState> players)
     {
         PlayerState? dealer;
         lock (_ctxLock) dealer = _ctxDealer;
@@ -294,9 +388,10 @@ public static partial class GameEngine
         SetForcedRecipient(dealer.Name);
         try { await CommandExecutor.ExecuteGroup("DealHit", dealer.Name, cfg); }
         finally { ClearForcedRecipient(); }
+        SaveSessionIfNeeded(players);
     }
 
-    public static async Task DealerStand(Configuration cfg)
+    public static async Task DealerStand(Configuration cfg, List<PlayerState> players)
     {
         PlayerState? dealer;
         lock (_ctxLock) dealer = _ctxDealer;
@@ -308,6 +403,7 @@ public static partial class GameEngine
         SetForcedRecipient(dealer.Name);
         try { await CommandExecutor.ExecuteGroup("DealStand", dealer.Name, cfg); }
         finally { ClearForcedRecipient(); }
+        SaveSessionIfNeeded(players);
     }
 
     public static string GetStatePromptGroup(PlayerState p, Configuration cfg)
@@ -392,6 +488,29 @@ public static partial class GameEngine
         foreach (var p in benchPlayers)
         {
             MovePlayerFromBench(p);
+        }
+    }
+
+    private static void SaveSessionIfNeeded(List<PlayerState> players)
+    {
+        PlayerState? dealer;
+        lock (_ctxLock) dealer = _ctxDealer;
+        if (dealer == null) return;
+
+        var mainWindow = Plugin.Instance.GetMainWindow();
+        SessionManager.SaveSession(
+            players,
+            dealer,
+            CurrentPhase,
+            mainWindow.IsRecognitionActive
+        );
+    }
+
+    private static List<PlayerState> GetPlayersFromContext()
+    {
+        lock (_ctxLock)
+        {
+            return _ctxPlayers ?? new List<PlayerState>();
         }
     }
 }

@@ -161,16 +161,10 @@ public static partial class GameEngine
 
         long cost = 0;
         if (actionName == "Initial") cost = p.CurrentBet;
-        if (actionName == "DD") cost = p.CurrentBet;
-        if (actionName == "Split") cost = p.CurrentBet;
+        if (actionName == "DD")      cost = p.CurrentBet;
+        if (actionName == "Split")   cost = p.CurrentBet;
 
         p.Bank -= cost;
-
-        if (p.Bank < 0)
-        {
-            ChatCommandRouter.Send($"/p [BJB] <t>, please transfer {Math.Abs(p.Bank)} gil to continue.", cfg);
-            return;
-        }
 
         await logic();
     }

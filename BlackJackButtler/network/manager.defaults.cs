@@ -400,6 +400,12 @@ public static class DefaultsManager
                 " Not enough - <t> falls short with <points>. ",
                 " <t> doesn't take it this time: <points>. ",
                 " House takes this one - <t> ends on <points>. "
+            ],
+
+            "Payment Reminder": [
+                "Please pay ${missingGil} gil to continue your ${action}. Otherwise your choice gets revoked.",
+                "I still need ${missingGil} gil from you to proceed with the ${action}.",
+                "Wallet check! ${missingGil} gil are missing for your ${action}."
             ]
         }
     }

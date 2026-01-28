@@ -24,6 +24,8 @@ public static class GameLog
     public static int CurrentIndex => _currentIndex;
     public static int SnapshotCount => _snapshots.Count;
 
+    public static void SetIndex(int index) {_currentIndex = index;}
+
     public static void Clear()
     {
         lock (_lock)
@@ -91,5 +93,9 @@ public static class GameLog
             DeckManager.RestoreShoe(snap.ShoeState);
             phase = snap.Phase;
         }
+    }
+    public static void RestoreSnapshot(int index, GameSnapshot snapshot)
+    {
+        _snapshots[index] = snapshot;
     }
 }
