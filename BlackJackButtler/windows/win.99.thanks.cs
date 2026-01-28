@@ -8,9 +8,18 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow
 {
-    private List<string> _thanksToNamesTesting = new() {"Sleip", "Xia Dove", "Hadesyra Ravenshadow", "Le'grasstoucher", "Amystra Pinkypie"};
+    private List<string> _thanksToNamesTesting = new() {
+        "Sleip",
+        "Xia Dove",
+        "Hadesyra Ravenshadow",
+        "Le'grasstoucher",
+        "Amystra Pinkypie"
+    };
 
-    private List<string> _thanksToNamesSupport = new() {};
+    private List<string> _thanksToNamesSupport = new()
+    {
+        
+    };
 
     private void DrawThanksPage()
     {
