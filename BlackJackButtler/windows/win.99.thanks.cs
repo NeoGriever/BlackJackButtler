@@ -144,6 +144,20 @@ public partial class BlackJackButtlerWindow
 
             ImGui.Spacing();
         }
+
+        var line3 = "Buy me a coffee and get on the supporter list";
+        var entrySize3 = ImGui.CalcTextSize(line3);
+        ImGui.SetCursorPosX((windowWidth - entrySize3.X) / 2);
+        ImGui.TextColored(new Vector4(0.8f, 0.5f, 0.0f, 1.0f), line3);
+        if(ImGui.IsItemHovered())
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if(ImGui.IsItemClicked())
+            {
+                Dalamud.Utility.Util.OpenLink("https://buymeacoffee.com/mindconstructor");
+            }
+        }
+
         ImGui.EndChild();
         ImGui.PopStyleColor();
     }

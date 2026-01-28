@@ -5,30 +5,15 @@ using System.Threading.Tasks;
 
 namespace BlackJackButtler.Chat;
 
-/// <summary>
-/// Handles dice roll results and synchronizes them with the CommandExecutor.
-/// This class bridges the gap between chat-based dice rolls and game logic,
-/// preventing race conditions by properly canceling and triggering new command chains.
-/// </summary>
 public static class DiceResultHandler
 {
-    /// <summary>
-    /// Processes a dice roll result, applies the card to the game state,
-    /// and manages the command execution flow based on the outcome.
-    /// </summary>
-    /// <param name="cardValue">The card value derived from the dice roll</param>
-    /// <param name="cfg">Configuration containing command groups</param>
-    /// <param name="players">List of active players</param>
-    /// <param name="dealer">The dealer state</param>
     public static void HandleDiceResult(int cardValue, Configuration cfg, List<PlayerState> players, PlayerState dealer)
     {
         var window = Plugin.Instance.GetMainWindow();
         window.AddDebugLog($"[DiceHandler] Processing card value: {cardValue}");
 
-        // Step 1: Apply the card to the current target
         GameEngine.ApplyCardToCurrentTarget(cardValue, players, dealer);
 
-        // Step 2: Determine the current target and their hand state
         var targetName = GameEngine.GetCurrentTargetName();
         PlayerState? target =
             (!string.IsNullOrWhiteSpace(targetName) && dealer.Name.Equals(targetName, StringComparison.OrdinalIgnoreCase))
@@ -53,11 +38,9 @@ public static class DiceResultHandler
 
         bool isDealer = ReferenceEquals(target, dealer) || target.Name.Equals(dealer.Name, StringComparison.OrdinalIgnoreCase);
 
-        // Step 3: Check if we need to cancel the current command group and trigger a new one
         bool shouldCancel = false;
         string? newGroup = null;
 
-        // Check dealer scenarios
         if (isDealer && GameEngine.CurrentPhase == GamePhase.DealerTurn)
         {
             if (best == 21)
@@ -73,10 +56,8 @@ public static class DiceResultHandler
                 window.AddDebugLog("[DiceHandler] Dealer bust - triggering DealerBust");
             }
         }
-        // Check player scenarios
         else if (!isDealer)
         {
-            // During initial deal
             if (GameEngine.CurrentPhase == GamePhase.InitialDeal)
             {
                 if (hand.Cards.Count == 2)
@@ -93,7 +74,6 @@ public static class DiceResultHandler
                     }
                     else
                     {
-                        // No cancel needed, just move to next turn
                         window.AddDebugLog("[DiceHandler] Initial deal complete, moving to next turn");
                         CommandExecutor.NotifyDiceResult();
                         GameEngine.NextTurn(players, cfg);
@@ -101,7 +81,6 @@ public static class DiceResultHandler
                     }
                 }
             }
-            // During player's turn
             else if (GameEngine.CurrentPhase == GamePhase.PlayersTurn)
             {
                 if (best > 21)
@@ -129,25 +108,20 @@ public static class DiceResultHandler
             }
         }
 
-        // Step 4: Execute the cancel and trigger logic
         if (shouldCancel && !string.IsNullOrEmpty(newGroup))
         {
-            // Cancel the current command group (e.g., the "Hit" chain)
             CommandExecutor.CancelCurrentGroup();
             window.AddDebugLog($"[DiceHandler] Canceled current group, starting new group: {newGroup}");
 
-            // Start the new group using internal execution (no dice wait logic)
             Task.Run(async () =>
             {
                 await CommandExecutor.ExecuteInternalGroup(newGroup, target.Name, cfg);
 
-                // After the new group completes, handle the next turn for player scenarios
                 if (!isDealer && (newGroup == "PlayerBust" || newGroup == "PlayerBJ" ||
                     newGroup == "PlayerDirtyBJ" || newGroup == "PlayerDDForcedStand"))
                 {
                     GameEngine.NextTurn(players, cfg);
                 }
-                // For dealer scenarios, evaluate final results
                 else if (isDealer && (newGroup == "DealerBJ" || newGroup == "DealerBust"))
                 {
                     GameEngine.CurrentPhase = GamePhase.Payout;
@@ -157,11 +131,9 @@ public static class DiceResultHandler
         }
         else
         {
-            // No special action needed, just notify the executor to continue
             window.AddDebugLog("[DiceHandler] No special action required, notifying executor to continue");
             CommandExecutor.NotifyDiceResult();
 
-            // If player is not done and phase is PlayersTurn, trigger the state prompt
             if (!isDealer && GameEngine.CurrentPhase == GamePhase.PlayersTurn &&
                 !hand.IsBust && best < 21 && !hand.IsStand)
             {

@@ -195,10 +195,52 @@ public partial class BlackJackButtlerWindow
 
         ImGui.TableNextColumn();
         if (p.IsActivePlayer) {
-            if (p.IsOnHold) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.2f, 0.2f, 1f));
-            if (ImGui.Button($"H##hold_{p.UIID}")) { p.IsOnHold = !p.IsOnHold; _save(); }
-            if (p.IsOnHold) ImGui.PopStyleColor();
+            bool canBench = GameEngine.CanMovePlayerToBench(p, _players);
+
+            if (!canBench) ImGui.BeginDisabled();
+
+            if (p.IsOnBench)
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1f));
+            else if (p.IsOnHold)
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.2f, 0.2f, 1f));
+
+            if (ImGui.Button($"H##hold_{p.UIID}"))
+            {
+                if (p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn && canBench)
+                {
+                    GameEngine.MovePlayerToBench(p, _players);
+                    GameEngine.NextTurn(_players, _config);
+                }
+                else if (p.IsOnBench)
+                {
+                    if (GameEngine.CurrentPhase != GamePhase.DealerTurn && GameEngine.CurrentPhase != GamePhase.Payout)
+                    {
+                        GameEngine.MovePlayerFromBench(p);
+                    }
+                }
+                else
+                {
+                    p.IsOnHold = !p.IsOnHold;
+                }
+                _save();
+            }
+
+            if (p.IsOnBench || p.IsOnHold) ImGui.PopStyleColor();
+            if (!canBench) ImGui.EndDisabled();
+
+            if (ImGui.IsItemHovered())
+            {
+                if (p.IsOnBench)
+                    ImGui.SetTooltip("On bench - Click to return (if dealer hasn't played yet)");
+                else if (p.IsOnHold)
+                    ImGui.SetTooltip("On hold - Won't participate in next round");
+                else if (p.IsCurrentTurn)
+                    ImGui.SetTooltip("Click to move to bench (pause current turn)");
+                else
+                    ImGui.SetTooltip("Click to hold (skip next round)");
+            }
         }
+
 
         ImGui.TableNextColumn();
         var nameColor = p.IsCurrentTurn ? new Vector4(1f, 1f, 0.2f, 1f) : new Vector4(1, 1, 1, 1);
