@@ -12,7 +12,7 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow : Window, IDisposable
 {
-    private enum Page { Main, Regexes, Messages, Commands , Settings , Vars , RoundLog , Debug }
+    private enum Page { Main, Regexes, Messages, Commands , Settings , Vars , RoundLog , Debug , Thanks }
     private Page _page = Page.Main;
 
     private readonly Configuration _config;
@@ -53,15 +53,15 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
         TitleBarButtons.Add(new TitleBarButton
         {
-            Icon = FontAwesomeIcon.Globe,
-            Priority = 0,
+            Icon = FontAwesomeIcon.Coffee,
+            Priority = 100,
             Click = _ =>
             {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "https://google.com/",
-                    UseShellExecute = true
-                });
+                Dalamud.Utility.Util.OpenLink("https://buymeacoffee.com/mindconstructor");
+            },
+            ShowTooltip = () =>
+            {
+                ImGui.SetTooltip("If you like the plugin,\nthink about to spend me something\nthrough buy me a coffee.\n\n<3 <3 <3");
             }
         });
     }
@@ -94,14 +94,14 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         var avail = ImGui.GetContentRegionAvail();
         var sidebarWidth = _isSidebarVisible ? 200f : 0f;
 
+        var level = _config.CurrentLevel;
+
         if (_isSidebarVisible)
         {
             ImGui.BeginChild("bjb.sidebar", new Vector2(sidebarWidth, avail.Y), true);
             ImGui.TextUnformatted("BlackJack Buttler");
             ImGui.SameLine(ImGui.GetWindowWidth() - 30);
             if (ImGui.SmallButton("<##hide_sidebar")) _isSidebarVisible = false;
-
-            var level = _config.CurrentLevel;
 
             ImGui.Separator();                  NavButton(Page.Main, "Main");
             ImGui.Separator();
@@ -111,7 +111,12 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             ImGui.Separator();                  NavButton(Page.Settings, "Settings");
             ImGui.Separator();                  NavButton(Page.RoundLog, "Round History");
             if(level >= UserLevel.Dev)          NavButton(Page.Vars, "Variables");
-            if(level >= UserLevel.Advanced)     NavButton(Page.Debug, "DEBUG");
+            if(level >= UserLevel.Dev)          NavButton(Page.Debug, "DEBUG");
+
+            var remainingHeight = ImGui.GetContentRegionAvail().Y;
+            if (remainingHeight > 50) ImGui.SetCursorPosY(ImGui.GetCursorPosY() + remainingHeight - 50);
+
+                                                NavButton(Page.Thanks, "Thanks to");
 
             ImGui.EndChild();
             ImGui.SameLine();
@@ -127,6 +132,21 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             ImGui.Separator();
         }
 
+        if(level >= UserLevel.Dev && !_config.dismissDevWarning) {
+            ImGui.TextColored(new Vector4(1.0f, 0.0f, 0.0f, 1.0f), "!!! Warning !!!");
+            ImGui.TextColored(new Vector4(1.0f, 0.4f, 0.0f, 1.0f), "You are in dev mode!");
+            ImGui.TextColored(new Vector4(0.9f, 0.6f, 0.0f, 1.0f), "");
+            ImGui.TextColored(new Vector4(0.9f, 0.6f, 0.0f, 1.0f), "Make sure you know what you're doing. Dev mode lets you change everything.");
+            ImGui.TextColored(new Vector4(0.9f, 0.6f, 0.0f, 1.0f), "And it's easy to change the wrong thing.");
+            ImGui.TextColored(new Vector4(0.9f, 0.6f, 0.0f, 1.0f), "");
+            if (ImGui.Button("I know, what i'm doing")) {
+                _config.dismissDevWarning = true;
+                _save();
+            }
+            ImGui.TextColored(new Vector4(0.9f, 0.6f, 0.0f, 1.0f), "");
+            ImGui.Spacing();
+        }
+
         switch (_page)
         {
             case Page.Main:         DrawMainPage(); break;
@@ -137,6 +157,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Vars:         DrawVarsPage(); break;
             case Page.RoundLog:     DrawRoundLogPage(); break;
             case Page.Debug:        DrawDebugPage(); break;
+            case Page.Thanks:       DrawThanksPage(); break;
         }
         ImGui.EndChild();
         DropboxIntegration.DrawHelperWindow();
