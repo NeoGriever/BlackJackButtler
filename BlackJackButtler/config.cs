@@ -34,6 +34,7 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool AutoInitialDeal = false;
     public bool SmallResult = false;
+    public bool dismissDevWarning = false;
 
     public UserLevel CurrentLevel = UserLevel.Beginner;
 

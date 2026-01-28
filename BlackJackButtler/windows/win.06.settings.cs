@@ -15,78 +15,128 @@ public partial class BlackJackButtlerWindow
         ImGui.TextUnformatted("User Level");
         ImGui.SetNextItemWidth(200f);
         int level = (int)_config.CurrentLevel;
-        if (ImGui.Combo("##user_level", ref level, "Beginner\0Advanced\0Dev\0"))
-        {
+        if (ImGui.Combo("##user_level", ref level, "Beginner\0Advanced\0Dev\0")) {
             _config.CurrentLevel = (UserLevel)level;
             _save();
         }
         ImGui.Separator();
 
         ImGui.TextUnformatted("Gameplay Settings");
-        ImGui.Spacing();
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
+            if (ImGui.Checkbox("First Deal, then Play", ref _config.FirstDealThenPlay)) _save();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: First deal every player their hands.\nInactive: Deal hand and direct play per player.");
+        } else if (!_config.FirstDealThenPlay) {
+            _config.FirstDealThenPlay = true;
+            _save();
+        }
 
-        if (ImGui.Checkbox("First Deal, then Play", ref _config.FirstDealThenPlay)) _save();
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: First deal every player their hands.\nInactive: Deal hand and direct play per player.");
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
+            if (ImGui.Checkbox("Identical Split Only", ref _config.IdenticalSplitOnly)) _save();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Only same cards (e.g. J+J) can split.\nInactive: Same score (e.g. J+K) can split.");
+        } else if (!_config.IdenticalSplitOnly) {
+            _config.IdenticalSplitOnly = true;
+            _save();
+        }
 
-        ImGui.Spacing();
-        if (ImGui.Checkbox("Identical Split Only", ref _config.IdenticalSplitOnly)) _save();
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Only same cards (e.g. J+J) can split.\nInactive: Same score (e.g. J+K) can split.");
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
+            if (ImGui.Checkbox("Allow Double Down after Split", ref _config.AllowDoubleDownAfterSplit)) _save();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Allows the player to Double Down on hands that resulted from a split.\nInactive: Splitted hands don't allow to Double Down.");
+        } else if (_config.AllowDoubleDownAfterSplit) {
+            _config.AllowDoubleDownAfterSplit = false;
+            _save();
+        }
 
-        ImGui.Spacing();
-        if (ImGui.Checkbox("Allow Double Down after Split", ref _config.AllowDoubleDownAfterSplit)) _save();
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Allows the player to Double Down on hands that resulted from a split.\nInactive: Splitted hands don't allow to Double Down.");
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
+            if (ImGui.Checkbox("Refund DD on push", ref _config.RefundFullDoubleDownOnPush)) _save();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: If a player has DD and got pushed, the DD bet gets pushed too.\nInactive: If a player has DD and got pushed, the DD bet is loosed.");
+        } else if (_config.RefundFullDoubleDownOnPush) {
+            _config.RefundFullDoubleDownOnPush = false;
+            _save();
+        }
 
-        ImGui.Spacing();
-        if (ImGui.Checkbox("Refund DD on push", ref _config.RefundFullDoubleDownOnPush)) _save();
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: If a player has DD and got pushed, the DD bet gets pushed too.\nInactive: If a player has DD and got pushed, the DD bet is loosed.");
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
+            if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Collects all results and sends a single compressed message.\nInactive: Sends individual result messages for every player hand.");
+        } else if (!_config.SmallResult) {
+            _config.SmallResult = true;
+            _save();
+        }
 
-        ImGui.Spacing();
-        if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Collects all results and sends a single compressed message.\nInactive: Sends individual result messages for every player hand.");
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
+            DrawMultiplierInput("Normal Win Multiplier", ref _config.MultiplierNormalWin);
+        } else if (_config.MultiplierNormalWin != 1.0f) {
+            _config.MultiplierNormalWin = 1.0f;
+            _save();
+        }
 
-        ImGui.Spacing();
-        DrawMultiplierInput("Normal Win Multiplier", ref _config.MultiplierNormalWin);
 
         ImGui.Spacing();
         DrawMultiplierInput("Natural BJ Multiplier (2 Cards)", ref _config.MultiplierBlackjackWin);
 
-        ImGui.Spacing();
-        DrawMultiplierInput("Dirty BJ Multiplier (3+ Cards)", ref _config.MultiplierDirtyBlackjackWin);
-
-        ImGui.Spacing();
-        ImGui.TextUnformatted("Max Hands per Player (Splits)");
-        ImGui.SameLine(300f);
-        ImGui.SetNextItemWidth(200f);
-        if (ImGui.InputInt("##max_hands", ref _config.MaxHandsPerPlayer, 1))
+        if(level >= (int)UserLevel.Advanced)
         {
-            _config.MaxHandsPerPlayer = Math.Clamp(_config.MaxHandsPerPlayer, 2, 10);
+            ImGui.Spacing();
+            DrawMultiplierInput("Dirty BJ Multiplier (3+ Cards)", ref _config.MultiplierDirtyBlackjackWin);
+        } else if (_config.MultiplierDirtyBlackjackWin != 1.0f) {
+            _config.MultiplierDirtyBlackjackWin = 1.0f;
             _save();
         }
 
-        ImGui.Separator();
-
-        ImGui.TextUnformatted("Clipboard: ");
-        ImGui.SameLine();
-        if (ImGui.Button("Export")) {
-            var json = JsonConvert.SerializeObject(_config, Formatting.Indented);
-            ImGui.SetClipboardText(json);
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Max Hands per Player (Splits)");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (ImGui.InputInt("##max_hands", ref _config.MaxHandsPerPlayer, 1))
+            {
+                _config.MaxHandsPerPlayer = Math.Clamp(_config.MaxHandsPerPlayer, 2, 10);
+                _save();
+            }
+        } else if (_config.MaxHandsPerPlayer != 2) {
+            _config.MaxHandsPerPlayer = 2;
+            _save();
         }
 
-        ImGui.SameLine();
+        if(level >= (int)UserLevel.Dev)
+        {
+            ImGui.Separator();
 
-        if (ImGui.Button("Import")) {
-            try {
-                var json = ImGui.GetClipboardText();
-                var imported = JsonConvert.DeserializeObject<Configuration>(json);
-                if (imported != null) {
-                    _tempImportConfig = imported;
-                    ImGui.OpenPopup("import_confirm_popup");
-                }
-            } catch { /* Log Error */ }
+            ImGui.TextUnformatted("Clipboard: ");
+            ImGui.SameLine();
+            if (ImGui.Button("Export")) {
+                var json = JsonConvert.SerializeObject(_config, Formatting.Indented);
+                ImGui.SetClipboardText(json);
+            }
+
+            ImGui.SameLine();
+
+            if (ImGui.Button("Import")) {
+                try {
+                    var json = ImGui.GetClipboardText();
+                    var imported = JsonConvert.DeserializeObject<Configuration>(json);
+                    if (imported != null) {
+                        _tempImportConfig = imported;
+                        ImGui.OpenPopup("import_confirm_popup");
+                    }
+                } catch { /* Log Error */ }
+            }
+
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Export and Import is in beta phase");
         }
-
-        ImGui.Spacing();
-        ImGui.TextUnformatted("Export and Import is in beta phase");
 
         if (ImGui.BeginPopupModal("import_confirm_popup", ref _showImportModal, ImGuiWindowFlags.AlwaysAutoResize))
         {
