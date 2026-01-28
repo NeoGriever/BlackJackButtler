@@ -8,14 +8,15 @@
     "AssemblyVersion": "1.0.0.0",
     "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
     "ApplicableVersion": "any",
-    "DalamudApiLevel": 10,
-    "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/plugins/BlackJackButtler/icon.png",
+    "DalamudApiLevel": 14,
+    "IsHide": false,
+    "IsTestingExclusive": false,
+    "DownloadCount": 0,
+    "LastUpdate": 1769578922,
     "DownloadLinkInstall": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
     "DownloadLinkUpdate": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
     "DownloadLinkTesting": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
-    "LoadPriority": 0,
-    "DownloadCount": 0,
-    "LastUpdate": "0",
+    "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/plugins/BlackJackButtler/icon.png",
     "Tags": ["BlackJack", "Helper", "Chat"]
   }
 ]
