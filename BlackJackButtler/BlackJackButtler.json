@@ -1,9 +1,12 @@
 {
-  "Author": "Valenth Siveria",
-  "Name": "BlackJack Buttler",
-  "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
-  "Description": "/bjb - opens the blackjack buttler tool",
-  "ApplicableVersion": "any",
-  "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/BlackJackButtler/images/icon.png",
-  "Tags": ["BlackJack", "Helper", "Chat"]
+    "Author": "Valenth Siveria",
+    "Name": "BlackJack Buttler",
+    "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
+    "Description": "/bjb - opens the blackjack buttler tool",
+    "InternalName": "BlackJackButtler",
+    "AssemblyVersion": "1.0.0.1",
+    "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
+    "ApplicableVersion": "any",
+    "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/BlackJackButtler/images/icon.png",
+    "Tags": ["BlackJack", "Helper", "Chat"]
 }

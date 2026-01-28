@@ -57,12 +57,27 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             Priority = 100,
             Click = _ =>
             {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 Dalamud.Utility.Util.OpenLink("https://buymeacoffee.com/mindconstructor");
             },
             ShowTooltip = () =>
             {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 ImGui.SetTooltip("If you like the plugin,\nthink about to spend me something\nthrough buy me a coffee.\n\n<3 <3 <3");
+            }
+        });
+
+        TitleBarButtons.Add(new TitleBarButton
+        {
+            Icon = FontAwesomeIcon.Discord,
+            Priority = 99,
+            Click = _ =>
+            {
+                Dalamud.Utility.Util.OpenLink("https://discord.gg/CMCzEH4NZS");
+            },
+            ShowTooltip = () =>
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                ImGui.SetTooltip("Join my discord for\n- bug reports\n- ideas\n- faq\n- just talk\n\n(still working on it!)");
             }
         });
     }
