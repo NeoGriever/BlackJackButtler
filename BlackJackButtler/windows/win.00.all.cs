@@ -40,6 +40,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _showImportModal = false;
     private bool _isSidebarVisible = true;
 
+    private bool _showRestoreSessionButton = false;
+
     public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog) : base("BlackJack Buttler")
     {
         _config = config;
@@ -50,6 +52,21 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         SizeCondition = ImGuiCond.FirstUseEver;
 
         RespectCloseHotkey = false;
+
+        TitleBarButtons.Add(new TitleBarButton
+        {
+            Icon = FontAwesomeIcon.Comments,
+            Priority = 90,
+            Click = _ =>
+            {
+                Dalamud.Utility.Util.OpenLink("https://discord.gg/CMCzEH4NZS");
+            },
+            ShowTooltip = () =>
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                ImGui.SetTooltip("Join my discord for\n- bug reports\n- ideas\n- faq\n- just talk\n\n(still working on it!)");
+            }
+        });
 
         TitleBarButtons.Add(new TitleBarButton
         {
@@ -66,20 +83,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             }
         });
 
-        TitleBarButtons.Add(new TitleBarButton
-        {
-            Icon = FontAwesomeIcon.Discord,
-            Priority = 99,
-            Click = _ =>
-            {
-                Dalamud.Utility.Util.OpenLink("https://discord.gg/CMCzEH4NZS");
-            },
-            ShowTooltip = () =>
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                ImGui.SetTooltip("Join my discord for\n- bug reports\n- ideas\n- faq\n- just talk\n\n(still working on it!)");
-            }
-        });
+        _showRestoreSessionButton = SessionManager.HasSavedSession();
     }
 
     public void Dispose() { }
@@ -99,6 +103,29 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     public override void Draw()
     {
+
+        if (_showRestoreSessionButton)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f)); // Orange
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1.0f, 0.6f, 0.1f, 1.0f));
+
+            if (ImGui.Button("⚠ RESTORE PREVIOUS SESSION ⚠", new Vector2(-1, 40)))
+            {
+                RestoreSessionFromFile();
+            }
+
+            ImGui.PopStyleColor(2);
+
+            ImGui.SameLine();
+            if (ImGui.SmallButton("X##dismiss_restore"))
+            {
+                _showRestoreSessionButton = false;
+                SessionManager.ClearSession();
+            }
+
+            ImGui.Separator();
+        }
+
         var avail = ImGui.GetContentRegionAvail();
         var sidebarWidth = _isSidebarVisible ? 200f : 0f;
 
@@ -169,7 +196,45 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         }
         ImGui.EndChild();
         DropboxIntegration.DrawHelperWindow();
+        DrawSplitMoneyPopup();
+        DrawDDMoneyPopup();
     }
+
+    private void RestoreSessionFromFile()
+    {
+        if (SessionManager.RestoreSession(
+            out var players,
+            out var dealer,
+            out var phase,
+            out var history,
+            out var historyIndex))
+        {
+            _players = players;
+            _dealer = dealer;
+            GameEngine.CurrentPhase = phase;
+
+            GameLog.Clear();
+            foreach (var (idx, snapshot) in history)
+            {
+                GameLog.RestoreSnapshot(idx, snapshot);
+            }
+            GameLog.SetIndex(historyIndex);
+
+            IsRecognitionActive = true;
+
+            _showRestoreSessionButton = false;
+            _page = Page.Main;
+
+            AddDebugLog("[SessionManager] Session restored successfully!", false);
+            Plugin.Log.Information($"[SessionManager] Restored to Phase: {phase} with {players.Count} players");
+        }
+        else
+        {
+            _showRestoreSessionButton = false;
+            AddDebugLog("[SessionManager] Failed to restore session!", false);
+        }
+    }
+
 
     private void NavButton(Page page, string label)
     {

@@ -148,7 +148,13 @@ public partial class BlackJackButtlerWindow
         if (ImGui.Button(recon_text, new Vector2(200, 0)))
         {
             IsRecognitionActive = !IsRecognitionActive;
-            SyncParty();
+            if(IsRecognitionActive) SyncParty();
+
+            if (!IsRecognitionActive)
+            {
+                SessionManager.ClearSession();
+                AddDebugLog("[SessionManager] Session cleared (Group Detector deactivated)", false);
+            }
         }
 
         ImGui.SameLine();
@@ -343,7 +349,7 @@ public partial class BlackJackButtlerWindow
 
     private void DrawPlayerControls(PlayerState p)
     {
-        bool globalLock = CommandExecutor.IsRunning;
+        bool globalLock = CommandExecutor.IsRunning || _showSplitMoneyPopup || _showDDMoneyPopup;
         if (globalLock) ImGui.BeginDisabled();
 
         InnerPlayerControls(p);
@@ -370,7 +376,14 @@ public partial class BlackJackButtlerWindow
 
         if (!p.IsCurrentTurn)
         {
-            ImGui.TextDisabled("Waiting...");
+            ImGui.TextDisabled("Waiting for turn ...");
+            return;
+        }
+
+        if (_showSplitMoneyPopup || _showDDMoneyPopup)
+        {
+            ImGui.TextColored(new Vector4(1, 0.5f, 0, 1), "Awaiting payment ...");
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Buttons are disabled until the payment is processed or cancelled.");
             return;
         }
 
@@ -463,14 +476,14 @@ public partial class BlackJackButtlerWindow
             if (ImGui.SmallButton("Hit"))
             {
                 BlackJackButtler.Chat.GameLog.PushSnapshot(_players, _dealer, phase, "DealerHit");
-                Task.Run(() => GameEngine.DealerHit(_config));
+                Task.Run(() => GameEngine.DealerHit(_config, _players));
             }
             ImGui.SameLine();
             if (ImGui.SmallButton("Stand"))
             {
                 BlackJackButtler.Chat.GameLog.PushSnapshot(_players, _dealer, phase, "DealerStand");
                 Task.Run(async () => {
-                    await GameEngine.DealerStand(_config);
+                    await GameEngine.DealerStand(_config, _players);
                     await GameEngine.EvaluateFinalResults(_players, _dealer, _config);
                 });
             }
@@ -533,14 +546,27 @@ public partial class BlackJackButtlerWindow
     private void CreateTestData()
     {
         _players.RemoveAll(p => p.IsDebugPlayer);
-        _players.Add(new PlayerState { Name = "Test Player A", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 100 });
-        _players.Add(new PlayerState { Name = "Test Player B", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 500 });
-        _players.Add(new PlayerState { Name = "Test Player C", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 1000 });
-        _players.Add(new PlayerState { Name = "Test Player D", IsActivePlayer = true, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 2000 });
-        _players.Add(new PlayerState { Name = "Test Player E", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 3000 });
-        _players.Add(new PlayerState { Name = "Test Player F", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 4000 });
-        _players.Add(new PlayerState { Name = "Test Player G", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 5000 });
-        _players.Add(new PlayerState { Name = "Test Player H", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 6000 });
-        _players.Add(new PlayerState { Name = "Test Player I", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 7000 });
+        _players.Add(new PlayerState { Name = "Lorem Ipsum",           IsActivePlayer = true,  IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank =    120, CurrentBet =  100 });
+        _players.Add(new PlayerState { Name = "Dolor Sit",             IsActivePlayer = true,  IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank =    900, CurrentBet =  500 });
+        _players.Add(new PlayerState { Name = "Ahmet Consentetuer",    IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 1000 });
+        _players.Add(new PlayerState { Name = "Adipisci Lorem",        IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 2000 });
+        _players.Add(new PlayerState { Name = "Sit Amet",              IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 3000 });
+        _players.Add(new PlayerState { Name = "Consentetuer Adipisci", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 4000 });
+        _players.Add(new PlayerState { Name = "Setue Vetue",           IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 5000 });
+    }
+
+    private void SendPaymentTell(PlayerState p, long amount, string action)
+    {
+        var batch = _config.MessageBatches.FirstOrDefault(b => b.Name == "Payment Reminder");
+        string raw = batch?.GetNextMessage() ?? "Please pay ${missingGil} gil for your ${action}.";
+
+        string tReplacement = !string.IsNullOrWhiteSpace(p.Alias) ? p.Alias : "<t>";
+
+        string processed = raw
+            .Replace("<t>", tReplacement)
+            .Replace("${missingGil}", amount.ToString("N0"))
+            .Replace("${action}", action);
+
+        ChatCommandRouter.Send($"/t <t> {processed}", _config, "PaymentTell");
     }
 }

@@ -16,6 +16,12 @@ using BlackJackButtler.Regex;
 using System.Runtime.InteropServices;
 using ECommons;
 
+using System.Numerics;
+using System.Collections.Generic;
+using System.Diagnostics;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
+
 namespace BlackJackButtler;
 
 public sealed class Plugin : IDalamudPlugin

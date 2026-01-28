@@ -44,7 +44,17 @@ public static class CommandExecutor
             if (v != null) text = text.Replace($"<{varName}>", v.Value);
         }
 
-        text = text.Replace("<t>", pState?.DisplayName ?? targetName);
+        string tReplacement;
+        if (pState != null)
+        {
+            tReplacement = !string.IsNullOrWhiteSpace(pState.Alias) ? pState.Alias : "<t>";
+        }
+        else
+        {
+            tReplacement = !string.IsNullOrWhiteSpace(targetName) ? targetName : "<t>";
+        }
+
+        text = text.Replace("<t>", tReplacement);
 
         if (pState != null)
         {
