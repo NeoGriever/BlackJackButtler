@@ -44,7 +44,6 @@ public static partial class GameEngine
         {
             await CommandExecutor.ExecuteGroup("DealStart", dealer.Name, cfg);
 
-            // Initialize dealerpoints variable with dealer's opening card
             if (dealer.Hands.Count > 0 && dealer.Hands[0].Cards.Count > 0)
             {
                 var (min, max) = dealer.CalculatePoints(0);
@@ -79,8 +78,14 @@ public static partial class GameEngine
 
     public static void NextTurn(List<PlayerState> players, Configuration cfg)
     {
-        var activePlayers = players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
-        if (activePlayers.Count == 0) { CurrentPhase = GamePhase.Waiting; return; }
+        var activePlayers = GetActivePlayers(players);
+        var benchPlayers = GetBenchPlayers(players);
+
+        if (activePlayers.Count == 0 && benchPlayers.Count == 0)
+        {
+            CurrentPhase = GamePhase.Waiting;
+            return;
+        }
 
         var current = activePlayers.FirstOrDefault(p => p.IsCurrentTurn);
 
@@ -147,7 +152,30 @@ public static partial class GameEngine
         }
         else
         {
-            var anyPlayerAlive = activePlayers.Any(p => p.Hands.Any(h => !h.IsBust));
+            if (benchPlayers.Count > 0)
+            {
+                ActivateAllBenchPlayers(players);
+
+                var firstFromBench = GetActivePlayers(players).FirstOrDefault(p => p.WasOnHoldThisRound);
+                if (firstFromBench != null)
+                {
+                    Plugin.Instance.GetMainWindow().AddDebugLog($"[Bench] Starting with bench player: {firstFromBench.DisplayName}", false);
+                    firstFromBench.IsCurrentTurn = true;
+
+                    if (IsPlayerFinished(firstFromBench))
+                    {
+                        NextTurn(players, cfg);
+                    }
+                    else
+                    {
+                        SwitchTurnTo(firstFromBench, GetActivePlayers(players), cfg);
+                    }
+                    return;
+                }
+            }
+
+            var allActivePlayers = GetActivePlayers(players);
+            var anyPlayerAlive = allActivePlayers.Any(p => p.Hands.Any(h => !h.IsBust));
 
             if (!anyPlayerAlive)
             {
@@ -162,7 +190,6 @@ public static partial class GameEngine
                 {
                     TargetPlayer(_ctxDealer.Name);
 
-                    // Update dealerpoints when dealer turn starts
                     if (_ctxDealer.Hands.Count > 0)
                     {
                         var (min, max) = _ctxDealer.CalculatePoints(0);
@@ -310,5 +337,61 @@ public static partial class GameEngine
     private static bool IsPlayerFinished(PlayerState p)
     {
         return p.Hands.Count > 0 && p.Hands.All(h => h.IsStand || h.IsBust || h.IsNaturalBlackJack);
+    }
+
+    private static List<PlayerState> GetActivePlayers(List<PlayerState> players)
+    {
+        return players.Where(p => p.IsActivePlayer && !p.IsOnHold && !p.IsOnBench).ToList();
+    }
+
+    private static List<PlayerState> GetBenchPlayers(List<PlayerState> players)
+    {
+        return players.Where(p => p.IsActivePlayer && p.IsOnBench).ToList();
+    }
+
+    public static bool CanMovePlayerToBench(PlayerState player, List<PlayerState> allPlayers)
+    {
+        if (player.WasOnHoldThisRound) return false;
+
+        var activePlayers = GetActivePlayers(allPlayers);
+        var benchPlayers = GetBenchPlayers(allPlayers);
+
+        if (activePlayers.Count == 1 && benchPlayers.Count == 0)
+            return false;
+
+        return true;
+    }
+
+    public static void MovePlayerToBench(PlayerState player, List<PlayerState> allPlayers)
+    {
+        if (!CanMovePlayerToBench(player, allPlayers)) return;
+
+        player.IsOnBench = true;
+        player.WasOnHoldThisRound = true;
+        player.IsCurrentTurn = false;
+
+        Plugin.Instance.GetMainWindow().AddDebugLog($"[Bench] {player.DisplayName} moved to bench.", false);
+    }
+
+    public static void MovePlayerFromBench(PlayerState player)
+    {
+        if (!player.IsOnBench) return;
+
+        player.IsOnBench = false;
+
+        Plugin.Instance.GetMainWindow().AddDebugLog($"[Bench] {player.DisplayName} returned from bench.", false);
+    }
+
+    private static void ActivateAllBenchPlayers(List<PlayerState> players)
+    {
+        var benchPlayers = GetBenchPlayers(players);
+        if (benchPlayers.Count == 0) return;
+
+        Plugin.Instance.GetMainWindow().AddDebugLog($"[Bench] Activating all {benchPlayers.Count} bench players.", false);
+
+        foreach (var p in benchPlayers)
+        {
+            MovePlayerFromBench(p);
+        }
     }
 }

@@ -125,7 +125,6 @@ public partial class BlackJackButtlerWindow
         List<DebugEntry> logCopy;
         lock (_logLock) logCopy = _debugLog.ToList();
 
-        // Filter based on verbose mode
         var filteredLog = logCopy.Where(entry => _verboseMode || entry.IsChat).ToList();
 
         if (filteredLog.Count == 0)
@@ -134,7 +133,6 @@ public partial class BlackJackButtlerWindow
             return;
         }
 
-        // Build string in chronological order (oldest first)
         var sb = new StringBuilder(filteredLog.Count * 100);
         sb.AppendLine($"=== BlackJack Buttler Debug Log ===");
         sb.AppendLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");

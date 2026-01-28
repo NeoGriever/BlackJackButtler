@@ -57,6 +57,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             Priority = 100,
             Click = _ =>
             {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 Dalamud.Utility.Util.OpenLink("https://buymeacoffee.com/mindconstructor");
             },
             ShowTooltip = () =>
@@ -72,13 +73,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     public List<PlayerState> GetPlayers() => _players;
     public PlayerState GetDealer() => _dealer;
 
-    /// <summary>
-    /// Called continuously by Framework.Update, regardless of which tab is active.
-    /// This ensures game logic (like party sync) runs even when the Main tab isn't visible.
-    /// </summary>
     public void OnUpdate()
     {
-        // Party sync runs continuously when recognition is active
         if (IsRecognitionActive && (DateTime.Now - _lastSync).TotalMilliseconds > 1000)
         {
             _lastSync = DateTime.Now;
@@ -88,9 +84,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     public override void Draw()
     {
-        // NOTE: Moved sync logic to OnUpdate() to ensure it runs regardless of active tab
-        // Draw() should ONLY handle UI rendering, not game logic
-
         var avail = ImGui.GetContentRegionAvail();
         var sidebarWidth = _isSidebarVisible ? 200f : 0f;
 

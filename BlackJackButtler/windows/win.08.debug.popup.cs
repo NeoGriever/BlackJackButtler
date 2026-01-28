@@ -55,7 +55,6 @@ public class DebugLogWindow : Window
         List<BlackJackButtlerWindow.DebugEntry> logCopy;
         lock (_main.GetLogLock()) logCopy = _main.GetDebugLog().ToList();
 
-        // Only chat entries in popout
         var chatEntries = logCopy.Where(e => e.IsChat).ToList();
 
         if (chatEntries.Count == 0)
@@ -64,7 +63,6 @@ public class DebugLogWindow : Window
             return;
         }
 
-        // Build string in chronological order (oldest first)
         var sb = new StringBuilder(chatEntries.Count * 100);
         sb.AppendLine($"=== BlackJack Buttler Chat Log ===");
         sb.AppendLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");

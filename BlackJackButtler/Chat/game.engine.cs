@@ -139,11 +139,6 @@ public static partial class GameEngine
 
     public static void HandlePostCardEvents(Configuration cfg, List<PlayerState> players, PlayerState dealer)
     {
-        // NOTE: This method is now primarily called by DiceResultHandler
-        // The old direct calls from this method have been moved to DiceResultHandler
-        // to prevent race conditions with the CommandExecutor.
-        // This method is kept for backwards compatibility and for any edge cases
-        // where it might still be called directly.
 
         var targetName = GetCurrentTargetName();
         PlayerState? target =
@@ -158,8 +153,6 @@ public static partial class GameEngine
         if (target.CurrentHandIndex < 0 || target.CurrentHandIndex >= target.Hands.Count)
         target.CurrentHandIndex = 0;
 
-        // The actual event handling is now done in DiceResultHandler to ensure
-        // proper synchronization with CommandExecutor
     }
 
     private static async Task ExecutePlayerAction(PlayerState p, string actionName, Configuration cfg, List<PlayerState> players, Func<Task> logic)
@@ -234,7 +227,7 @@ public static partial class GameEngine
 
             VariableManager.SetVariable("winners", FormatResultCategory(winList.Distinct().ToList(), "Winner", "Winners"));
             VariableManager.SetVariable("pushed", FormatResultCategory(pushList.Distinct().ToList(), "Pushed", "Pushed"));
-            VariableManager.SetVariable("loosers", FormatResultCategory(lossList.Distinct().ToList(), "Loosed", "Loosed")); // "Loosed" wie gewünscht
+            VariableManager.SetVariable("loosers", FormatResultCategory(lossList.Distinct().ToList(), "Loosed", "Loosed"));
             VariableManager.SetVariable("busted", FormatResultCategory(bustList.Distinct().ToList(), "Busted", "Busted"));
 
             var parts = new List<string>();

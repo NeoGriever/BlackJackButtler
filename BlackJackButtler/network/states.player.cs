@@ -13,6 +13,8 @@ public class PlayerState
     public bool IsActivePlayer = false;
 
     public bool IsOnHold = false;
+    public bool WasOnHoldThisRound = false;
+    public bool IsOnBench = false;
 
     public bool IsInParty = true;
     public bool IsCurrentTurn = false;
@@ -66,6 +68,8 @@ public class PlayerState
         CurrentHandIndex = 0;
         IsCurrentTurn = false;
         HasInitialHandDealt = false;
+        WasOnHoldThisRound = false;
+        IsOnBench = false;
     }
 
     public (int Min, int? Max) CalculatePoints(int handIndex)
