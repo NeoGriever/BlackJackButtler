@@ -69,22 +69,17 @@ public partial class BlackJackButtlerWindow
             ImGui.PushID(i);
             if (isStd) ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.1f, 0.3f, 0.1f, 1f));
 
-            // Calculate widths
-            float comboWidth = 120f;
-            float spacing = 8f;
-            float totalWidth = ImGui.GetContentRegionAvail().X;
-            float headerWidth = totalWidth - comboWidth - spacing;
+            // Get mode name for display
+            string modeName = batch.Mode switch
+            {
+                SelectionMode.Random => "Random",
+                SelectionMode.First => "First",
+                SelectionMode.Iterative => "Iterative",
+                _ => "Unknown"
+            };
 
-            // Create a child region for the header to limit its click area
-            ImGui.BeginChild($"##header_region_{i}", new Vector2(headerWidth, ImGui.GetFrameHeight()), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBackground);
-            bool open = ImGui.CollapsingHeader($"{(isStd ? "● " : "")}{batch.Name}###batch_{i}");
-            ImGui.EndChild();
-
-            // Draw combo on same line
-            ImGui.SameLine();
-            ImGui.SetNextItemWidth(comboWidth);
-            int mode = (int)batch.Mode;
-            if (ImGui.Combo($"##mode_{batch.Name}", ref mode, "Random\0First\0Iterative\0")) { batch.Mode = (SelectionMode)mode; _save(); }
+            // Draw header with mode text
+            bool open = ImGui.CollapsingHeader($"{(isStd ? "● " : "")}{batch.Name} [{modeName}]###batch_{i}");
 
             if (isStd) ImGui.PopStyleColor();
 
@@ -100,7 +95,15 @@ public partial class BlackJackButtlerWindow
                     ImGui.SameLine();
                     if (ImGui.Button($"X##{batch.Name}_{m}")) { batch.Messages.RemoveAt(m); _save(); break; }
                 }
+
+                // Draw "+ Line" button and mode combo on same line
                 if (ImGui.Button("+ Line")) { batch.Messages.Add(""); _save(); }
+                ImGui.SameLine();
+                ImGui.Text("Mode:");
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(120);
+                int mode = (int)batch.Mode;
+                if (ImGui.Combo($"##mode_{batch.Name}", ref mode, "Random\0First\0Iterative\0")) { batch.Mode = (SelectionMode)mode; _save(); }
 
                 if (!isStd)
                 {
