@@ -201,9 +201,31 @@ public partial class BlackJackButtlerWindow
 
         ImGui.TableNextColumn();
         if (p.IsActivePlayer) {
-            bool canBench = GameEngine.CanMovePlayerToBench(p, _players);
+            var currentPhase = GameEngine.CurrentPhase;
 
-            if (!canBench) ImGui.BeginDisabled();
+            // Determine if button should be disabled
+            bool isDisabled = false;
+
+            // If on bench, can only return if not in DealerTurn or Payout
+            if (p.IsOnBench)
+            {
+                isDisabled = (currentPhase == GamePhase.DealerTurn || currentPhase == GamePhase.Payout);
+            }
+            // If on hold, can toggle off unless dealer has cards (during DealerTurn after dealer drew)
+            else if (p.IsOnHold)
+            {
+                // Check if dealer has drawn cards
+                bool dealerHasCards = _dealer.Hands.Count > 0 && _dealer.Hands[0].Cards.Count > 0;
+                isDisabled = (currentPhase == GamePhase.DealerTurn && dealerHasCards);
+            }
+            // If not on bench/hold, can only bench during PlayersTurn if allowed
+            else
+            {
+                bool canBench = GameEngine.CanMovePlayerToBench(p, _players);
+                isDisabled = (p.IsCurrentTurn && currentPhase == GamePhase.PlayersTurn && !canBench);
+            }
+
+            if (isDisabled) ImGui.BeginDisabled();
 
             bool colorPushed = false;
             if (p.IsOnBench)
@@ -219,14 +241,14 @@ public partial class BlackJackButtlerWindow
 
             if (ImGui.Button($"H##hold_{p.UIID}"))
             {
-                if (p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn && canBench)
+                if (p.IsCurrentTurn && currentPhase == GamePhase.PlayersTurn && GameEngine.CanMovePlayerToBench(p, _players))
                 {
                     GameEngine.MovePlayerToBench(p, _players);
                     GameEngine.NextTurn(_players, _config);
                 }
                 else if (p.IsOnBench)
                 {
-                    if (GameEngine.CurrentPhase != GamePhase.DealerTurn && GameEngine.CurrentPhase != GamePhase.Payout)
+                    if (currentPhase != GamePhase.DealerTurn && currentPhase != GamePhase.Payout)
                     {
                         GameEngine.MovePlayerFromBench(p);
                     }
@@ -239,7 +261,7 @@ public partial class BlackJackButtlerWindow
             }
 
             if (colorPushed) ImGui.PopStyleColor();
-            if (!canBench) ImGui.EndDisabled();
+            if (isDisabled) ImGui.EndDisabled();
 
             if (ImGui.IsItemHovered())
             {
@@ -253,6 +275,9 @@ public partial class BlackJackButtlerWindow
                     ImGui.SetTooltip("Click to hold (skip next round)");
             }
         }
+        /*
+        TODO: Der Pause-Button lässt die UI kaputt gehen (texte werden alle schwarz auch außerhalb des plugins. Irgendwo ist da eine Race-Condition oder sowas)
+        */
 
         ImGui.TableNextColumn();
         var nameColor = p.IsCurrentTurn ? new Vector4(1f, 1f, 0.2f, 1f) : new Vector4(1, 1, 1, 1);
