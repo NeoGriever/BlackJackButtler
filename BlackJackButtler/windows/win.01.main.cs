@@ -205,10 +205,17 @@ public partial class BlackJackButtlerWindow
 
             if (!canBench) ImGui.BeginDisabled();
 
+            bool colorPushed = false;
             if (p.IsOnBench)
+            {
                 ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1f));
+                colorPushed = true;
+            }
             else if (p.IsOnHold)
+            {
                 ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.2f, 0.2f, 1f));
+                colorPushed = true;
+            }
 
             if (ImGui.Button($"H##hold_{p.UIID}"))
             {
@@ -231,7 +238,7 @@ public partial class BlackJackButtlerWindow
                 _save();
             }
 
-            if (p.IsOnBench || p.IsOnHold) ImGui.PopStyleColor();
+            if (colorPushed) ImGui.PopStyleColor();
             if (!canBench) ImGui.EndDisabled();
 
             if (ImGui.IsItemHovered())
@@ -246,7 +253,6 @@ public partial class BlackJackButtlerWindow
                     ImGui.SetTooltip("Click to hold (skip next round)");
             }
         }
-
 
         ImGui.TableNextColumn();
         var nameColor = p.IsCurrentTurn ? new Vector4(1f, 1f, 0.2f, 1f) : new Vector4(1, 1, 1, 1);

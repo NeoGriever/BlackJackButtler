@@ -69,10 +69,20 @@ public partial class BlackJackButtlerWindow
             ImGui.PushID(i);
             if (isStd) ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.1f, 0.3f, 0.1f, 1f));
 
-            bool open = ImGui.CollapsingHeader($"{(isStd ? "● " : "")}{batch.Name}###batch_{i}");
+            // Calculate widths
+            float comboWidth = 120f;
+            float spacing = 8f;
+            float totalWidth = ImGui.GetContentRegionAvail().X;
+            float headerWidth = totalWidth - comboWidth - spacing;
 
-            ImGui.SameLine(ImGui.GetContentRegionAvail().X - 120);
-            ImGui.SetNextItemWidth(120);
+            // Create a child region for the header to limit its click area
+            ImGui.BeginChild($"##header_region_{i}", new Vector2(headerWidth, ImGui.GetFrameHeight()), false, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoBackground);
+            bool open = ImGui.CollapsingHeader($"{(isStd ? "● " : "")}{batch.Name}###batch_{i}");
+            ImGui.EndChild();
+
+            // Draw combo on same line
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(comboWidth);
             int mode = (int)batch.Mode;
             if (ImGui.Combo($"##mode_{batch.Name}", ref mode, "Random\0First\0Iterative\0")) { batch.Mode = (SelectionMode)mode; _save(); }
 
