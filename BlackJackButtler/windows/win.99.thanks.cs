@@ -12,13 +12,13 @@ public partial class BlackJackButtlerWindow
         "Sleip",
         "Xia Dove",
         "Hadesyra Ravenshadow",
-        "Le'grasstoucher",
-        "Amystra Pinkypie"
+        "LG",
+        "Amystra"
     };
 
     private List<string> _thanksToNamesSupport = new()
     {
-        
+
     };
 
     private void DrawThanksPage()
