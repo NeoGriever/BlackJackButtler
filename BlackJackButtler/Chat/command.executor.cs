@@ -12,6 +12,7 @@ public static class CommandExecutor
 {
     private static readonly RRX.Regex StackTokenRegex = new(@"#\{([^}]+)\}", RRX.RegexOptions.Compiled);
     private static readonly RRX.Regex DicePartyRegex = new(@"^/dice\s+party\s+(\d+)\s*$", RRX.RegexOptions.Compiled | RRX.RegexOptions.IgnoreCase);
+    private const float MinCommandDelay = 0.3f;
     private static bool _isRunning = false;
     public static bool IsRunning => _isRunning;
 
@@ -191,7 +192,8 @@ public static class CommandExecutor
                     }
                 }
 
-                float effectiveDelay = Plugin.IsDebugMode ? 0.2f : cmd.Delay;
+                float effectiveDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
+                    : Math.Max(MinCommandDelay, cmd.Delay * cfg.CommandSpeedMultiplier);
 
                 if (effectiveDelay > 0)
                 {
@@ -285,7 +287,8 @@ public static class CommandExecutor
 
                 ChatCommandRouter.Send(processedText, cfg, $"{groupName}:internal:{step}");
 
-                float effectiveDelay = Plugin.IsDebugMode ? 0.2f : cmd.Delay;
+                float effectiveDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
+                    : Math.Max(MinCommandDelay, cmd.Delay * cfg.CommandSpeedMultiplier);
 
                 if (effectiveDelay > 0)
                 {

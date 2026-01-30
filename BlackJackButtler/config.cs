@@ -23,6 +23,7 @@ public sealed class Configuration : IPluginConfiguration
     public float MultiplierBlackjackWin = 1.5f;
     public float MultiplierDirtyBlackjackWin = 1.0f;
     public bool RefundFullDoubleDownOnPush = false;
+    public float CommandSpeedMultiplier = 1.0f;
 
     public List<CommandGroup> CommandGroups = new();
     public List<MessageBatch> MessageBatches = new();

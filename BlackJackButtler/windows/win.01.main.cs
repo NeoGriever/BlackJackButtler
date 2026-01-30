@@ -288,6 +288,25 @@ public partial class BlackJackButtlerWindow
         if (ImGui.InputLong($"##bank_{p.UIID}", ref p.Bank, 1000, 10000)) _save();
 
         ImGui.TableNextColumn();
+        bool betOutOfRange = p.CurrentBet < _config.MinBet || p.CurrentBet > _config.MaxBet;
+        if (betOutOfRange)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+            if (ImGui.SmallButton($"!##bet_warn_{p.UIID}"))
+            {
+                _page = Page.Settings;
+                _pendingSettingsFocus = p.CurrentBet < _config.MinBet ? "min_bet" : "max_bet";
+            }
+            ImGui.PopStyleColor();
+            if (ImGui.IsItemHovered())
+            {
+                if (p.CurrentBet < _config.MinBet)
+                    ImGui.SetTooltip($"Bet is below minimum ({_config.MinBet:N0})");
+                else
+                    ImGui.SetTooltip($"Bet is above maximum ({_config.MaxBet:N0})");
+            }
+            ImGui.SameLine();
+        }
         ImGui.SetNextItemWidth(-1);
         if (ImGui.InputLong($"##bet_{p.UIID}", ref p.CurrentBet, 500, 5000)) _save();
 

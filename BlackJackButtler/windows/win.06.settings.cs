@@ -19,6 +19,19 @@ public partial class BlackJackButtlerWindow
             _config.CurrentLevel = (UserLevel)level;
             _save();
         }
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Command Speed");
+        ImGui.SameLine(300f);
+        ImGui.SetNextItemWidth(200f);
+        if (ImGui.SliderFloat("##cmd_speed", ref _config.CommandSpeedMultiplier, 0.1f, 4.0f, "%.2fx"))
+        {
+            _config.CommandSpeedMultiplier = (float)(Math.Round(_config.CommandSpeedMultiplier / 0.05) * 0.05);
+            _config.CommandSpeedMultiplier = Math.Clamp(_config.CommandSpeedMultiplier, 0.1f, 4.0f);
+            _save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Multiplier applied to all command delays at execution time.\n1.00x = normal speed, 0.50x = twice as fast, 2.00x = twice as slow.\nMinimum effective delay is always 0.3s.");
+
         ImGui.Separator();
 
         ImGui.TextUnformatted("Gameplay Settings");
@@ -84,6 +97,36 @@ public partial class BlackJackButtlerWindow
 
         ImGui.Spacing();
         DrawMultiplierInput("Natural BJ Multiplier (2 Cards)", ref _config.MultiplierBlackjackWin);
+
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Min Bet");
+        ImGui.SameLine(300f);
+        ImGui.SetNextItemWidth(200f);
+        if (_pendingSettingsFocus == "min_bet")
+        {
+            ImGui.SetKeyboardFocusHere();
+            _pendingSettingsFocus = null;
+        }
+        if (ImGui.InputLong("##min_bet", ref _config.MinBet, 100, 1000))
+        {
+            _config.MinBet = Math.Clamp(_config.MinBet, 1, _config.MaxBet);
+            _save();
+        }
+
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Max Bet");
+        ImGui.SameLine(300f);
+        ImGui.SetNextItemWidth(200f);
+        if (_pendingSettingsFocus == "max_bet")
+        {
+            ImGui.SetKeyboardFocusHere();
+            _pendingSettingsFocus = null;
+        }
+        if (ImGui.InputLong("##max_bet", ref _config.MaxBet, 1000, 10000))
+        {
+            _config.MaxBet = Math.Max(_config.MaxBet, _config.MinBet);
+            _save();
+        }
 
         if(level >= (int)UserLevel.Advanced)
         {
@@ -179,6 +222,8 @@ public partial class BlackJackButtlerWindow
         _config.MultiplierBlackjackWin = _tempImportConfig.MultiplierBlackjackWin;
         _config.MultiplierDirtyBlackjackWin = _tempImportConfig.MultiplierDirtyBlackjackWin;
         _config.MaxHandsPerPlayer = _tempImportConfig.MaxHandsPerPlayer;
+        _config.MinBet = _tempImportConfig.MinBet;
+        _config.MaxBet = _tempImportConfig.MaxBet;
 
         _save();
     }
