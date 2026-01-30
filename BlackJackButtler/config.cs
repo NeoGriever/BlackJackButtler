@@ -29,6 +29,9 @@ public sealed class Configuration : IPluginConfiguration
     public List<MessageBatch> MessageBatches = new();
     public List<UserRegexEntry> UserRegexes = new();
 
+    public long MinBet = 1;
+    public long MaxBet = 1000000;
+
     public bool DefaultBatchesSeeded = false;
     public bool DefaultRegexSeeded = false;
     public bool DefaultCommandsSeeded = false;

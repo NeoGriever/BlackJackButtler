@@ -39,6 +39,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private Configuration? _tempImportConfig;
     private bool _showImportModal = false;
     private bool _isSidebarVisible = true;
+    private string? _pendingSettingsFocus;
 
     private bool _showRestoreSessionButton = false;
 
