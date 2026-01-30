@@ -33,6 +33,10 @@ public class PlayerState
     public bool HighlightDD = false;
     public bool HighlightSplit = false;
     public bool HighlightPay = false;
+    public bool HighlightAlias = false;
+    public bool HighlightPause = false;
+    public bool HighlightLeave = false;
+    public bool HighlightJoin = false;
     public bool IsInDebt => Bank < 0;
 
     public string DisplayName => !string.IsNullOrWhiteSpace(Alias) ? Alias : Name;
@@ -61,6 +65,28 @@ public class PlayerState
         Bank -= amount;
     }
 
+    public void ResetHighlightsOnceConsistent()
+    {
+        HighlightHit = false;
+        HighlightStand = false;
+        HighlightDD = false;
+        HighlightSplit = false;
+    }
+
+    public void ResetHighlightsAll()
+    {
+        HighlightBet = false;
+        HighlightHit = false;
+        HighlightStand = false;
+        HighlightDD = false;
+        HighlightSplit = false;
+        HighlightPay = false;
+        HighlightAlias = false;
+        HighlightPause = false;
+        HighlightLeave = false;
+        HighlightJoin = false;
+    }
+
     public void ResetForNewRound()
     {
         Hands.Clear();
@@ -70,6 +96,7 @@ public class PlayerState
         HasInitialHandDealt = false;
         WasOnHoldThisRound = false;
         IsOnBench = false;
+        ResetHighlightsAll();
     }
 
     public (int Min, int? Max) CalculatePoints(int handIndex)
@@ -129,7 +156,11 @@ public class PlayerState
             HighlightStand = HighlightStand,
             HighlightDD = HighlightDD,
             HighlightSplit = HighlightSplit,
-            HighlightPay = HighlightPay
+            HighlightPay = HighlightPay,
+            HighlightAlias = HighlightAlias,
+            HighlightPause = HighlightPause,
+            HighlightLeave = HighlightLeave,
+            HighlightJoin = HighlightJoin
         };
     }
 
