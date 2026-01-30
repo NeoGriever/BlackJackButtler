@@ -134,6 +134,32 @@ public static class RegexEngine
                     ChatCommandRouter.Send($"/p {processedText}", cfg, $"Batch:{batch.Name}->{msg.Name}");
                 }
                 break;
+
+            // Persistent highlights — always set
+            case RegexAction.HighlightBet:     if (p != null) p.HighlightBet = true; break;
+            case RegexAction.HighlightPayout:  if (p != null) p.HighlightPay = true; break;
+            case RegexAction.HighlightAlias:   if (p != null) p.HighlightAlias = true; break;
+            case RegexAction.HighlightPause:   if (p != null) p.HighlightPause = true; break;
+            case RegexAction.HighlightLeave:   if (p != null) p.HighlightLeave = true; break;
+            case RegexAction.HighlightJoin:    if (p != null) p.HighlightJoin = true; break;
+
+            // Once-consistent highlights — only set if none in group is active
+            case RegexAction.HighlightHit:
+                if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                    p.HighlightHit = true;
+                break;
+            case RegexAction.HighlightStand:
+                if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                    p.HighlightStand = true;
+                break;
+            case RegexAction.HighlightDD:
+                if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                    p.HighlightDD = true;
+                break;
+            case RegexAction.HighlightSplit:
+                if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                    p.HighlightSplit = true;
+                break;
         }
     }
 

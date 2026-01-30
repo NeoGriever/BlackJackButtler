@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using Dalamud.Configuration;
 using BlackJackButtler.Regex;
 
@@ -38,6 +39,7 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool AutoInitialDeal = false;
     public bool SmallResult = false;
+    public Vector4 HighlightColor = new Vector4(1.0f, 1.0f, 0.0f, 1.0f);
     public bool dismissDevWarning = false;
 
     public UserLevel CurrentLevel = UserLevel.Beginner;

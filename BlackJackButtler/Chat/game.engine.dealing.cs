@@ -86,6 +86,9 @@ public static partial class GameEngine
         var activePlayers = GetActivePlayers(players);
         var benchPlayers = GetBenchPlayers(players);
 
+        foreach (var pl in activePlayers)
+            pl.ResetHighlightsOnceConsistent();
+
         if (activePlayers.Count == 0 && benchPlayers.Count == 0)
         {
             CurrentPhase = GamePhase.Waiting;

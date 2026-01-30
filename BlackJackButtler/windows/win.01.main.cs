@@ -188,16 +188,30 @@ public partial class BlackJackButtlerWindow
 
         ImGui.TableNextColumn();
         if (p.IsActivePlayer) {
+            bool hlAlias = p.HighlightAlias;
+            if (hlAlias) ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
             if (ImGui.Button($"A##alias_btn_{p.UIID}")) {
+                p.HighlightAlias = false;
                 _editingAliasPlayer = p;
                 _aliasInputBuffer = !string.IsNullOrWhiteSpace(p.Alias) ? p.Alias : p.Name;
                 _triggerAliasPopup = true;
             }
+            if (hlAlias) ImGui.PopStyleColor();
         }
 
         ImGui.TableNextColumn();
-        if (!p.IsActivePlayer) { if (ImGui.Button($">##{p.UIID}", new Vector2(-1, 0))) p.IsActivePlayer = true; }
-        else { if (ImGui.Button($"X##{p.UIID}", new Vector2(-1, 0))) { p.IsActivePlayer = false; p.IsCurrentTurn = false; } }
+        if (!p.IsActivePlayer) {
+            bool hlJoin = p.HighlightJoin;
+            if (hlJoin) ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
+            if (ImGui.Button($">##{p.UIID}", new Vector2(-1, 0))) { p.HighlightJoin = false; p.IsActivePlayer = true; }
+            if (hlJoin) ImGui.PopStyleColor();
+        }
+        else {
+            bool hlLeave = p.HighlightLeave;
+            if (hlLeave) ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
+            if (ImGui.Button($"X##{p.UIID}", new Vector2(-1, 0))) { p.HighlightLeave = false; p.IsActivePlayer = false; p.IsCurrentTurn = false; }
+            if (hlLeave) ImGui.PopStyleColor();
+        }
 
         ImGui.TableNextColumn();
         if (p.IsActivePlayer) {
@@ -238,9 +252,15 @@ public partial class BlackJackButtlerWindow
                 ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.2f, 0.2f, 1f));
                 colorPushed = true;
             }
+            else if (p.HighlightPause)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
+                colorPushed = true;
+            }
 
             if (ImGui.Button($"H##hold_{p.UIID}"))
             {
+                p.HighlightPause = false;
                 if (p.IsCurrentTurn && currentPhase == GamePhase.PlayersTurn && GameEngine.CanMovePlayerToBench(p, _players))
                 {
                     GameEngine.MovePlayerToBench(p, _players);
@@ -307,8 +327,15 @@ public partial class BlackJackButtlerWindow
             }
             ImGui.SameLine();
         }
+        bool hlBet = p.HighlightBet;
+        if (hlBet) ImGui.PushStyleColor(ImGuiCol.FrameBg, _config.HighlightColor);
         ImGui.SetNextItemWidth(-1);
-        if (ImGui.InputLong($"##bet_{p.UIID}", ref p.CurrentBet, 500, 5000)) _save();
+        if (ImGui.InputLong($"##bet_{p.UIID}", ref p.CurrentBet, 500, 5000))
+        {
+            p.HighlightBet = false;
+            _save();
+        }
+        if (hlBet) ImGui.PopStyleColor();
 
         ImGui.TableNextColumn();
         DrawMultiHandCards(p);
@@ -414,7 +441,7 @@ public partial class BlackJackButtlerWindow
         if (phase == GamePhase.Payout)
         {
             bool shouldHighlight = p.HighlightPay;
-            if (shouldHighlight) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1, 0.5f, 0, 1));
+            if (shouldHighlight) ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
             if (ImGui.SmallButton($"Pay Out##{p.UIID}"))
             {
                 p.HighlightPay = false;
@@ -545,7 +572,7 @@ public partial class BlackJackButtlerWindow
     {
         if (!enabled) ImGui.BeginDisabled();
         bool shouldHighlight = highlightField && enabled;
-        if (shouldHighlight) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0, 0.8f, 0.8f, 1));
+        if (shouldHighlight) ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
 
         if (ImGui.SmallButton($"{label}##btn_{label}_{p.UIID}"))
         {

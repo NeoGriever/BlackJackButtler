@@ -34,7 +34,7 @@ public partial class BlackJackButtlerWindow
 
         ImGui.Separator();
 
-        ImGui.TextUnformatted("Gameplay Settings");
+        ImGui.TextUnformatted("Gameplay Rules");
         if(level >= (int)UserLevel.Advanced)
         {
             ImGui.Spacing();
@@ -78,6 +78,25 @@ public partial class BlackJackButtlerWindow
         if(level >= (int)UserLevel.Advanced)
         {
             ImGui.Spacing();
+            ImGui.TextUnformatted("Max Hands per Player (Splits)");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (ImGui.InputInt("##max_hands", ref _config.MaxHandsPerPlayer, 1))
+            {
+                _config.MaxHandsPerPlayer = Math.Clamp(_config.MaxHandsPerPlayer, 2, 10);
+                _save();
+            }
+        } else if (_config.MaxHandsPerPlayer != 2) {
+            _config.MaxHandsPerPlayer = 2;
+            _save();
+        }
+
+        ImGui.Separator();
+
+        ImGui.TextUnformatted("UI");
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
             if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Collects all results and sends a single compressed message.\nInactive: Sends individual result messages for every player hand.");
         } else if (!_config.SmallResult) {
@@ -88,16 +107,43 @@ public partial class BlackJackButtlerWindow
         if(level >= (int)UserLevel.Advanced)
         {
             ImGui.Spacing();
+            ImGui.TextUnformatted("Highlight Color");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (ImGui.ColorEdit4("##highlight_color", ref _config.HighlightColor, ImGuiColorEditFlags.NoAlpha))
+            {
+                _config.HighlightColor.W = 1.0f;
+                _save();
+            }
+        }
+
+        ImGui.Separator();
+
+        ImGui.TextUnformatted("Multipliers");
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
             DrawMultiplierInput("Normal Win Multiplier", ref _config.MultiplierNormalWin);
         } else if (_config.MultiplierNormalWin != 1.0f) {
             _config.MultiplierNormalWin = 1.0f;
             _save();
         }
 
-
         ImGui.Spacing();
         DrawMultiplierInput("Natural BJ Multiplier (2 Cards)", ref _config.MultiplierBlackjackWin);
 
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
+            DrawMultiplierInput("Dirty BJ Multiplier (3+ Cards)", ref _config.MultiplierDirtyBlackjackWin);
+        } else if (_config.MultiplierDirtyBlackjackWin != 1.0f) {
+            _config.MultiplierDirtyBlackjackWin = 1.0f;
+            _save();
+        }
+
+        ImGui.Separator();
+
+        ImGui.TextUnformatted("Bet Limits");
         ImGui.Spacing();
         ImGui.TextUnformatted("Min Bet");
         ImGui.SameLine(300f);
@@ -125,31 +171,6 @@ public partial class BlackJackButtlerWindow
         if (ImGui.InputLong("##max_bet", ref _config.MaxBet, 1000, 10000))
         {
             _config.MaxBet = Math.Max(_config.MaxBet, _config.MinBet);
-            _save();
-        }
-
-        if(level >= (int)UserLevel.Advanced)
-        {
-            ImGui.Spacing();
-            DrawMultiplierInput("Dirty BJ Multiplier (3+ Cards)", ref _config.MultiplierDirtyBlackjackWin);
-        } else if (_config.MultiplierDirtyBlackjackWin != 1.0f) {
-            _config.MultiplierDirtyBlackjackWin = 1.0f;
-            _save();
-        }
-
-        if(level >= (int)UserLevel.Advanced)
-        {
-            ImGui.Spacing();
-            ImGui.TextUnformatted("Max Hands per Player (Splits)");
-            ImGui.SameLine(300f);
-            ImGui.SetNextItemWidth(200f);
-            if (ImGui.InputInt("##max_hands", ref _config.MaxHandsPerPlayer, 1))
-            {
-                _config.MaxHandsPerPlayer = Math.Clamp(_config.MaxHandsPerPlayer, 2, 10);
-                _save();
-            }
-        } else if (_config.MaxHandsPerPlayer != 2) {
-            _config.MaxHandsPerPlayer = 2;
             _save();
         }
 

@@ -198,7 +198,17 @@ public partial class BlackJackButtlerWindow
                         "TradeCommit\0" +
                         "TradeCancel\0" +
                         "TakeBatch\0" +
-                        "DiceRollValue\0"
+                        "DiceRollValue\0" +
+                        "HighlightBet\0" +
+                        "HighlightPayout\0" +
+                        "HighlightAlias\0" +
+                        "HighlightPause\0" +
+                        "HighlightLeave\0" +
+                        "HighlightJoin\0" +
+                        "HighlightHit\0" +
+                        "HighlightStand\0" +
+                        "HighlightDD\0" +
+                        "HighlightSplit\0"
                     ))
                     {
                         e.Action = (RegexAction)action;

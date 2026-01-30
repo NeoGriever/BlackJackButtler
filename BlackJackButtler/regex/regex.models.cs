@@ -26,6 +26,16 @@ public enum RegexAction
     TradeCancel,
     TakeBatch,
     DiceRollValue,
+    HighlightBet,
+    HighlightPayout,
+    HighlightAlias,
+    HighlightPause,
+    HighlightLeave,
+    HighlightJoin,
+    HighlightHit,
+    HighlightStand,
+    HighlightDD,
+    HighlightSplit,
 }
 
 [Serializable]
