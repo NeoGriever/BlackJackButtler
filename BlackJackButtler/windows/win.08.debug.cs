@@ -51,6 +51,12 @@ public partial class BlackJackButtlerWindow
             }
         }
 
+        if (Plugin.IsDebugMode)
+        {
+            ImGui.SameLine();
+            ImGui.Checkbox("Fast Tests", ref Plugin.IsSpeedMode);
+        }
+
         ImGui.SameLine();
         if (ImGui.SmallButton("Popout Log")) Plugin.Instance.OpenDebugPopout();
 

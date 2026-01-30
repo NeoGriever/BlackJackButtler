@@ -23,6 +23,12 @@ public class DebugLogWindow : Window
     {
         if (ImGui.SmallButton("Clear Log")) { lock(_main.GetLogLock()) _main.GetDebugLog().Clear(); }
 
+        if (Plugin.IsDebugMode)
+        {
+            ImGui.SameLine();
+            ImGui.Checkbox("Fast Tests", ref Plugin.IsSpeedMode);
+        }
+
         ImGui.SameLine();
         if (ImGui.SmallButton("Copy All"))
         {

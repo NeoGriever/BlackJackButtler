@@ -46,6 +46,7 @@ public sealed class Plugin : IDalamudPlugin
     public Configuration Configuration { get; }
 
     public static bool IsDebugMode = false;
+    public static bool IsSpeedMode = false;
 
     private readonly WindowSystem windowSystem = new("BlackJackButtler");
     private readonly BlackJackButtlerWindow mainWindow;
