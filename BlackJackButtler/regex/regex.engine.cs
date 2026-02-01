@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using RRX = System.Text.RegularExpressions;
 using BlackJackButtler.Chat;
 
@@ -109,19 +110,71 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantHit:
-                if (p != null) p.HighlightHit = true;
+                if (p != null && p.IsCurrentTurn && !CommandExecutor.IsRunning
+                    && GameEngine.CurrentPhase == GamePhase.PlayersTurn
+                    && p.HasInitialHandDealt && p.Hands.Count > 0)
+                {
+                    var hand = p.Hands[p.CurrentHandIndex];
+                    var (min, _) = p.CalculatePoints(p.CurrentHandIndex);
+                    if (min < 21 && !hand.IsDoubleDown && !hand.IsStand)
+                    {
+                        GameLog.PushSnapshot(players, dealer, GameEngine.CurrentPhase, $"RegexHit:{p.Name}");
+                        Task.Run(() => GameEngine.ActionHit(p, cfg, players));
+                    }
+                }
                 break;
 
             case RegexAction.WantStand:
-                if (p != null) p.HighlightStand = true;
+                if (p != null && p.IsCurrentTurn && !CommandExecutor.IsRunning
+                    && GameEngine.CurrentPhase == GamePhase.PlayersTurn
+                    && p.HasInitialHandDealt && p.Hands.Count > 0)
+                {
+                    var hand = p.Hands[p.CurrentHandIndex];
+                    if (!hand.IsStand && !hand.IsBust)
+                    {
+                        GameLog.PushSnapshot(players, dealer, GameEngine.CurrentPhase, $"RegexStand:{p.Name}");
+                        Task.Run(() => GameEngine.ActionStand(p, cfg, players));
+                    }
+                }
                 break;
 
             case RegexAction.WantDD:
-                if (p != null) p.HighlightDD = true;
+                if (p != null && p.IsCurrentTurn && !CommandExecutor.IsRunning
+                    && GameEngine.CurrentPhase == GamePhase.PlayersTurn
+                    && p.HasInitialHandDealt && p.Hands.Count > 0)
+                {
+                    var hand = p.Hands[p.CurrentHandIndex];
+                    var (min, _) = p.CalculatePoints(p.CurrentHandIndex);
+                    if (min < 21 && !hand.IsDoubleDown && !hand.IsStand
+                        && hand.Cards.Count == 2
+                        && !(p.Hands.Count > 1 && !cfg.AllowDoubleDownAfterSplit))
+                    {
+                        GameLog.PushSnapshot(players, dealer, GameEngine.CurrentPhase, $"RegexDD:{p.Name}");
+                        Task.Run(() => GameEngine.ActionDD(p, cfg, players));
+                    }
+                }
                 break;
 
             case RegexAction.WantSplit:
-                if (p != null) p.HighlightSplit = true;
+                if (p != null && p.IsCurrentTurn && !CommandExecutor.IsRunning
+                    && GameEngine.CurrentPhase == GamePhase.PlayersTurn
+                    && p.HasInitialHandDealt && p.Hands.Count > 0)
+                {
+                    var hand = p.Hands[p.CurrentHandIndex];
+                    var (min, _) = p.CalculatePoints(p.CurrentHandIndex);
+                    if (min < 21 && !hand.IsDoubleDown && !hand.IsStand
+                        && hand.Cards.Count == 2 && p.Hands.Count < cfg.MaxHandsPerPlayer)
+                    {
+                        bool canSplit = cfg.IdenticalSplitOnly
+                            ? hand.Cards[0].Value == hand.Cards[1].Value
+                            : PlayerState.GetCardScoreValue(hand.Cards[0].Value) == PlayerState.GetCardScoreValue(hand.Cards[1].Value);
+                        if (canSplit)
+                        {
+                            GameLog.PushSnapshot(players, dealer, GameEngine.CurrentPhase, $"RegexSplit:{p.Name}");
+                            Task.Run(() => GameEngine.ActionSplit(p, cfg, players));
+                        }
+                    }
+                }
                 break;
 
             case RegexAction.BankOut:

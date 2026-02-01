@@ -39,8 +39,11 @@ public sealed class Configuration : IPluginConfiguration
     public bool DefaultCommandsSeeded = false;
 
     public bool AutoInitialDeal = false;
+    public bool AutoDealerDraw = false;
+    public int DealerDrawsUntil = 17;
     public bool SmallResult = false;
     public Vector4 HighlightColor = new Vector4(1.0f, 1.0f, 0.0f, 1.0f);
+    public Vector4 HighlightTextColor = new Vector4(0f, 0f, 0f, 1f);
     public bool dismissDevWarning = false;
 
     public UserLevel CurrentLevel = UserLevel.Beginner;

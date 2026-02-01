@@ -123,6 +123,19 @@ public partial class BlackJackButtlerWindow
             }
         }
 
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Highlight Text Color");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (ImGui.ColorEdit4("##highlight_text_color", ref _config.HighlightTextColor, ImGuiColorEditFlags.NoAlpha))
+            {
+                _config.HighlightTextColor.W = 1.0f;
+                _save();
+            }
+        }
+
         ImGui.Separator();
 
         ImGui.TextUnformatted("Multipliers");

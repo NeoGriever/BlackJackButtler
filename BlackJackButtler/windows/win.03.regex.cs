@@ -105,14 +105,14 @@ public partial class BlackJackButtlerWindow
                 bool disableEditing = isStd && !_config.AllowEditingStandardRegex;
                 if (disableEditing) ImGui.BeginDisabled();
 
-                if (ImGui.Checkbox($"##enabled{e.Name}", ref e.Enabled)) _save();
+                if (ImGui.Checkbox("##enabled", ref e.Enabled)) _save();
 
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     ImGui.SetTooltip("Enabled");
 
                 ImGui.SameLine();
 
-                if (ImGui.Checkbox($"##caseSensitive{e.Name}", ref e.CaseSensitive)) _save();
+                if (ImGui.Checkbox("##caseSensitive", ref e.CaseSensitive)) _save();
 
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     ImGui.SetTooltip("Case sensitive");
@@ -123,7 +123,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.SetNextItemWidth(300f);
 
                 if (isStd) ImGui.BeginDisabled();
-                if (ImGui.InputText($"##entryName{e.Name}", ref entryName, 64))
+                if (ImGui.InputText("##entryName", ref entryName, 64))
                 {
                     e.Name = entryName;
                     _save();
@@ -133,7 +133,7 @@ public partial class BlackJackButtlerWindow
                 int modeInt = (int)e.Mode;
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(250f);
-                if (ImGui.Combo($"##opMode{e.Name}", ref modeInt, "Regex-To-Variable\0Regex-Trigger\0"))
+                if (ImGui.Combo("##opMode", ref modeInt, "Regex-To-Variable\0Regex-Trigger\0"))
                 {
                     e.Mode = (RegexEntryMode)modeInt;
                     _save();
@@ -187,10 +187,10 @@ public partial class BlackJackButtlerWindow
                         ref action,
                         "None\0" +
                         "BetChange\0" +
-                        "Hit\0" +
-                        "Stand\0" +
-                        "DD\0" +
-                        "Split\0" +
+                        "Auto Hit\0" +
+                        "Auto Stand\0" +
+                        "Auto DD\0" +
+                        "Auto Split\0" +
                         "BankOut\0" +
                         "TradePartner\0" +
                         "TradeGilIn\0" +
@@ -205,10 +205,10 @@ public partial class BlackJackButtlerWindow
                         "HighlightPause\0" +
                         "HighlightLeave\0" +
                         "HighlightJoin\0" +
-                        "HighlightHit\0" +
-                        "HighlightStand\0" +
-                        "HighlightDD\0" +
-                        "HighlightSplit\0"
+                        "Highlight Hit\0" +
+                        "Highlight Stand\0" +
+                        "Highlight DD\0" +
+                        "Highlight Split\0"
                     ))
                     {
                         e.Action = (RegexAction)action;
