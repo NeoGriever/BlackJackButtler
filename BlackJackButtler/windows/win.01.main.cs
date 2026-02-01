@@ -225,7 +225,7 @@ public partial class BlackJackButtlerWindow
 
     private bool IsLocalPlayerPartyLeader()
     {
-        var localName = Plugin.ClientState.LocalPlayer?.Name.TextValue;
+        var localName = Plugin.ObjectTable.LocalPlayer?.Name.TextValue;
         if (string.IsNullOrEmpty(localName) || Plugin.PartyList.Length == 0)
             return true;
         var leader = Plugin.PartyList[(int)Plugin.PartyList.PartyLeaderIndex];
