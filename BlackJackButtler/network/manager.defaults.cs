@@ -89,16 +89,19 @@ public static class DefaultsManager
                 { "Text": "/upset", "Delay": 2.5 }
             ],
             "DealStart": [
+                { "Text": "/p #{Dividor}", "Delay": 0.8 },
                 { "Text": "/p #{Dealer Draw Messages} <se.1>", "Delay": 0.8 },
                 { "Text": "/beam motion", "Delay": 0.8 },
                 { "Text": "/bstance motion", "Delay": 4.5 },
                 { "Text": "/dice party 13", "Delay": 0.8 }
             ],
             "DealHit": [
+                { "Text": "/p #{Dividor}", "Delay": 0.8 },
                 { "Text": "/p #{Dealer Hit Messages}", "Delay": 0.8 },
                 { "Text": "/beam motion", "Delay": 0.8 },
                 { "Text": "/bstance motion", "Delay": 4.5 },
-                { "Text": "/dice party 13", "Delay": 0.8 }
+                { "Text": "/dice party 13", "Delay": 0.8 },
+                { "Text": "/p Now i have ${dealerpoints}.", "Delay": 0.5 }
             ],
             "DealStand": [
                 { "Text": "/p #{Dealer Stands Messages}", "Delay": 1.5 }
@@ -124,13 +127,16 @@ public static class DefaultsManager
                 { "Text": "/p #{Lost Messages}", "Delay": 1.9 }
             ],
             "StateHSDS": [
-                { "Text": "/p #{Player State Messages HSDS} <se.7>", "Delay": 0.8 }
+                { "Text": "/p #{Dividor}", "Delay": 0.5 },
+                { "Text": "/p #{Player State Messages HSDS} <se.7>", "Delay": 0.5 }
             ],
             "StateHSD":  [
-                { "Text": "/p #{Player State Messages HSD} <se.7>", "Delay": 0.8 }
+                { "Text": "/p #{Dividor}", "Delay": 0.5 },
+                { "Text": "/p #{Player State Messages HSD} <se.7>", "Delay": 0.5 }
             ],
             "StateHS":   [
-                { "Text": "/p #{Player State Messages HS} <se.7>", "Delay": 0.8 }
+                { "Text": "/p #{Dividor}", "Delay": 0.5 },
+                { "Text": "/p #{Player State Messages HS} <se.7>", "Delay": 0.5 }
             ],
             "PlayerDDForcedStand": [
                 { "Text": "/p #{Player DD Forced Stand Messages}", "Delay": 1.2 },

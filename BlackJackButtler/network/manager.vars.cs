@@ -23,6 +23,14 @@ public static class VariableManager
             Variables.Add(new SessionVariable { Name = name, Value = value });
     }
 
+    public static void SetPlayerVariables(PlayerState p)
+    {
+        var culture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+        SetVariable("bankamount", p.Bank.ToString("N0", culture) + " Gil");
+        SetVariable("betamount", p.CurrentBet.ToString("N0", culture) + " Gil");
+        SetVariable("lastwin", p.LastRoundResult.ToString("N0", culture) + " Gil");
+    }
+
     public static string ProcessMessage(string message)
     {
         if (string.IsNullOrEmpty(message)) return message;

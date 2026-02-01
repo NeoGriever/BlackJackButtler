@@ -96,6 +96,12 @@ public static class GameLog
     }
     public static void RestoreSnapshot(int index, GameSnapshot snapshot)
     {
-        _snapshots[index] = snapshot;
+        lock (_lock)
+        {
+            if (index >= _snapshots.Count)
+                _snapshots.Add(snapshot);
+            else
+                _snapshots[index] = snapshot;
+        }
     }
 }

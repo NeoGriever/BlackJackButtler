@@ -1,0 +1,1003 @@
+{
+  "HideStandardBatches": false,
+  "AllowEditingStandardRegex": true,
+  "FirstDealThenPlay": true,
+  "IdenticalSplitOnly": true,
+  "AllowDoubleDownAfterSplit": false,
+  "MaxHandsPerPlayer": 2,
+  "MultiplierNormalWin": 1.0,
+  "MultiplierBlackjackWin": 1.5,
+  "MultiplierDirtyBlackjackWin": 1.0,
+  "RefundFullDoubleDownOnPush": false,
+  "CommandSpeedMultiplier": 1.0,
+  "CommandGroups": [
+    {
+      "Name": "Initial",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 1.2
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Player Deal Hand}",
+          "Delay": 1.2
+        },
+        {
+          "Enabled": true,
+          "Text": "/beam motion",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/bstance motion",
+          "Delay": 4.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/dice party 13",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/bstance motion",
+          "Delay": 4.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/dice party 13",
+          "Delay": 1.2
+        }
+      ]
+    },
+    {
+      "Name": "Hit",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Player Draw Messages}",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/bstance motion",
+          "Delay": 4.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/dice party 13",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.8
+        }
+      ]
+    },
+    {
+      "Name": "Stand",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/thumbsup motion",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Player Stand Messages}",
+          "Delay": 1.2
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Hand Reaction Messages}",
+          "Delay": 1.0
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.8
+        }
+      ]
+    },
+    {
+      "Name": "DD",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Player DD Messages}",
+          "Delay": 1.2
+        },
+        {
+          "Enabled": true,
+          "Text": "/bstance motion",
+          "Delay": 4.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/dice party 13",
+          "Delay": 1.3
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Player DD Messages Stand}",
+          "Delay": 1.3
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.8
+        }
+      ]
+    },
+    {
+      "Name": "Split",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Player Split Messages}",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/beam motion",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/bstance motion",
+          "Delay": 4.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/dice party 13",
+          "Delay": 0.8
+        }
+      ]
+    },
+    {
+      "Name": "PlayerBJ",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Player BlackJack Messages} <se.7>",
+          "Delay": 1.3
+        },
+        {
+          "Enabled": true,
+          "Text": "/thumbsup motion",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/shout #{Player BlackJack Messages Shout}",
+          "Delay": 0.8
+        }
+      ]
+    },
+    {
+      "Name": "PlayerDirtyBJ",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Player Dirty BlackJack Messages} <se.7>",
+          "Delay": 1.3
+        },
+        {
+          "Enabled": true,
+          "Text": "/thumbsup motion",
+          "Delay": 0.8
+        }
+      ]
+    },
+    {
+      "Name": "PlayerBust",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Player Busts Messages} <se.11>",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/upset",
+          "Delay": 2.5
+        }
+      ]
+    },
+    {
+      "Name": "DealStart",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Dealer Draw Messages} <se.1>",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/beam motion",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/bstance motion",
+          "Delay": 4.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/dice party 13",
+          "Delay": 0.8
+        }
+      ]
+    },
+    {
+      "Name": "DealHit",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Dealer Hit Messages}",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/beam motion",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/bstance motion",
+          "Delay": 4.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/dice party 13",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/p Now i have ${dealerpoints}.",
+          "Delay": 0.5
+        }
+      ]
+    },
+    {
+      "Name": "DealStand",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dealer Stands Messages}",
+          "Delay": 1.5
+        }
+      ]
+    },
+    {
+      "Name": "DealerBJ",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dealer Blackjack Messages} <se.7>",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/vpose",
+          "Delay": 3.5
+        }
+      ]
+    },
+    {
+      "Name": "DealerBust",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dealer Busts Messages} <se.11>",
+          "Delay": 0.8
+        },
+        {
+          "Enabled": true,
+          "Text": "/facepalm",
+          "Delay": 3.5
+        }
+      ]
+    },
+    {
+      "Name": "ResultPlayerWin",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Win Messages}",
+          "Delay": 1.9
+        }
+      ]
+    },
+    {
+      "Name": "ResultPlayerPush",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Push Messages}",
+          "Delay": 1.9
+        }
+      ]
+    },
+    {
+      "Name": "ResultPlayerBusted",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Bust Messages}",
+          "Delay": 1.9
+        }
+      ]
+    },
+    {
+      "Name": "ResultPlayerLost",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Lost Messages}",
+          "Delay": 1.9
+        }
+      ]
+    },
+    {
+      "Name": "StateHSDS",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Player State Messages HSDS} <se.7>",
+          "Delay": 0.5
+        }
+      ]
+    },
+    {
+      "Name": "StateHSD",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Player State Messages HSD} <se.7>",
+          "Delay": 0.5
+        }
+      ]
+    },
+    {
+      "Name": "StateHS",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Player State Messages HS} <se.7>",
+          "Delay": 0.5
+        }
+      ]
+    },
+    {
+      "Name": "PlayerDDForcedStand",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Player DD Forced Stand Messages}",
+          "Delay": 1.2
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.8
+        }
+      ]
+    },
+    {
+      "Name": "ResultSmall",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Match Results}",
+          "Delay": 0.9
+        }
+      ]
+    }
+  ],
+  "CustomCommandGroups": [
+    {
+      "Name": "Shoutout",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/shout Feeling a lil luck? Test your luck over at our gamba table with Valenth Siveria!",
+          "Delay": 0.5
+        }
+      ]
+    },
+    {
+      "Name": "Welcome",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p  Welcome <_p_>. Thank you for joining us. Bet ranges goes from 50k to 500k. VIP can go up to 1m. - I do banking. - Do you need the rules for BJ? ",
+          "Delay": 1.0
+        }
+      ]
+    },
+    {
+      "Name": "Rules",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/reference",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p The goal of Blackjack is to beat the Dealer's hand without going over 21.",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p • Face cards (11,12,13) are worth 10. 1 are Aces (1 or 11). Everthing else number value.",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p • To \"Hit\" is to ask for another card. To \"Stand\" is to hold your total and end your turn.",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p • \"Push\" If you Tie with the dealer, you have the choice to Push your bet to the next hand or receive your gil back.",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p • Double Down is like a Hit, only the bet is doubled and you only get one more card.",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p • Split can be done when you have two of the same card, the pair is split into two hands. You can only split once.",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p • If the Player and Dealer get a Natural Blackjack you get Pushed.",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p • Dealer stands at 17, and dealers choice on a soft 17 to stand or not.",
+          "Delay": 0.5
+        }
+      ]
+    }
+  ],
+  "MessageBatches": [
+    {
+      "Name": "Dividor",
+      "IsExpanded": true,
+      "Messages": [
+        "========================="
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Match Results",
+      "IsExpanded": true,
+      "Messages": [
+        " Results: <results> ",
+        " This round is over. The battlefield looks like this: <results> ",
+        " After this round, we have the results: <results> ",
+        " Round complete. Here's how everyone fared: <results> ",
+        " The dust settles - time to count the chips: <results> ",
+        " Cards are down, wallets are open. Results: <results> ",
+        " That's a wrap on this round. Final standings: <results> ",
+        " Another round in the books. Here's the damage: <results> ",
+        " Alright, let's see who's celebrating and who's crying: <results> ",
+        " Round concluded. Winners and losers revealed: <results> ",
+        " The table speaks its verdict: <results> ",
+        " Fortune has made her decision this round: <results> ",
+        " Time to face the music. Round results: <results> ",
+        " Cards never lie - here's what happened: <results> ",
+        " The house has spoken. Results: <results> ",
+        " Round's over. Let's see who beat the odds: <results> ",
+        " Another spin of fate complete. Results: <results> ",
+        " Chips counted, tears shed. Here's the breakdown: <results> ",
+        " The verdict is in for this round: <results> ",
+        " Round finished. Time for the truth: <results> "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player Deal Hand",
+      "IsExpanded": true,
+      "Messages": [
+        " Here are your cards now, <t>. ",
+        " Let me deal your hand, <t>. ",
+        " Two cards for you, <t>. ",
+        " What do the cards say for <t>? ",
+        " <t> gets 2 cards. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player State Messages HSDS",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> - You have splittable <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Double Down] or [Split]? "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player State Messages HSD",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand] or [Double Down]? "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player State Messages HS",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit] or [Stand]? "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player DD Forced Stand Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " Now you have <points> with ${playerCards}. Since it was a Double Down, this hand is now locked. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player Draw Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> want another card? Then <t> will get another card~. ",
+        " <t> want a card - here it is. ",
+        " <t> decides to hit. ",
+        " And with that, <t> gets another card. ",
+        " I'll draw another card for <t>. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player Stand Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> decides to keep the given hand. Good Luck. ",
+        " This hand stands now on <points> for <t>. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player DD Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> want to play a risky game? - DOUBLE DOWN! - Take this card and live with the consequences~. ",
+        " Double Down? Did you say DOUBLE DOWN, <t>? - Well, you want it, you get it! ",
+        " Double bet, double chance. Let's see, what fortuna wanna do with <t>'s hand now. ",
+        " DD! - Let this card speak! ",
+        " <t> wants another card. The last card for <t>'s hand. - Rolling drumsssss~. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player DD Messages Stand",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> drew the DD card. Hand is now locked at <points>. ",
+        " Double Down complete. <t> stands automatically at <points>. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player Split Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> splits the hand. Okay let's see~. ",
+        " These two cards are getting divided into 2 hands. What will <t> do with them? ",
+        " <t> wants to split. Let's gooo~. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player BlackJack Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " Wohoo. <t> got a NATURAL BLACKJACK! Congrats! ",
+        " FANTASTIC. A NATURAL BLACKJACK FOR <t>! Congrats! "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player BlackJack Messages Shout",
+      "IsExpanded": true,
+      "Messages": [
+        "Wohoo. <t> got a natural blackjack. Congrats to <t>!"
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player Dirty BlackJack Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " Wohoo. <t> got a blackjack. Fantastic! ",
+        " Unbelievable. A BLACKJACK FOR <t>! CONGRATS! "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player Busts Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " Oh no. <t> got busted with <points>. ",
+        " That's bad luck. <t> busted with <points>. ",
+        " Ouch! <t> busted at <points>. ",
+        " Bust! <t> pushed it to <points> and paid the price. ",
+        " Dealer smiles. <t> went over with <points>. ",
+        " Too hot to handle - <t> burned out at <points>. ",
+        " Unlucky! <t> cracked with <points>. ",
+        " And that's a bust - <t> hits <points>. ",
+        " Over 21 alert: <t> landed on <points>. ",
+        " Greed got the best of <t> at <points>. ",
+        " One card too far - <t> ended on <points>. ",
+        " The cards said 'nope.' <t> busted with <points>. ",
+        " Risky business - <t> busted at <points>. ",
+        " <t> went full send… to <points>. Bust. ",
+        " The dealer thanks you, <t>: <points> is a bust. ",
+        " Close? Not really. <t> busted with <points>. ",
+        " Math check failed: <t> reached <points>. ",
+        " You hate to see it - <t> busted at <points>. ",
+        " <t> hit <points> and instantly regretted it. ",
+        " That last hit was spicy - <t> busted with <points>. ",
+        " Bold move, <t>. <points> is still a bust. ",
+        " Dealer: 'I'll allow it.' Rules: 'No.' <t> has <points>. ",
+        " <t> chased 21 and caught <points>. Bust. ",
+        " Congratulations, <t> - you found <points> the hard way. ",
+        " House wins this round: <t> busted with <points>. ",
+        " Fortune favors the bold… not <t> at <points>. ",
+        " <t> tried to outsmart the deck and got <points>. ",
+        " Too many hits, not enough sense - <t> busted at <points>. ",
+        " <t> went overboard with <points>. ",
+        " The deck giveth, the deck busteth: <t> at <points>. ",
+        " <t> zigged when they should've stayed - <points>. ",
+        " <t> just invented a new number: <points> (aka bust). "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Dealer Draw Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " New round on the table - dealer starts off with a card. ",
+        " Alright, fresh hand incoming. Dealer draws the opener. ",
+        " Let's kick this round off - dealer reveals the first card. ",
+        " The house makes the first move. Dealer draws. ",
+        " Place your bets and brace yourself - dealer flips the opening card. ",
+        " And we're live. Dealer draws to set the tone for this round. ",
+        " Round start: the dealer breaks the silence with the first card. ",
+        " Cards up - dealer opens the round with a draw. ",
+        " Here we go again. Dealer draws the first card and the table wakes up. ",
+        " The deck speaks first - dealer draws to begin the round. ",
+        " New round, same nerves. Dealer reveals the opening card. ",
+        " Let the drama begin - dealer pulls the first card. ",
+        " The table is set and the dealer starts the story with one card. ",
+        " First card down - dealer opens the round with a draw. ",
+        " Starting whistle: dealer draws the opener and we're in. ",
+        " Another round begins. Dealer draws and the tension returns. ",
+        " Eyes on the felt - dealer flips the first card to start off. ",
+        " No turning back now. Dealer draws the opening card. ",
+        " Fresh round, fresh fate - dealer reveals what we're up against. ",
+        " The house sets the pace - dealer draws the first card. ",
+        " Let's see what kind of round this will be - dealer opens with a draw. ",
+        " Dealer draws the opener. Somewhere, a wallet flinches. ",
+        " New round boots up - dealer drops the first card on the table. ",
+        " The dealer starts the countdown with a single draw. ",
+        " Dealer draws the first card - now the round can officially misbehave. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Dealer Hit Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " Dealer hits - let's see what fate deals next. ",
+        " One more card for the dealer. No fear, just confidence. ",
+        " Dealer takes another - surely this can't go wrong. ",
+        " Dealer hits. The deck is about to say something important. ",
+        " Dealer asks for a card - fortune, don't embarrass me. ",
+        " Another card, please. Let's spice this round up. ",
+        " Dealer hits again - because playing it safe is overrated. ",
+        " Dealer reaches for the deck. One more step toward glory… or doom. ",
+        " Hit me - dealer style. ",
+        " Dealer hits. The table holds its breath. ",
+        " Dealer goes fishing for a better number. ",
+        " Dealer: 'I can fix this.' *draws another card* ",
+        " Dealer hits - trusting cardboard and bad decisions. ",
+        " Dealer wants another card. The suspense is free, the stress is not. ",
+        " Dealer hits. If this works, it was skill. If not, it was the deck. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Dealer Stands Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " Dealer stands. No more cards - time to settle this. ",
+        " Dealer stays. Let's see who'll be smiling after this hand. ",
+        " Dealer stands - final answer. Showdown time. ",
+        " That's enough for the dealer. Let's compare hands. ",
+        " Dealer stands. The rest is just math and regret. ",
+        " Dealer locks it in - now we find out who guessed right. ",
+        " Dealer stands. No more flirting with disaster. ",
+        " Dealer holds. Cards down, results up. ",
+        " Dealer stands - let the chips fall where they may. ",
+        " Dealer stays. Time to see who played it smart. ",
+        " Dealer stands. The hand is set; the verdict is next. ",
+        " Dealer stops here. Let's finish this round. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Dealer Blackjack Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " Dealer hits BLACKJACK. The house sends its regards. ",
+        " Blackjack for the dealer - clean, cruel, and classic. ",
+        " Dealer blackjack. Sometimes the deck just chooses violence. ",
+        " Dealer reveals BLACKJACK - instant pressure on the table. ",
+        " Dealer has BLACKJACK. That escalated quickly. ",
+        " BLACKJACK! Dealer didn't even break a sweat. ",
+        " Dealer blackjack - lucky? maybe. painful? definitely. ",
+        " Dealer shows BLACKJACK. Round went from 'maybe' to 'nope.' ",
+        " Dealer blackjack. The house always remembers your last bet. ",
+        " BLACKJACK for the dealer - short round, sharp sting. ",
+        " Dealer reveals a perfect 21 - BLACKJACK. ",
+        " Dealer blackjack. The table just got a lot quieter. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Dealer Busts Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " Dealer busts with <points>. Greed is a harsh dealer. ",
+        " Dealer pushed too far - <points>. That's a bust. ",
+        " Dealer overcooked it: <points>. Oops. ",
+        " Dealer busted at <points>. The house does, in fact, lose sometimes. ",
+        " Too many hits - dealer explodes with <points>. ",
+        " Dealer drew one card too many and landed on <points>. ",
+        " Dealer busts with <points>. The deck finally fights back. ",
+        " Dealer went past 21 - <points>. That's what we call 'unfortunate.' ",
+        " Dealer busts at <points>. Suddenly, the table feels lucky. ",
+        " Dealer's confidence just turned into <points>. Bust. ",
+        " Dealer tried to be brave - ended up at <points>. ",
+        " Dealer busted with <points>. Turns out risk is universal. ",
+        " Dealer hits <points> and immediately regrets it. ",
+        " Dealer busted at <points>. The house takes an L this round. ",
+        " Dealer went overboard: <points>. Bust, plain and simple. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Hand Reaction Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " Will <points> be enough for <t> this round? ",
+        " <t> sits on <points> - bold choice or bad idea? ",
+        " <points> for <t>. The table is watching. ",
+        " <t> has <points>. Now we wait for the dealer's answer. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Win Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> wins the round with <points>. ",
+        " Victory for <t> - <points> takes it. ",
+        " <t> takes the hand: <points>. ",
+        " <t> comes out on top with <points>. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Push Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " Push for <t> at <points>. Full bet returned. ",
+        " It's a push: <t> with <points>. All stakes back. ",
+        " Standoff! <t> pushes with <points>. Complete refund. ",
+        " No winner - push at <points> for <t>. Total bet returned. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Bust Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> busts with <points>. That one hurt. ",
+        " Bust! <t> went over with <points>. ",
+        " <t> pushed too far - <points>. Busted. ",
+        " Unlucky round: <t> busts at <points>. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Lost Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> loses this hand with <points>. ",
+        " Not enough - <t> falls short with <points>. ",
+        " <t> doesn't take it this time: <points>. ",
+        " House takes this one - <t> ends on <points>. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Payment Reminder",
+      "IsExpanded": true,
+      "Messages": [
+        "Please pay ${missingGil} gil to continue your ${action}. Otherwise your choice gets revoked.",
+        "I still need ${missingGil} gil from you to proceed with the ${action}.",
+        "Wallet check! ${missingGil} gil are missing for your ${action}."
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    }
+  ],
+  "UserRegexes": [
+    {
+      "Enabled": true,
+      "Mode": 1,
+      "Action": 7,
+      "ActionParam": "",
+      "Name": "Trade: Inbound",
+      "Patterns": [
+        "^(.+) möchte mit dir handeln\\.$",
+        "^(.+) wishes to trade with you\\.$"
+      ],
+      "CaseSensitive": false
+    },
+    {
+      "Enabled": true,
+      "Mode": 1,
+      "Action": 7,
+      "ActionParam": "",
+      "Name": "Trade: Outbound",
+      "Patterns": [
+        "^Du hast (.+) einen Handel angeboten\\.$",
+        "^Trade request sent to (.+)$"
+      ],
+      "CaseSensitive": false
+    },
+    {
+      "Enabled": true,
+      "Mode": 1,
+      "Action": 8,
+      "ActionParam": "",
+      "Name": "Trade: Gil In",
+      "Patterns": [
+        "^Du erhältst ([\\d.]+) Gil\\.$",
+        "^You receive ([\\d.]+) gil\\.$"
+      ],
+      "CaseSensitive": false
+    },
+    {
+      "Enabled": true,
+      "Mode": 1,
+      "Action": 9,
+      "ActionParam": "",
+      "Name": "Trade: Gil Out",
+      "Patterns": [
+        "^Du überreichst ([\\d.]+) Gil\\.$",
+        "^You hand over ([\\d.]+) gil\\.$"
+      ],
+      "CaseSensitive": false
+    },
+    {
+      "Enabled": true,
+      "Mode": 1,
+      "Action": 10,
+      "ActionParam": "",
+      "Name": "Trade: Success",
+      "Patterns": [
+        "^Der Handel wurde abgeschlossen\\.$",
+        "^Trade complete\\.$"
+      ],
+      "CaseSensitive": false
+    },
+    {
+      "Enabled": true,
+      "Mode": 1,
+      "Action": 11,
+      "ActionParam": "",
+      "Name": "Trade: Cancel",
+      "Patterns": [
+        "^Der Handel wurde abgebrochen\\.$",
+        "^Trade canceled\\.$"
+      ],
+      "CaseSensitive": false
+    },
+    {
+      "Enabled": true,
+      "Mode": 1,
+      "Action": 13,
+      "ActionParam": "",
+      "Name": "Dice: Blackjack Logic",
+      "Patterns": [
+        "Würfeln! .*?\\) (\\d+)\\s*$",
+        "Random! .*?\\) (\\d+)\\s*$"
+      ],
+      "CaseSensitive": false
+    }
+  ],
+  "MinBet": 50000,
+  "MaxBet": 500000,
+  "DefaultBatchesSeeded": true,
+  "DefaultRegexSeeded": true,
+  "DefaultCommandsSeeded": true,
+  "AutoInitialDeal": true,
+  "SmallResult": true,
+  "HighlightColor": {
+    "X": 1.0,
+    "Y": 1.0,
+    "Z": 0.0,
+    "W": 1.0
+  },
+  "dismissDevWarning": true,
+  "CurrentLevel": 2,
+  "Version": 0
+}

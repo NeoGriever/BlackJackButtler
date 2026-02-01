@@ -43,26 +43,6 @@ public partial class BlackJackButtlerWindow
         long bankIncrease = _ddPopupPlayer.Bank - _ddPopupInitialBank;
         bool hasEnoughMoney = bankIncrease >= _ddPopupMissingAmount;
 
-        if (hasEnoughMoney)
-        {
-            var playerToProcess = _ddPopupPlayer;
-            var currentConfig = _config;
-            var currentPlayers = _players;
-
-            AddDebugLog($"[DoubleDown] {playerToProcess?.DisplayName} payment verified. Processing...");
-
-            CloseDDMoneyPopup();
-
-            if (playerToProcess != null)
-            {
-                Task.Run(async () => {
-                    await Task.Delay(50);
-                    GameEngine.ContinueDDAfterPayment(playerToProcess, currentConfig, currentPlayers);
-                });
-            }
-            return;
-        }
-
         ImGui.SetNextWindowSize(new Vector2(420, 0), ImGuiCond.Always);
         ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
 
@@ -135,10 +115,37 @@ public partial class BlackJackButtlerWindow
             ImGui.Separator();
             ImGui.Spacing();
 
+            if (!hasEnoughMoney) ImGui.BeginDisabled();
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.3f, 0.8f, 0.3f, 1.0f));
+
+            if (ImGui.Button("Continue Double Down", new Vector2(-1, 40)))
+            {
+                var playerToProcess = _ddPopupPlayer;
+                var currentConfig = _config;
+                var currentPlayers = _players;
+
+                AddDebugLog($"[DoubleDown] {playerToProcess?.DisplayName} payment verified. Processing...");
+                CloseDDMoneyPopup();
+
+                if (playerToProcess != null)
+                {
+                    Task.Run(async () => {
+                        await Task.Delay(50);
+                        GameEngine.ContinueDDAfterPayment(playerToProcess, currentConfig, currentPlayers);
+                    });
+                }
+            }
+
+            ImGui.PopStyleColor(2);
+            if (!hasEnoughMoney) ImGui.EndDisabled();
+
+            ImGui.Spacing();
+
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.2f, 0.2f, 1.0f));
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1.0f, 0.3f, 0.3f, 1.0f));
 
-            if (ImGui.Button("Cancel Double Down", new Vector2(-1, 40))) // Text korrigiert
+            if (ImGui.Button("Cancel Double Down", new Vector2(-1, 40)))
             {
                 AddDebugLog($"[DD] Cancelled for {_ddPopupPlayer.DisplayName} - insufficient funds", false);
                 CloseDDMoneyPopup();

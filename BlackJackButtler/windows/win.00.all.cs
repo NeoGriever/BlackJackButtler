@@ -12,7 +12,7 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow : Window, IDisposable
 {
-    private enum Page { Main, Regexes, Messages, Commands , Settings , Vars , RoundLog , Debug , Thanks }
+    private enum Page { Main, Regexes, Messages, Commands , OwnButtons , Settings , Vars , RoundLog , Debug , MacroImport , Thanks }
     private Page _page = Page.Main;
 
     private readonly Configuration _config;
@@ -144,10 +144,12 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             if(level >= UserLevel.Dev)          NavButton(Page.Regexes, "Regex");
             if(level >= UserLevel.Advanced)     NavButton(Page.Messages, "Messages");
             if(level >= UserLevel.Advanced)     NavButton(Page.Commands, "Commands");
+            if(level >= UserLevel.Advanced)     NavButton(Page.OwnButtons, "Own Buttons");
             ImGui.Separator();                  NavButton(Page.Settings, "Settings");
             ImGui.Separator();                  NavButton(Page.RoundLog, "Round History");
             if(level >= UserLevel.Dev)          NavButton(Page.Vars, "Variables");
             if(level >= UserLevel.Dev)          NavButton(Page.Debug, "DEBUG");
+            if(level >= UserLevel.Dev)          NavButton(Page.MacroImport, "Macro Import");
 
             var remainingHeight = ImGui.GetContentRegionAvail().Y;
             if (remainingHeight > 50) ImGui.SetCursorPosY(ImGui.GetCursorPosY() + remainingHeight - 50);
@@ -189,10 +191,12 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Regexes:      DrawRegexPage(); break;
             case Page.Messages:     DrawMessagesPage(); break;
             case Page.Commands:     DrawCommandsPage(); break;
+            case Page.OwnButtons:   DrawOwnButtonsPage(); break;
             case Page.Settings:     DrawSettingsPage(); break;
             case Page.Vars:         DrawVarsPage(); break;
             case Page.RoundLog:     DrawRoundLogPage(); break;
             case Page.Debug:        DrawDebugPage(); break;
+            case Page.MacroImport:  DrawMacroImportPage(); break;
             case Page.Thanks:       DrawThanksPage(); break;
         }
         ImGui.EndChild();

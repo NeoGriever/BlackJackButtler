@@ -119,13 +119,18 @@ public static class CommandExecutor
             ? dealer
             : players.FirstOrDefault(p => p.DisplayName.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase));
 
-        var group = cfg.CommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+        var group = cfg.CommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase))
+                 ?? cfg.CustomCommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
 
         if (group == null) return;
 
         _isRunning = true;
         _cancel = false;
         int step = 0;
+
+        // Wait for target focus to settle before executing commands
+        if (!Plugin.IsDebugMode || !Plugin.IsSpeedMode)
+            await Task.Delay(300);
 
         foreach (var cmd in group.Commands)
         {
@@ -253,7 +258,8 @@ public static class CommandExecutor
             ? dealer
             : players.FirstOrDefault(p => p.DisplayName.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase));
 
-        var group = cfg.CommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+        var group = cfg.CommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase))
+                 ?? cfg.CustomCommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
 
         if (group == null)
         {
@@ -262,6 +268,10 @@ public static class CommandExecutor
         }
 
         int step = 0;
+
+        // Wait for target focus to settle before executing commands
+        if (!Plugin.IsDebugMode || !Plugin.IsSpeedMode)
+            await Task.Delay(300);
 
         foreach (var cmd in group.Commands)
         {

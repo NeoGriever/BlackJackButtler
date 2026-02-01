@@ -64,6 +64,9 @@ public static class RegexEngine
         switch (entry.Action)
         {
             case RegexAction.DiceRollValue:
+                var window = Plugin.Instance.GetMainWindow();
+                if (!window.IsRecognitionActive && !Plugin.IsDebugMode)
+                    break;
                 if (match.Success && match.Groups.Count >= 2)
                 {
                     if (int.TryParse(match.Groups[1].Value, out var rolled))

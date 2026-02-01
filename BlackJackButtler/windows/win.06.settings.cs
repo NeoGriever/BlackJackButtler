@@ -13,6 +13,7 @@ public partial class BlackJackButtlerWindow
         ImGui.Separator();
 
         ImGui.TextUnformatted("User Level");
+        ImGui.SameLine(300f);
         ImGui.SetNextItemWidth(200f);
         int level = (int)_config.CurrentLevel;
         if (ImGui.Combo("##user_level", ref level, "Beginner\0Advanced\0Dev\0")) {
@@ -32,9 +33,11 @@ public partial class BlackJackButtlerWindow
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Multiplier applied to all command delays at execution time.\n1.00x = normal speed, 0.50x = twice as fast, 2.00x = twice as slow.\nMinimum effective delay is always 0.3s.");
 
-        ImGui.Separator();
-
-        ImGui.TextUnformatted("Gameplay Rules");
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Separator();
+            ImGui.TextUnformatted("Gameplay Rules");
+        }
         if(level >= (int)UserLevel.Advanced)
         {
             ImGui.Spacing();
@@ -78,6 +81,16 @@ public partial class BlackJackButtlerWindow
         if(level >= (int)UserLevel.Advanced)
         {
             ImGui.Spacing();
+            if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Collects all results and sends a single compressed message.\nInactive: Sends individual result messages for every player hand.");
+        } else if (!_config.SmallResult) {
+            _config.SmallResult = true;
+            _save();
+        }
+
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
             ImGui.TextUnformatted("Max Hands per Player (Splits)");
             ImGui.SameLine(300f);
             ImGui.SetNextItemWidth(200f);
@@ -91,17 +104,10 @@ public partial class BlackJackButtlerWindow
             _save();
         }
 
-        ImGui.Separator();
-
-        ImGui.TextUnformatted("UI");
         if(level >= (int)UserLevel.Advanced)
         {
-            ImGui.Spacing();
-            if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Collects all results and sends a single compressed message.\nInactive: Sends individual result messages for every player hand.");
-        } else if (!_config.SmallResult) {
-            _config.SmallResult = true;
-            _save();
+            ImGui.Separator();
+            ImGui.TextUnformatted("UI");
         }
 
         if(level >= (int)UserLevel.Advanced)
@@ -145,7 +151,7 @@ public partial class BlackJackButtlerWindow
 
         ImGui.TextUnformatted("Bet Limits");
         ImGui.Spacing();
-        ImGui.TextUnformatted("Min Bet");
+        ImGui.TextUnformatted("Minimum");
         ImGui.SameLine(300f);
         ImGui.SetNextItemWidth(200f);
         if (_pendingSettingsFocus == "min_bet")
@@ -153,14 +159,14 @@ public partial class BlackJackButtlerWindow
             ImGui.SetKeyboardFocusHere();
             _pendingSettingsFocus = null;
         }
-        if (ImGui.InputLong("##min_bet", ref _config.MinBet, 100, 1000))
+        if (ImGui.InputLong("##min_bet", ref _config.MinBet, 1, 1000))
         {
             _config.MinBet = Math.Clamp(_config.MinBet, 1, _config.MaxBet);
             _save();
         }
 
         ImGui.Spacing();
-        ImGui.TextUnformatted("Max Bet");
+        ImGui.TextUnformatted("Maximum");
         ImGui.SameLine(300f);
         ImGui.SetNextItemWidth(200f);
         if (_pendingSettingsFocus == "max_bet")
@@ -168,7 +174,7 @@ public partial class BlackJackButtlerWindow
             ImGui.SetKeyboardFocusHere();
             _pendingSettingsFocus = null;
         }
-        if (ImGui.InputLong("##max_bet", ref _config.MaxBet, 1000, 10000))
+        if (ImGui.InputLong("##max_bet", ref _config.MaxBet, 1, 10000))
         {
             _config.MaxBet = Math.Max(_config.MaxBet, _config.MinBet);
             _save();
@@ -238,6 +244,7 @@ public partial class BlackJackButtlerWindow
         _config.MessageBatches = _tempImportConfig.MessageBatches;
         _config.UserRegexes = _tempImportConfig.UserRegexes;
         _config.CommandGroups = _tempImportConfig.CommandGroups;
+        _config.CustomCommandGroups = _tempImportConfig.CustomCommandGroups;
 
         _config.MultiplierNormalWin = _tempImportConfig.MultiplierNormalWin;
         _config.MultiplierBlackjackWin = _tempImportConfig.MultiplierBlackjackWin;
@@ -265,6 +272,11 @@ public partial class BlackJackButtlerWindow
         foreach (var c in _tempImportConfig.CommandGroups) {
             _config.CommandGroups.RemoveAll(x => x.Name == c.Name);
             _config.CommandGroups.Add(c);
+        }
+
+        foreach (var c in _tempImportConfig.CustomCommandGroups) {
+            _config.CustomCommandGroups.RemoveAll(x => x.Name == c.Name);
+            _config.CustomCommandGroups.Add(c);
         }
 
         _save();

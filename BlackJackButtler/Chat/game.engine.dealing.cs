@@ -136,6 +136,25 @@ public static partial class GameEngine
                 {
                     NextTurn(players, cfg);
                 }
+                else if (current.Hands[current.CurrentHandIndex].Cards.Count < 2)
+                {
+                    var p = current;
+                    Task.Run(async () =>
+                    {
+                        TargetPlayer(p.Name);
+                        SetForcedRecipient(p.Name);
+                        try { await CommandExecutor.ExecuteGroup("Hit", p.Name, cfg); }
+                        finally { ClearForcedRecipient(); }
+
+                        if (p.CurrentHandIndex < p.Hands.Count)
+                        {
+                            var hand = p.Hands[p.CurrentHandIndex];
+                            if (hand.IsStand || hand.IsBust)
+                                NextTurn(players, cfg);
+                        }
+                        SaveSessionIfNeeded(players);
+                    });
+                }
                 return;
             }
 
@@ -216,6 +235,7 @@ public static partial class GameEngine
         target.IsCurrentTurn = true;
         target.CurrentHandIndex = 0;
         TargetPlayer(target.Name);
+        VariableManager.SetPlayerVariables(target);
         if (target.Hands.Count > 0 && target.Hands[target.CurrentHandIndex].Cards.Count >= 2)
         {
             string promptGroup = GetStatePromptGroup(target, cfg);

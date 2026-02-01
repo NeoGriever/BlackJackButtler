@@ -27,11 +27,12 @@ public sealed class Configuration : IPluginConfiguration
     public float CommandSpeedMultiplier = 1.0f;
 
     public List<CommandGroup> CommandGroups = new();
+    public List<CommandGroup> CustomCommandGroups = new();
     public List<MessageBatch> MessageBatches = new();
     public List<UserRegexEntry> UserRegexes = new();
 
-    public long MinBet = 1;
-    public long MaxBet = 1000000;
+    public long MinBet = 50000;
+    public long MaxBet = 500000;
 
     public bool DefaultBatchesSeeded = false;
     public bool DefaultRegexSeeded = false;

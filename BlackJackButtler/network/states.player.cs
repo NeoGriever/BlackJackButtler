@@ -23,6 +23,7 @@ public class PlayerState
 
     public long Bank = 0;
     public long CurrentBet = 0;
+    public long LastRoundResult = 0;
 
     public List<HandState> Hands = new();
     public int CurrentHandIndex = 0;
@@ -96,6 +97,7 @@ public class PlayerState
         HasInitialHandDealt = false;
         WasOnHoldThisRound = false;
         IsOnBench = false;
+        LastRoundResult = 0;
         ResetHighlightsAll();
     }
 
@@ -147,6 +149,7 @@ public class PlayerState
 
             Bank = Bank,
             CurrentBet = CurrentBet,
+            LastRoundResult = LastRoundResult,
 
             Hands = Hands.Select(h => h.Clone()).ToList(),
             CurrentHandIndex = CurrentHandIndex,
