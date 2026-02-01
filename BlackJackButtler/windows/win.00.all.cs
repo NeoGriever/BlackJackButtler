@@ -49,7 +49,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         _save = save;
         _chatLog = chatLog;
 
-        Size = new Vector2(1150, 650);
+        Size = new Vector2(1280, 580);
         SizeCondition = ImGuiCond.FirstUseEver;
 
         RespectCloseHotkey = false;
@@ -135,9 +135,9 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         if (_isSidebarVisible)
         {
             ImGui.BeginChild("bjb.sidebar", new Vector2(sidebarWidth, avail.Y), true);
-            ImGui.TextUnformatted("BlackJack Buttler");
-            ImGui.SameLine(ImGui.GetWindowWidth() - 30);
             if (ImGui.SmallButton("<##hide_sidebar")) _isSidebarVisible = false;
+            ImGui.SameLine();
+            ImGui.TextUnformatted("BlackJack Buttler");
 
             ImGui.Separator();                  NavButton(Page.Main, "Main");
             ImGui.Separator();

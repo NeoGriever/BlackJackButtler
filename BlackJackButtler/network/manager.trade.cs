@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Dalamud.Game.Addon.Lifecycle;
+using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using RRX = System.Text.RegularExpressions;
 
 namespace BlackJackButtler.Chat;
@@ -9,6 +11,13 @@ public static class TradeManager
 {
     private static string? _currentPartner;
     private static long _buffer;
+    private static bool _isTradeActive;
+    private static bool _committed;
+
+    public static bool IsTradeActive => _isTradeActive;
+    public static string? CurrentPartner => _currentPartner;
+
+    // --- Regex-driven methods (called from RegexEngine) ---
 
     public static void SetPartner(string name)
     {
@@ -31,7 +40,52 @@ public static class TradeManager
         if (p != null && p.IsActivePlayer)
         {
             p.Bank += _buffer;
+            var window = Plugin.Instance.GetMainWindow();
+            window.AddDebugLog($"[TradeManager] Committed: {_currentPartner} bank += {_buffer}");
         }
+        _committed = true;
+    }
+
+    // --- Addon Lifecycle Callbacks (supplementary open/close detection) ---
+
+    public static unsafe void OnTradeOpened(AddonEvent type, AddonArgs args)
+    {
+        // NOTE: Do NOT reset _currentPartner here.
+        // The regex SetPartner fires BEFORE the Trade addon opens:
+        //   Chat: "Du hast X einen Handel angeboten."  -> SetPartner("X")
+        //   Addon: PostSetup                           -> OnTradeOpened
+        _buffer = 0;
+        _isTradeActive = true;
+        _committed = false;
+
+        var window = Plugin.Instance.GetMainWindow();
+        window.AddDebugLog($"[TradeManager] Trade opened (partner={_currentPartner ?? "?"})");
+    }
+
+    public static unsafe void OnTradeUpdated(AddonEvent type, AddonArgs args)
+    {
+        // Gil amounts come from regex, nothing to do here.
+    }
+
+    public static unsafe void OnTradeClosed(AddonEvent type, AddonArgs args)
+    {
+        if (!_isTradeActive) return;
+        var window = Plugin.Instance.GetMainWindow();
+
+        // Fallback: if regex CommitTrade didn't fire, apply what we have
+        if (!_committed && !string.IsNullOrEmpty(_currentPartner) && _buffer != 0)
+        {
+            var players = window.GetPlayers();
+            var p = players.FirstOrDefault(x =>
+                x.Name.Equals(_currentPartner, StringComparison.OrdinalIgnoreCase));
+            if (p != null && p.IsActivePlayer)
+            {
+                p.Bank += _buffer;
+                window.AddDebugLog($"[TradeManager] Committed (fallback): {_currentPartner} bank += {_buffer}");
+            }
+        }
+
+        window.AddDebugLog($"[TradeManager] Trade closed (partner={_currentPartner}, buffer={_buffer}, committed={_committed})");
         Reset();
     }
 
@@ -39,6 +93,8 @@ public static class TradeManager
     {
         _currentPartner = null;
         _buffer = 0;
+        _isTradeActive = false;
+        _committed = false;
     }
 
     private static long ParseGil(string input)

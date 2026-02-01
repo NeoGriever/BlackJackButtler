@@ -50,6 +50,7 @@ public partial class BlackJackButtlerWindow
                 "DealStand" => "Dealer Stand",
                 "DealerBJ" => "Dealer Has Blackjack",
                 "DealerBust" => "Dealer Busted",
+                "BankTell" => "Bank Tell (Individual)",
                 _ => group.Name
             };
 

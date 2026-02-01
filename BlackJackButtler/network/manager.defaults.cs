@@ -144,6 +144,9 @@ public static class DefaultsManager
             ],
             "ResultSmall": [
                 { "Text": "/p #{Match Results}", "Delay": 0.9 }
+            ],
+            "BankTell": [
+                { "Text": "/p #{Bank Tell Messages}", "Delay": 0.5 }
             ]
         },
         "Messages": {
@@ -412,6 +415,10 @@ public static class DefaultsManager
                 "Please pay ${missingGil} gil to continue your ${action}. Otherwise your choice gets revoked.",
                 "I still need ${missingGil} gil from you to proceed with the ${action}.",
                 "Wallet check! ${missingGil} gil are missing for your ${action}."
+            ],
+
+            "Bank Tell Messages": [
+                "<t> - Bank: ${bankamount} | Bet: ${betamount}"
             ]
         }
     }

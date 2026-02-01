@@ -6,6 +6,7 @@ using Dalamud.Game.Command;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
+using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.IoC;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin;
@@ -37,6 +38,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
+    [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
     internal static Plugin Instance { get; private set; } = null!;
 
     internal static Action<string>? DebugCommandSink { get; private set; }
@@ -71,6 +73,20 @@ public sealed class Plugin : IDalamudPlugin
         Configuration.EnsureDefaultBatchesOnce();
 
         changed |= Configuration.EnsureDefaultBatchesOnce();
+
+        if (!Configuration.MessageBatches.Any(b => b.Name == "Bank Tell Messages"))
+        {
+            var defaultBatch = DefaultsManager.GetDefaultMessages().FirstOrDefault(b => b.Name == "Bank Tell Messages");
+            if (defaultBatch != null) Configuration.MessageBatches.Add(defaultBatch);
+            changed = true;
+        }
+        if (!Configuration.CommandGroups.Any(g => g.Name == "BankTell"))
+        {
+            var defaultGroup = DefaultsManager.GetDefaultCommands().FirstOrDefault(g => g.Name == "BankTell");
+            if (defaultGroup != null) Configuration.CommandGroups.Add(defaultGroup);
+            changed = true;
+        }
+
         if (changed) Configuration.Save();
 
         mainWindow = new BlackJackButtlerWindow(Configuration, () => Configuration.Save(), chatLog);
@@ -90,6 +106,10 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenConfigUi += mainWindow.OpenSettings;
 
         ChatGui.ChatMessage += OnChatMessage;
+
+        AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "Trade", TradeManager.OnTradeOpened);
+        AddonLifecycle.RegisterListener(AddonEvent.PostRequestedUpdate, "Trade", TradeManager.OnTradeUpdated);
+        AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "Trade", TradeManager.OnTradeClosed);
 
         Log.Information("BlackJack Buttler loaded.");
     }
@@ -124,6 +144,32 @@ public sealed class Plugin : IDalamudPlugin
             }
         }
 
+        if (Configuration.AutoDealerDraw && GameEngine.CurrentPhase == GamePhase.DealerTurn)
+        {
+            if (!CommandExecutor.IsRunning)
+            {
+                var dealer = mainWindow.GetDealer();
+                if (dealer != null && dealer.Hands.Count > 0 && dealer.Hands[0].Cards.Count > 0)
+                {
+                    var (min, max) = dealer.CalculatePoints(0);
+                    int score = (max.HasValue && max.Value <= 21) ? max.Value : min;
+                    if (score < Configuration.DealerDrawsUntil)
+                    {
+                        var players = mainWindow.GetPlayers();
+                        Task.Run(() => GameEngine.DealerHit(Configuration, players));
+                    }
+                    else
+                    {
+                        var players = mainWindow.GetPlayers();
+                        Task.Run(async () => {
+                            await GameEngine.DealerStand(Configuration, players);
+                            await GameEngine.EvaluateFinalResults(players, dealer, Configuration);
+                        });
+                    }
+                }
+            }
+        }
+
         DropboxIntegration.Update();
     }
 
@@ -132,6 +178,10 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= mainWindow.OpenMain;
         PluginInterface.UiBuilder.OpenConfigUi -= mainWindow.OpenSettings;
+
+        AddonLifecycle.UnregisterListener(AddonEvent.PostSetup, "Trade", TradeManager.OnTradeOpened);
+        AddonLifecycle.UnregisterListener(AddonEvent.PostRequestedUpdate, "Trade", TradeManager.OnTradeUpdated);
+        AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, "Trade", TradeManager.OnTradeClosed);
 
         ChatGui.ChatMessage -= OnChatMessage;
 
@@ -161,12 +211,6 @@ public sealed class Plugin : IDalamudPlugin
 
     public void InjectChatMessage(int type, uint worldId, string playerName, string senderText, string messageText, SeString? rawSender = null, SeString? rawMessage = null)
     {
-        if (type != (int)XivChatType.Party && type != (int)XivChatType.SystemMessage &&
-            type != 569 && type != 2105 && type != 4153 && type != 8249 && type != 313 && type != 57 && type != 64)
-        {
-            return;
-        }
-
         string logName = !string.IsNullOrEmpty(playerName) ? playerName : senderText;
         string logLine = string.IsNullOrEmpty(logName) ? messageText : $"{logName}: {messageText}";
 
