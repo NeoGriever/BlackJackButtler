@@ -55,11 +55,12 @@ public partial class BlackJackButtlerWindow
 
             if (ImGui.CollapsingHeader($"{displayName} (Internal: {group.Name})"))
             {
-                if (ImGui.BeginTable($"table_{group.Name}", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+                if (ImGui.BeginTable($"table_{group.Name}", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
                 {
                     ImGui.TableSetupColumn("Act", ImGuiTableColumnFlags.WidthFixed, 30);
                     ImGui.TableSetupColumn("Command / Chat Message", ImGuiTableColumnFlags.WidthStretch);
                     ImGui.TableSetupColumn("Wait (s)", ImGuiTableColumnFlags.WidthFixed, 100);
+                    ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, 50);
                     ImGui.TableSetupColumn("X", ImGuiTableColumnFlags.WidthFixed, 30);
                     ImGui.TableHeadersRow();
 
@@ -83,6 +84,32 @@ public partial class BlackJackButtlerWindow
                             if (cmd.Delay < 0.5f) cmd.Delay = 0.5f;
                             _save();
                         }
+
+                        ImGui.TableNextColumn();
+                        bool isFirst = i == 0;
+                        bool isLast = i == group.Commands.Count - 1;
+
+                        if (isFirst) ImGui.BeginDisabled();
+                        if (ImGui.SmallButton("^##up"))
+                        {
+                            (group.Commands[i - 1], group.Commands[i]) = (group.Commands[i], group.Commands[i - 1]);
+                            _save();
+                            ImGui.PopID();
+                            break;
+                        }
+                        if (isFirst) ImGui.EndDisabled();
+
+                        ImGui.SameLine();
+
+                        if (isLast) ImGui.BeginDisabled();
+                        if (ImGui.SmallButton("v##down"))
+                        {
+                            (group.Commands[i], group.Commands[i + 1]) = (group.Commands[i + 1], group.Commands[i]);
+                            _save();
+                            ImGui.PopID();
+                            break;
+                        }
+                        if (isLast) ImGui.EndDisabled();
 
                         ImGui.TableNextColumn();
                         if (ImGui.Button("X##del"))

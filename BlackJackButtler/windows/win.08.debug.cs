@@ -38,17 +38,8 @@ public partial class BlackJackButtlerWindow
     {
         if (ImGui.Checkbox("Enable Debug Mode", ref Plugin.IsDebugMode))
         {
-            if (Plugin.IsDebugMode) CreateTestData();
-            else
-            {
-                _players.Clear();
-                _dealer = new PlayerState { Name = "Dealer", IsActivePlayer = true };
-                GameEngine.CurrentPhase = GamePhase.Waiting;
-                GameEngine.SetRuntimeContext(_players, _dealer);
-                GameLog.Clear();
-                IsRecognitionActive = false;
-                _save();
-            }
+            if (Plugin.IsDebugMode) EnableDebugMode();
+            else DisableDebugMode();
         }
 
         if (Plugin.IsDebugMode)
@@ -125,6 +116,24 @@ public partial class BlackJackButtlerWindow
 
     public List<DebugEntry> GetDebugLog() => _debugLog;
     public object GetLogLock() => _logLock;
+
+    private void EnableDebugMode()
+    {
+        Plugin.IsDebugMode = true;
+        CreateTestData();
+    }
+
+    private void DisableDebugMode()
+    {
+        _players.Clear();
+        _dealer = new PlayerState { Name = "Dealer", IsActivePlayer = true };
+        GameEngine.CurrentPhase = GamePhase.Waiting;
+        GameEngine.SetRuntimeContext(_players, _dealer);
+        GameLog.Clear();
+        IsRecognitionActive = false;
+        Plugin.IsDebugMode = false;
+        _save();
+    }
 
     private void CopyDebugLogToClipboard()
     {

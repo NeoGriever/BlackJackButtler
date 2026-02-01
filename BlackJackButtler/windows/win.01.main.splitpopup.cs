@@ -43,26 +43,6 @@ public partial class BlackJackButtlerWindow
         long bankIncrease = _splitPopupPlayer.Bank - _splitPopupInitialBank;
         bool hasEnoughMoney = bankIncrease >= _splitPopupMissingAmount;
 
-        if (hasEnoughMoney)
-        {
-            var playerToProcess = _splitPopupPlayer;
-            var currentConfig = _config;
-            var currentPlayers = _players;
-
-            AddDebugLog($"[Split] {playerToProcess?.DisplayName} payment verified. Processing...");
-
-            CloseSplitMoneyPopup();
-
-            if (playerToProcess != null)
-            {
-                Task.Run(async () => {
-                    await Task.Delay(50);
-                    GameEngine.ContinueSplitAfterPayment(playerToProcess, currentConfig, currentPlayers);
-                });
-            }
-            return;
-        }
-
         ImGui.SetNextWindowSize(new Vector2(420, 0), ImGuiCond.Always);
         ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
 
@@ -133,6 +113,33 @@ public partial class BlackJackButtlerWindow
 
             ImGui.Spacing();
             ImGui.Separator();
+            ImGui.Spacing();
+
+            if (!hasEnoughMoney) ImGui.BeginDisabled();
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.3f, 0.8f, 0.3f, 1.0f));
+
+            if (ImGui.Button("Continue Split", new Vector2(-1, 40)))
+            {
+                var playerToProcess = _splitPopupPlayer;
+                var currentConfig = _config;
+                var currentPlayers = _players;
+
+                AddDebugLog($"[Split] {playerToProcess?.DisplayName} payment verified. Processing...");
+                CloseSplitMoneyPopup();
+
+                if (playerToProcess != null)
+                {
+                    Task.Run(async () => {
+                        await Task.Delay(50);
+                        GameEngine.ContinueSplitAfterPayment(playerToProcess, currentConfig, currentPlayers);
+                    });
+                }
+            }
+
+            ImGui.PopStyleColor(2);
+            if (!hasEnoughMoney) ImGui.EndDisabled();
+
             ImGui.Spacing();
 
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.2f, 0.2f, 1.0f));

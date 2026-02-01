@@ -4,6 +4,8 @@ using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
+using Dalamud.Interface.Windowing;
 using System.Threading.Tasks;
 using BlackJackButtler.Chat;
 
@@ -15,6 +17,7 @@ public partial class BlackJackButtlerWindow
     {
         DrawMainHeader();
         ImGui.Separator();
+        DrawCustomButtonBar();
 
         ImGui.TextColored(new Vector4(1, 0.5f, 0, 1), $"DEALER - Phase: {GameEngine.CurrentPhase}");
 
@@ -173,6 +176,68 @@ public partial class BlackJackButtlerWindow
 
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Automatically deals the first two cards to players during the Initial Deal phase.");
+
+        if (IsRecognitionActive && !IsLocalPlayerPartyLeader())
+        {
+            var leaderName = GetPartyLeaderName();
+            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1.0f, 0.6f, 0.2f, 1.0f));
+            ImGui.TextUnformatted($"Du bist nicht der Gruppenanführer! Anführer: {leaderName}");
+            ImGui.PopStyleColor();
+            if (ImGui.IsItemClicked())
+                GameEngine.TargetPlayer(leaderName);
+        }
+
+        if (IsRecognitionActive && _config.CurrentLevel == UserLevel.Dev
+            && (!IsLocalPlayerPartyLeader() || Plugin.PartyList.Length == 0))
+        {
+            if (ImGui.SmallButton("Activate debug mode"))
+            {
+                IsRecognitionActive = false;
+                SessionManager.ClearSession();
+                EnableDebugMode();
+            }
+        }
+    }
+
+    private void DrawCustomButtonBar()
+    {
+        if (_config.CustomCommandGroups.Count == 0) return;
+
+        bool isRunning = CommandExecutor.IsRunning;
+        if (isRunning) ImGui.BeginDisabled();
+
+        for (int i = 0; i < _config.CustomCommandGroups.Count; i++)
+        {
+            var group = _config.CustomCommandGroups[i];
+            if (i > 0) ImGui.SameLine();
+            if (ImGui.SmallButton($"{group.Name}##custom_{i}"))
+            {
+                var targetName = _players.FirstOrDefault(p => p.IsCurrentTurn)?.DisplayName
+                              ?? _dealer.DisplayName;
+                var groupName = group.Name;
+                Task.Run(() => CommandExecutor.ExecuteGroup(groupName, targetName, _config));
+            }
+        }
+
+        if (isRunning) ImGui.EndDisabled();
+        ImGui.Spacing();
+    }
+
+    private bool IsLocalPlayerPartyLeader()
+    {
+        var localName = Plugin.ClientState.LocalPlayer?.Name.TextValue;
+        if (string.IsNullOrEmpty(localName) || Plugin.PartyList.Length == 0)
+            return true;
+        var leader = Plugin.PartyList[(int)Plugin.PartyList.PartyLeaderIndex];
+        return leader != null
+            && string.Equals(leader.Name.TextValue, localName, StringComparison.Ordinal);
+    }
+
+    private string GetPartyLeaderName()
+    {
+        if (Plugin.PartyList.Length == 0) return string.Empty;
+        var leader = Plugin.PartyList[(int)Plugin.PartyList.PartyLeaderIndex];
+        return leader?.Name.TextValue ?? string.Empty;
     }
 
     private void DrawPlayerRow(PlayerState p, bool isDealer)
@@ -432,6 +497,26 @@ public partial class BlackJackButtlerWindow
         InnerPlayerControls(p);
 
         if (globalLock) ImGui.EndDisabled();
+
+        var phase = GameEngine.CurrentPhase;
+        if (phase == GamePhase.Waiting || phase == GamePhase.Payout)
+        {
+            var currentTarget = GameEngine.GetCurrentTargetName();
+            bool isTargeted = p.Name.Equals(currentTarget, StringComparison.OrdinalIgnoreCase);
+            if (!isTargeted)
+            {
+                ImGui.SameLine();
+                ImGui.PushFont(UiBuilder.IconFont);
+                if (ImGui.SmallButton($"{FontAwesomeIcon.Crosshairs.ToIconString()}##target_{p.UIID}"))
+                {
+                    GameEngine.TargetPlayer(p.Name);
+                    VariableManager.SetPlayerVariables(p);
+                }
+                ImGui.PopFont();
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("Target this player");
+            }
+        }
     }
 
     private void InnerPlayerControls(PlayerState p)
