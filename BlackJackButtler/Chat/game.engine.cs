@@ -225,7 +225,7 @@ public static partial class GameEngine
 
             VariableManager.SetVariable("winners", FormatResultCategory(winList.Distinct().ToList(), "Winner", "Winners"));
             VariableManager.SetVariable("pushed", FormatResultCategory(pushList.Distinct().ToList(), "Pushed", "Pushed"));
-            VariableManager.SetVariable("loosers", FormatResultCategory(lossList.Distinct().ToList(), "Loosed", "Loosed"));
+            VariableManager.SetVariable("loosers", FormatResultCategory(lossList.Distinct().ToList(), "Lost", "Lost"));
             VariableManager.SetVariable("busted", FormatResultCategory(bustList.Distinct().ToList(), "Busted", "Busted"));
 
             var parts = new List<string>();
@@ -280,6 +280,8 @@ public static partial class GameEngine
                 }
             }
         }
+
+        StatsManager.RecordRound();
     }
 
     private static string FormatResultCategory(List<string> names, string singular, string plural)

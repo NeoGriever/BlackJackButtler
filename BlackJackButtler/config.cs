@@ -44,6 +44,11 @@ public sealed class Configuration : IPluginConfiguration
     public bool SmallResult = false;
     public Vector4 HighlightColor = new Vector4(1.0f, 1.0f, 0.0f, 1.0f);
     public Vector4 HighlightTextColor = new Vector4(0f, 0f, 0f, 1f);
+
+    public long OverallIncome = 0;
+    public long OverallExpense = 0;
+    public int OverallRounds = 0;
+
     public bool dismissDevWarning = false;
 
     public UserLevel CurrentLevel = UserLevel.Beginner;

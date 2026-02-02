@@ -72,7 +72,7 @@ public partial class BlackJackButtlerWindow
         {
             ImGui.Spacing();
             if (ImGui.Checkbox("Refund DD on push", ref _config.RefundFullDoubleDownOnPush)) _save();
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: If a player has DD and got pushed, the DD bet gets pushed too.\nInactive: If a player has DD and got pushed, the DD bet is loosed.");
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: If a player has DD and got pushed, the DD bet gets pushed too.\nInactive: If a player has DD and got pushed, the DD bet is lost.");
         } else if (_config.RefundFullDoubleDownOnPush) {
             _config.RefundFullDoubleDownOnPush = false;
             _save();
