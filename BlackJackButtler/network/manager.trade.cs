@@ -40,6 +40,8 @@ public static class TradeManager
         if (p != null && p.IsActivePlayer)
         {
             p.Bank += _buffer;
+            if (_buffer > 0) StatsManager.RecordIncome(_buffer);
+            else if (_buffer < 0) StatsManager.RecordExpense(-_buffer);
             var window = Plugin.Instance.GetMainWindow();
             window.AddDebugLog($"[TradeManager] Committed: {_currentPartner} bank += {_buffer}");
         }
@@ -81,6 +83,8 @@ public static class TradeManager
             if (p != null && p.IsActivePlayer)
             {
                 p.Bank += _buffer;
+                if (_buffer > 0) StatsManager.RecordIncome(_buffer);
+                else if (_buffer < 0) StatsManager.RecordExpense(-_buffer);
                 window.AddDebugLog($"[TradeManager] Committed (fallback): {_currentPartner} bank += {_buffer}");
             }
         }

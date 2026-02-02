@@ -19,6 +19,7 @@ public static class DropboxIntegration
     public static void PayOut(PlayerState p)
     {
         if (p.Bank <= 0) return;
+        StatsManager.RecordExpense(p.Bank);
         GameEngine.TargetPlayer(p.Name);
         bool hasDropbox = Svc.PluginInterface.InstalledPlugins
             .Any(pl => pl.InternalName == "Dropbox" && pl.IsLoaded);
