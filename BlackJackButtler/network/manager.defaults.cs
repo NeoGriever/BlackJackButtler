@@ -458,18 +458,24 @@ public static class DefaultsManager
         } catch (Exception) { return new(); }
     }
 
-    private class DefaultsContainer {
+    internal class DefaultsContainer {
         public Dictionary<string, List<string>>? Messages { get; set; }
         public List<TradeRegexDto>? TradeRegex { get; set; }
         public Dictionary<string, List<CommandDto>>? Commands { get; set; }
     }
-    private class TradeRegexDto {
+    internal class TradeRegexDto {
         public string? Name { get; set; }
         public List<string>? Patterns { get; set; }
         public string? Action { get; set; }
     }
-    private class CommandDto {
+    internal class CommandDto {
         public string? Text { get; set; }
         public float Delay { get; set; }
+    }
+
+    internal static DefaultsContainer? GetRawContainer() {
+        try {
+            return JsonConvert.DeserializeObject<DefaultsContainer>(RawJson);
+        } catch (Exception) { return null; }
     }
 }

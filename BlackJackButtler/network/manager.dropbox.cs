@@ -15,6 +15,24 @@ public static class DropboxIntegration
     private static List<bool> _chunkDone = new();
     private static bool _isHelperActive = false;
     private static bool _lastFrameTradeOpen = false;
+    private static string? _dropboxPayoutTarget;
+
+    public static bool IsPayoutTarget(string? name)
+    {
+        if (string.IsNullOrEmpty(name)) return false;
+        if (_dropboxPayoutTarget != null &&
+            _dropboxPayoutTarget.Equals(name, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (_isHelperActive &&
+            _currentTargetName.Equals(name, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
+    public static void ClearDropboxPayoutTarget()
+    {
+        _dropboxPayoutTarget = null;
+    }
 
     public static void PayOut(PlayerState p)
     {
@@ -29,6 +47,7 @@ public static class DropboxIntegration
             Plugin.Instance.GetMainWindow().AddDebugLog($"[Payout] Dropbox detected. Copying {p.Bank} to clipboard.");
             ImGui.SetClipboardText(p.Bank.ToString());
             ChatCommandRouter.Send("/dropbox", Plugin.Instance.Configuration, "OpenDropbox");
+            _dropboxPayoutTarget = p.Name;
             p.Bank = 0;
             Plugin.Instance.Configuration.Save();
         }
