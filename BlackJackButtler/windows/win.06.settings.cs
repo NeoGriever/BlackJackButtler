@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Newtonsoft.Json;
 
@@ -191,6 +192,38 @@ public partial class BlackJackButtlerWindow
         {
             _config.MaxBet = Math.Max(_config.MaxBet, _config.MinBet);
             _save();
+        }
+
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Separator();
+            ImGui.TextUnformatted("Defaults");
+            ImGui.Spacing();
+
+            var io = ImGui.GetIO();
+            bool keysDown = io.KeyCtrl && io.KeyShift;
+
+            if (!keysDown) ImGui.BeginDisabled();
+            if (keysDown) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
+
+            if (ImGui.Button("Reset Default Config File##reset_defaults_file"))
+            {
+                DefaultsMigration.ResetSnapshotFile();
+            }
+
+            if (keysDown) ImGui.PopStyleColor();
+            if (!keysDown)
+            {
+                ImGui.EndDisabled();
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    ImGui.SetTooltip("Hold CTRL + SHIFT to unlock this button.");
+            }
+
+            if (keysDown)
+            {
+                ImGui.TextColored(new Vector4(1, 0, 0, 1),
+                    "WARNING: This will completely reset the defaults file. All accumulated updates will be lost.");
+            }
         }
 
         if(level >= (int)UserLevel.Dev)

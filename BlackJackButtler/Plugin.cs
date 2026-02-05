@@ -68,26 +68,8 @@ public sealed class Plugin : IDalamudPlugin
 
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
-        var changed = false;
-
-        Configuration.EnsureDefaultBatchesOnce();
-
-        changed |= Configuration.EnsureDefaultBatchesOnce();
-
-        if (!Configuration.MessageBatches.Any(b => b.Name == "Bank Tell Messages"))
-        {
-            var defaultBatch = DefaultsManager.GetDefaultMessages().FirstOrDefault(b => b.Name == "Bank Tell Messages");
-            if (defaultBatch != null) Configuration.MessageBatches.Add(defaultBatch);
-            changed = true;
-        }
-        if (!Configuration.CommandGroups.Any(g => g.Name == "BankTell"))
-        {
-            var defaultGroup = DefaultsManager.GetDefaultCommands().FirstOrDefault(g => g.Name == "BankTell");
-            if (defaultGroup != null) Configuration.CommandGroups.Add(defaultGroup);
-            changed = true;
-        }
-
-        if (changed) Configuration.Save();
+        if (DefaultsMigration.RunMigration(Configuration))
+            Configuration.Save();
 
         StatsManager.Init(Configuration, () => Configuration.Save());
 

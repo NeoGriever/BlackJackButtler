@@ -36,6 +36,15 @@ public static class TradeManager
     {
         if (string.IsNullOrEmpty(_currentPartner)) return;
 
+        if (DropboxIntegration.IsPayoutTarget(_currentPartner))
+        {
+            var window = Plugin.Instance.GetMainWindow();
+            window.AddDebugLog($"[TradeManager] Skipped commit for payout target: {_currentPartner}");
+            DropboxIntegration.ClearDropboxPayoutTarget();
+            _committed = true;
+            return;
+        }
+
         var p = players.FirstOrDefault(x => x.Name.Equals(_currentPartner, StringComparison.OrdinalIgnoreCase));
         if (p != null && p.IsActivePlayer)
         {
@@ -77,15 +86,23 @@ public static class TradeManager
         // Fallback: if regex CommitTrade didn't fire, apply what we have
         if (!_committed && !string.IsNullOrEmpty(_currentPartner) && _buffer != 0)
         {
-            var players = window.GetPlayers();
-            var p = players.FirstOrDefault(x =>
-                x.Name.Equals(_currentPartner, StringComparison.OrdinalIgnoreCase));
-            if (p != null && p.IsActivePlayer)
+            if (DropboxIntegration.IsPayoutTarget(_currentPartner))
             {
-                p.Bank += _buffer;
-                if (_buffer > 0) StatsManager.RecordIncome(_buffer);
-                else if (_buffer < 0) StatsManager.RecordExpense(-_buffer);
-                window.AddDebugLog($"[TradeManager] Committed (fallback): {_currentPartner} bank += {_buffer}");
+                window.AddDebugLog($"[TradeManager] Skipped fallback commit for payout target: {_currentPartner}");
+                DropboxIntegration.ClearDropboxPayoutTarget();
+            }
+            else
+            {
+                var players = window.GetPlayers();
+                var p = players.FirstOrDefault(x =>
+                    x.Name.Equals(_currentPartner, StringComparison.OrdinalIgnoreCase));
+                if (p != null && p.IsActivePlayer)
+                {
+                    p.Bank += _buffer;
+                    if (_buffer > 0) StatsManager.RecordIncome(_buffer);
+                    else if (_buffer < 0) StatsManager.RecordExpense(-_buffer);
+                    window.AddDebugLog($"[TradeManager] Committed (fallback): {_currentPartner} bank += {_buffer}");
+                }
             }
         }
 

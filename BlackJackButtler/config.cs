@@ -57,7 +57,8 @@ public sealed class Configuration : IPluginConfiguration
     public static string[] StandardRegexNames => DefaultsManager.GetDefaultRegex().Select(r => r.Name).ToArray();
 
     public void ForceResetStandardBatches() {
-        var defaults = DefaultsManager.GetDefaultMessages();
+        var defaults = DefaultsMigration.GetSnapshotMessages()
+                    ?? DefaultsManager.GetDefaultMessages();
         var names = defaults.Select(d => d.Name).ToList();
         MessageBatches.RemoveAll(b => names.Contains(b.Name));
         MessageBatches.AddRange(defaults);
@@ -65,7 +66,8 @@ public sealed class Configuration : IPluginConfiguration
     }
 
     public void ForceResetStandardRegexes() {
-        var defaults = DefaultsManager.GetDefaultRegex();
+        var defaults = DefaultsMigration.GetSnapshotRegex()
+                    ?? DefaultsManager.GetDefaultRegex();
         var names = defaults.Select(d => d.Name).ToList();
         UserRegexes.RemoveAll(r => names.Contains(r.Name));
         UserRegexes.AddRange(defaults);
@@ -73,7 +75,8 @@ public sealed class Configuration : IPluginConfiguration
     }
 
     public void ForceResetCommandGroups() {
-        CommandGroups = DefaultsManager.GetDefaultCommands();
+        CommandGroups = DefaultsMigration.GetSnapshotCommands()
+                     ?? DefaultsManager.GetDefaultCommands();
         DefaultCommandsSeeded = true;
     }
 
