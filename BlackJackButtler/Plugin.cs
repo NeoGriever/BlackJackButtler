@@ -101,6 +101,7 @@ public sealed class Plugin : IDalamudPlugin
     private void OnFrameworkUpdate(IFramework framework)
     {
         if(mainWindow == null) return;
+        if (!mainWindow.IsRecognitionActive) return;
 
         _cachedLocalName = ObjectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
 
@@ -184,6 +185,8 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
     {
+        if (mainWindow == null || !mainWindow.IsRecognitionActive) return;
+
         var senderText = sender.TextValue ?? string.Empty;
         var messageText = message.TextValue ?? string.Empty;
         var pp = sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();

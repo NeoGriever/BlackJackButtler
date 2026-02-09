@@ -17,8 +17,6 @@ public static class TradeManager
     public static bool IsTradeActive => _isTradeActive;
     public static string? CurrentPartner => _currentPartner;
 
-    // --- Regex-driven methods (called from RegexEngine) ---
-
     public static void SetPartner(string name)
     {
         _currentPartner = name.Trim();
@@ -57,14 +55,10 @@ public static class TradeManager
         _committed = true;
     }
 
-    // --- Addon Lifecycle Callbacks (supplementary open/close detection) ---
-
     public static unsafe void OnTradeOpened(AddonEvent type, AddonArgs args)
     {
-        // NOTE: Do NOT reset _currentPartner here.
-        // The regex SetPartner fires BEFORE the Trade addon opens:
-        //   Chat: "Du hast X einen Handel angeboten."  -> SetPartner("X")
-        //   Addon: PostSetup                           -> OnTradeOpened
+        if (!Plugin.Instance.GetMainWindow().IsRecognitionActive) return;
+
         _buffer = 0;
         _isTradeActive = true;
         _committed = false;
@@ -75,15 +69,15 @@ public static class TradeManager
 
     public static unsafe void OnTradeUpdated(AddonEvent type, AddonArgs args)
     {
-        // Gil amounts come from regex, nothing to do here.
     }
 
     public static unsafe void OnTradeClosed(AddonEvent type, AddonArgs args)
     {
         if (!_isTradeActive) return;
+        if (!Plugin.Instance.GetMainWindow().IsRecognitionActive) return;
+
         var window = Plugin.Instance.GetMainWindow();
 
-        // Fallback: if regex CommitTrade didn't fire, apply what we have
         if (!_committed && !string.IsNullOrEmpty(_currentPartner) && _buffer != 0)
         {
             if (DropboxIntegration.IsPayoutTarget(_currentPartner))

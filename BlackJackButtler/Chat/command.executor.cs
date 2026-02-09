@@ -57,6 +57,9 @@ public static class CommandExecutor
 
         text = text.Replace("<t>", tReplacement);
 
+        var dealerName = Plugin.ObjectTable.LocalPlayer?.Name.TextValue ?? "";
+        text = text.Replace("<dealer>", dealerName);
+
         if (pState != null)
         {
             if (text.Contains("<points>"))
@@ -68,6 +71,12 @@ public static class CommandExecutor
             string cardString = pState.GetCardsString(pState.CurrentHandIndex);
             text = text.Replace("<cards>", cardString);
             text = text.Replace("${playerCards}", cardString);
+
+            if (text.Contains("<handnumber>"))
+                text = text.Replace("<handnumber>", (pState.CurrentHandIndex + 1).ToString());
+
+            if (text.Contains("<totalhands>"))
+                text = text.Replace("<totalhands>", pState.Hands.Count.ToString());
         }
 
         return text;
@@ -128,7 +137,6 @@ public static class CommandExecutor
         _cancel = false;
         int step = 0;
 
-        // Wait for target focus to settle before executing commands
         if (!Plugin.IsDebugMode || !Plugin.IsSpeedMode)
             await Task.Delay(300);
 
@@ -269,7 +277,6 @@ public static class CommandExecutor
 
         int step = 0;
 
-        // Wait for target focus to settle before executing commands
         if (!Plugin.IsDebugMode || !Plugin.IsSpeedMode)
             await Task.Delay(300);
 
