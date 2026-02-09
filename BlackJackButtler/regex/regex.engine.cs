@@ -9,6 +9,8 @@ namespace BlackJackButtler.Regex;
 
 public static class RegexEngine
 {
+    private static readonly Dictionary<string, RRX.Regex> _regexCache = new();
+
     public static int? LastDetectedCardValue { get; private set; }
 
     public static bool TryConsumeDetectedCard(out int cardValue)
@@ -25,6 +27,8 @@ public static class RegexEngine
 
     public static int? MapRollToCard(int rolled) => MapValue(rolled);
 
+    public static void ClearRegexCache() => _regexCache.Clear();
+
     public static void ProcessIncoming(ParsedChatMessage msg, Configuration cfg, List<PlayerState> players, PlayerState dealer)
     {
         foreach (var entry in cfg.UserRegexes)
@@ -36,8 +40,12 @@ public static class RegexEngine
                 if (string.IsNullOrWhiteSpace(pattern)) continue;
 
                 var options = entry.CaseSensitive ? RRX.RegexOptions.Compiled : (RRX.RegexOptions.Compiled | RRX.RegexOptions.IgnoreCase);
-                RRX.Regex rx;
-                try { rx = new RRX.Regex(pattern, options); } catch { continue; }
+                string cacheKey = $"{pattern}|{(entry.CaseSensitive ? "1" : "0")}";
+                if (!_regexCache.TryGetValue(cacheKey, out var rx))
+                {
+                    try { rx = new RRX.Regex(pattern, options); } catch { continue; }
+                    _regexCache[cacheKey] = rx;
+                }
 
                 if (rx.IsMatch(msg.Message))
                 {
@@ -191,7 +199,6 @@ public static class RegexEngine
                 }
                 break;
 
-            // Persistent highlights — always set
             case RegexAction.HighlightBet:     if (p != null) p.HighlightBet = true; break;
             case RegexAction.HighlightPayout:  if (p != null) p.HighlightPay = true; break;
             case RegexAction.HighlightAlias:   if (p != null) p.HighlightAlias = true; break;
@@ -199,7 +206,6 @@ public static class RegexEngine
             case RegexAction.HighlightLeave:   if (p != null) p.HighlightLeave = true; break;
             case RegexAction.HighlightJoin:    if (p != null) p.HighlightJoin = true; break;
 
-            // Once-consistent highlights — only set if none in group is active
             case RegexAction.HighlightHit:
                 if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
                     p.HighlightHit = true;

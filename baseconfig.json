@@ -428,7 +428,7 @@
       "Commands": [
         {
           "Enabled": true,
-          "Text": "/shout Feeling a lil luck? Test your luck over at our gamba table with Valenth Siveria!",
+          "Text": "/shout Feeling a lil luck? Test your luck over at our gamba table with <dealer>!",
           "Delay": 0.5
         }
       ]

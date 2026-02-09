@@ -54,6 +54,7 @@ public static partial class GameEngine
                 var (min, max) = dealer.CalculatePoints(0);
                 int dealerScore = (max.HasValue && max.Value <= 21) ? max.Value : min;
                 VariableManager.SetVariable("dealerpoints", dealerScore.ToString());
+                VariableManager.SetVariable("dealercards", dealer.GetCardsString(0));
             }
         }
         finally
@@ -222,6 +223,7 @@ public static partial class GameEngine
                         var (min, max) = _ctxDealer.CalculatePoints(0);
                         int dealerScore = (max.HasValue && max.Value <= 21) ? max.Value : min;
                         VariableManager.SetVariable("dealerpoints", dealerScore.ToString());
+                        VariableManager.SetVariable("dealercards", _ctxDealer.GetCardsString(0));
                     }
                 }
             }
@@ -448,9 +450,11 @@ public static partial class GameEngine
         if (isSplitHand && !cfg.AllowDoubleDownAfterSplit)
             canDD = false;
 
-        if (canSplit) return "StateHSDS";
-        if (canDD)    return "StateHSD";
-        return "StateHS";
+        string prefix = isSplitHand ? "HandState" : "State";
+
+        if (canSplit) return $"{prefix}HSDS";
+        if (canDD)    return $"{prefix}HSD";
+        return $"{prefix}HS";
     }
 
     private static bool IsPlayerFinished(PlayerState p)

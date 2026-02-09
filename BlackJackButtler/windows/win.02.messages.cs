@@ -69,7 +69,6 @@ public partial class BlackJackButtlerWindow
             ImGui.PushID(i);
             if (isStd) ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.1f, 0.3f, 0.1f, 1f));
 
-            // Get mode name for display
             string modeName = batch.Mode switch
             {
                 SelectionMode.Random => "Random",
@@ -78,7 +77,6 @@ public partial class BlackJackButtlerWindow
                 _ => "Unknown"
             };
 
-            // Draw header with mode text
             bool open = ImGui.CollapsingHeader($"{(isStd ? "● " : "")}{batch.Name} [{modeName}]###batch_{i}");
 
             if (isStd) ImGui.PopStyleColor();
@@ -96,7 +94,6 @@ public partial class BlackJackButtlerWindow
                     if (ImGui.Button($"X##{batch.Name}_{m}")) { batch.Messages.RemoveAt(m); _save(); break; }
                 }
 
-                // Draw "+ Line" button and mode combo on same line
                 if (ImGui.Button("+ Line")) { batch.Messages.Add(""); _save(); }
                 ImGui.SameLine();
                 ImGui.Text("Mode:");

@@ -82,6 +82,7 @@ public static partial class GameEngine
         {
             int dealerScore = (max.HasValue && max.Value <= 21) ? max.Value : min;
             VariableManager.SetVariable("dealerpoints", dealerScore.ToString());
+            VariableManager.SetVariable("dealercards", dealer.GetCardsString(0));
         }
     }
 
