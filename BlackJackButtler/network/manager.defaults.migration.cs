@@ -44,6 +44,10 @@ public static class DefaultsMigration
         return typeof(Plugin).Assembly.GetName().Version?.ToString() ?? "0.0.0.0";
     }
 
+    /// <summary>
+    /// Main entry point called at plugin startup.
+    /// Returns true if the configuration was changed and needs saving.
+    /// </summary>
     public static bool RunMigration(Configuration config)
     {
         try
@@ -53,12 +57,14 @@ public static class DefaultsMigration
 
             if (snapshot == null)
             {
+                // defaults.json does not exist
                 bool isExistingUser = config.DefaultBatchesSeeded
                                    || config.DefaultRegexSeeded
                                    || config.DefaultCommandsSeeded;
 
                 if (isExistingUser)
                 {
+                    // Existing user upgrading: create defaults.json but don't touch config
                     var fresh = CreateFreshSnapshot(assemblyVersion);
                     SaveSnapshot(fresh);
                     Plugin.Log.Information("[DefaultsMigration] Existing user detected. Created defaults.json without modifying config.");
@@ -66,6 +72,7 @@ public static class DefaultsMigration
                 }
                 else
                 {
+                    // New installation: seed all defaults into config
                     SeedAllDefaults(config);
                     var fresh = CreateFreshSnapshot(assemblyVersion);
                     SaveSnapshot(fresh);
@@ -75,12 +82,14 @@ public static class DefaultsMigration
             }
             else
             {
+                // defaults.json exists - check version
                 if (snapshot.Version == assemblyVersion)
                 {
                     Plugin.Log.Debug("[DefaultsMigration] Version matches. No migration needed.");
                     return false;
                 }
 
+                // Version differs - merge new entries
                 Plugin.Log.Information($"[DefaultsMigration] Version changed: {snapshot.Version} -> {assemblyVersion}. Running migration.");
                 bool changed = MergeNewEntries(snapshot, config);
                 UpdateSnapshotFile(snapshot, assemblyVersion);
@@ -90,10 +99,14 @@ public static class DefaultsMigration
         catch (Exception ex)
         {
             Plugin.Log.Error($"[DefaultsMigration] Migration failed: {ex.Message}");
+            // Fallback: ensure defaults are seeded at minimum
             return config.EnsureDefaultsOnce();
         }
     }
 
+    /// <summary>
+    /// Seeds all code defaults into the configuration (for new installations).
+    /// </summary>
     private static void SeedAllDefaults(Configuration config)
     {
         config.ForceResetStandardBatches();
@@ -101,20 +114,29 @@ public static class DefaultsMigration
         config.ForceResetCommandGroups();
     }
 
+    /// <summary>
+    /// Finds entries in code defaults that are NOT in the file snapshot,
+    /// and inserts them into the config if they don't already exist there.
+    /// Returns true if config was modified.
+    /// </summary>
     internal static bool MergeNewEntries(DefaultsSnapshot fileSnapshot, Configuration config)
     {
         bool changed = false;
         var container = DefaultsManager.GetRawContainer();
         if (container == null) return false;
 
+        // --- Messages ---
         if (container.Messages != null)
         {
             foreach (var kvp in container.Messages)
             {
+                // Is this entry new (not in the file snapshot)?
                 if (!fileSnapshot.Messages.ContainsKey(kvp.Key))
                 {
+                    // Add to snapshot for later saving
                     fileSnapshot.Messages[kvp.Key] = kvp.Value;
 
+                    // Insert into config if not already present
                     if (!config.MessageBatches.Any(b => b.Name == kvp.Key))
                     {
                         config.MessageBatches.Add(new MessageBatch
@@ -129,18 +151,21 @@ public static class DefaultsMigration
             }
         }
 
+        // --- Commands ---
         if (container.Commands != null)
         {
             foreach (var kvp in container.Commands)
             {
                 if (!fileSnapshot.Commands.ContainsKey(kvp.Key))
                 {
+                    // Add to snapshot
                     fileSnapshot.Commands[kvp.Key] = kvp.Value.Select(c => new SnapshotCommandDto
                     {
                         Text = c.Text ?? "",
                         Delay = c.Delay
                     }).ToList();
 
+                    // Insert into config if not already present
                     if (!config.CommandGroups.Any(g => g.Name == kvp.Key))
                     {
                         var group = new CommandGroup { Name = kvp.Key };
@@ -157,6 +182,7 @@ public static class DefaultsMigration
             }
         }
 
+        // --- Regex ---
         if (container.TradeRegex != null)
         {
             foreach (var r in container.TradeRegex)
@@ -164,6 +190,7 @@ public static class DefaultsMigration
                 var name = r.Name ?? "";
                 if (!fileSnapshot.Regex.Any(x => x.Name == name))
                 {
+                    // Add to snapshot
                     fileSnapshot.Regex.Add(new SnapshotRegexDto
                     {
                         Name = name,
@@ -171,6 +198,7 @@ public static class DefaultsMigration
                         Action = r.Action ?? ""
                     });
 
+                    // Insert into config if not already present
                     if (!config.UserRegexes.Any(x => x.Name == name))
                     {
                         config.UserRegexes.Add(new UserRegexEntry
@@ -191,12 +219,18 @@ public static class DefaultsMigration
         return changed;
     }
 
+    /// <summary>
+    /// Updates the snapshot file with the (possibly modified) snapshot and new version.
+    /// </summary>
     private static void UpdateSnapshotFile(DefaultsSnapshot snapshot, string newVersion)
     {
         snapshot.Version = newVersion;
         SaveSnapshot(snapshot);
     }
 
+    /// <summary>
+    /// Loads the defaults snapshot from defaults.json. Returns null if file doesn't exist.
+    /// </summary>
     public static DefaultsSnapshot? LoadSnapshot()
     {
         var path = GetSnapshotFilePath();
@@ -215,6 +249,9 @@ public static class DefaultsMigration
         }
     }
 
+    /// <summary>
+    /// Saves the snapshot to defaults.json.
+    /// </summary>
     public static void SaveSnapshot(DefaultsSnapshot snapshot)
     {
         try
@@ -233,6 +270,9 @@ public static class DefaultsMigration
         }
     }
 
+    /// <summary>
+    /// Creates a fresh snapshot from code defaults with the given version.
+    /// </summary>
     public static DefaultsSnapshot CreateFreshSnapshot(string version)
     {
         var container = DefaultsManager.GetRawContainer();
@@ -268,6 +308,10 @@ public static class DefaultsMigration
         return snapshot;
     }
 
+    /// <summary>
+    /// Completely overwrites defaults.json with current code defaults.
+    /// Called by the "Reset Default Config File" button.
+    /// </summary>
     public static void ResetSnapshotFile()
     {
         var version = GetAssemblyVersion();
@@ -276,6 +320,9 @@ public static class DefaultsMigration
         Plugin.Log.Information("[DefaultsMigration] defaults.json has been reset to code defaults.");
     }
 
+    /// <summary>
+    /// Loads messages from defaults.json for ForceReset. Returns null if unavailable.
+    /// </summary>
     public static List<MessageBatch>? GetSnapshotMessages()
     {
         var snapshot = LoadSnapshot();
@@ -289,6 +336,9 @@ public static class DefaultsMigration
         }).ToList();
     }
 
+    /// <summary>
+    /// Loads commands from defaults.json for ForceReset. Returns null if unavailable.
+    /// </summary>
     public static List<CommandGroup>? GetSnapshotCommands()
     {
         var snapshot = LoadSnapshot();
@@ -307,6 +357,9 @@ public static class DefaultsMigration
         }).ToList();
     }
 
+    /// <summary>
+    /// Loads regex entries from defaults.json for ForceReset. Returns null if unavailable.
+    /// </summary>
     public static List<UserRegexEntry>? GetSnapshotRegex()
     {
         var snapshot = LoadSnapshot();
