@@ -13,6 +13,7 @@ public static class TradeManager
     private static long _buffer;
     private static bool _isTradeActive;
     private static bool _committed;
+    private static DateTime? _closedAtUtc;
 
     public static bool IsTradeActive => _isTradeActive;
     public static string? CurrentPartner => _currentPartner;
@@ -23,6 +24,7 @@ public static class TradeManager
     {
         _currentPartner = name.Trim();
         _buffer = 0;
+        _closedAtUtc = null;
     }
 
     public static void AddGil(string rawAmount, bool isPositive)
@@ -42,6 +44,7 @@ public static class TradeManager
             window.AddDebugLog($"[TradeManager] Skipped commit for payout target: {_currentPartner}");
             DropboxIntegration.ClearDropboxPayoutTarget();
             _committed = true;
+            Reset();
             return;
         }
 
@@ -55,6 +58,7 @@ public static class TradeManager
             window.AddDebugLog($"[TradeManager] Committed: {_currentPartner} bank += {_buffer}");
         }
         _committed = true;
+        Reset();
     }
 
     // --- Addon Lifecycle Callbacks (supplementary open/close detection) ---
@@ -68,6 +72,7 @@ public static class TradeManager
         _buffer = 0;
         _isTradeActive = true;
         _committed = false;
+        _closedAtUtc = null;
 
         var window = Plugin.Instance.GetMainWindow();
         window.AddDebugLog($"[TradeManager] Trade opened (partner={_currentPartner ?? "?"})");
@@ -81,11 +86,27 @@ public static class TradeManager
     public static unsafe void OnTradeClosed(AddonEvent type, AddonArgs args)
     {
         if (!_isTradeActive) return;
-        var window = Plugin.Instance.GetMainWindow();
+        _isTradeActive = false;
+        _closedAtUtc = DateTime.UtcNow;
 
-        // Fallback: if regex CommitTrade didn't fire, apply what we have
+        var window = Plugin.Instance.GetMainWindow();
+        window.AddDebugLog($"[TradeManager] Trade closed, grace period started (partner={_currentPartner}, buffer={_buffer}, committed={_committed})");
+    }
+
+    /// <summary>
+    /// Called every frame from Plugin.OnFrameworkUpdate.
+    /// After a 3-second grace period, performs a fallback commit if the regex CommitTrade never fired.
+    /// </summary>
+    public static void Tick()
+    {
+        if (_closedAtUtc == null) return;
+        if ((DateTime.UtcNow - _closedAtUtc.Value).TotalSeconds < 3.0) return;
+
+        // Grace period expired
         if (!_committed && !string.IsNullOrEmpty(_currentPartner) && _buffer != 0)
         {
+            var window = Plugin.Instance.GetMainWindow();
+
             if (DropboxIntegration.IsPayoutTarget(_currentPartner))
             {
                 window.AddDebugLog($"[TradeManager] Skipped fallback commit for payout target: {_currentPartner}");
@@ -106,7 +127,6 @@ public static class TradeManager
             }
         }
 
-        window.AddDebugLog($"[TradeManager] Trade closed (partner={_currentPartner}, buffer={_buffer}, committed={_committed})");
         Reset();
     }
 
@@ -116,6 +136,7 @@ public static class TradeManager
         _buffer = 0;
         _isTradeActive = false;
         _committed = false;
+        _closedAtUtc = null;
     }
 
     private static long ParseGil(string input)

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BlackJackButtler.Chat;
 
@@ -18,6 +19,8 @@ public static partial class GameEngine
 
     private static string _virtualTargetName = string.Empty;
     private static string _forcedRecipientName = string.Empty;
+
+    internal static int _payoutGuard = 0;
 
     public static void SetDebugMode(bool enabled) => _debugMode = enabled;
 
