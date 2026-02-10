@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BlackJackButtler.Chat;
 
@@ -171,6 +172,12 @@ public static partial class GameEngine
 
     public static async Task EvaluateFinalResults(List<PlayerState> players, PlayerState dealer, Configuration cfg)
     {
+        if (Interlocked.CompareExchange(ref _payoutGuard, 1, 0) != 0)
+        {
+            Plugin.Instance.GetMainWindow().AddDebugLog("[Engine] EvaluateFinalResults skipped (already running)");
+            return;
+        }
+
         CurrentPhase = GamePhase.Payout;
 
         int dealerScore = dealer.GetBestScore(0);

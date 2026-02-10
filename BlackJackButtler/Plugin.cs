@@ -155,6 +155,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         DropboxIntegration.Update();
+        TradeManager.Tick();
     }
 
     public void Dispose()

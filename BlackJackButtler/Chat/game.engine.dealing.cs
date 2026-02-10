@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BlackJackButtler.Chat;
 
@@ -41,6 +42,7 @@ public static partial class GameEngine
             p.HasInitialHandDealt = false;
         }
 
+        Interlocked.Exchange(ref _payoutGuard, 0);
         CurrentPhase = GamePhase.InitialDeal;
 
         TargetPlayer(dealer.Name);
