@@ -333,17 +333,22 @@ public partial class BlackJackButtlerWindow
         if (p.IsActivePlayer) {
             var currentPhase = GameEngine.CurrentPhase;
 
+            // Determine if button should be disabled
             bool isDisabled = false;
 
+            // If on bench, can only return if not in DealerTurn or Payout
             if (p.IsOnBench)
             {
                 isDisabled = (currentPhase == GamePhase.DealerTurn || currentPhase == GamePhase.Payout);
             }
+            // If on hold, can toggle off unless dealer has cards (during DealerTurn after dealer drew)
             else if (p.IsOnHold)
             {
+                // Check if dealer has drawn cards
                 bool dealerHasCards = _dealer.Hands.Count > 0 && _dealer.Hands[0].Cards.Count > 0;
                 isDisabled = (currentPhase == GamePhase.DealerTurn && dealerHasCards);
             }
+            // If not on bench/hold, can only bench during PlayersTurn if allowed
             else
             {
                 bool canBench = GameEngine.CanMovePlayerToBench(p, _players);
