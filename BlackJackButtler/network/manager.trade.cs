@@ -88,25 +88,22 @@ public static class TradeManager
         if (!_isTradeActive) return;
         _isTradeActive = false;
         _closedAtUtc = DateTime.UtcNow;
-
         var window = Plugin.Instance.GetMainWindow();
         window.AddDebugLog($"[TradeManager] Trade closed, grace period started (partner={_currentPartner}, buffer={_buffer}, committed={_committed})");
     }
 
-    /// <summary>
-    /// Called every frame from Plugin.OnFrameworkUpdate.
-    /// After a 3-second grace period, performs a fallback commit if the regex CommitTrade never fired.
-    /// </summary>
     public static void Tick()
     {
         if (_closedAtUtc == null) return;
-        if ((DateTime.UtcNow - _closedAtUtc.Value).TotalSeconds < 3.0) return;
 
-        // Grace period expired
+        var elapsed = (DateTime.UtcNow - _closedAtUtc.Value).TotalSeconds;
+        if (elapsed < 3.0) return;
+
+        var window = Plugin.Instance.GetMainWindow();
+
+        // Grace period expired — if regex CommitTrade didn't fire, apply fallback
         if (!_committed && !string.IsNullOrEmpty(_currentPartner) && _buffer != 0)
         {
-            var window = Plugin.Instance.GetMainWindow();
-
             if (DropboxIntegration.IsPayoutTarget(_currentPartner))
             {
                 window.AddDebugLog($"[TradeManager] Skipped fallback commit for payout target: {_currentPartner}");
@@ -127,6 +124,7 @@ public static class TradeManager
             }
         }
 
+        window.AddDebugLog($"[TradeManager] Grace period expired, resetting (partner={_currentPartner}, committed={_committed})");
         Reset();
     }
 
