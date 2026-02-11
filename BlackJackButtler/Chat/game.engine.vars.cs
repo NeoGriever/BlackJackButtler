@@ -17,10 +17,10 @@ public static partial class GameEngine
     private static List<PlayerState>? _ctxPlayers;
     private static PlayerState? _ctxDealer;
 
+    internal static int _payoutGuard = 0;
+
     private static string _virtualTargetName = string.Empty;
     private static string _forcedRecipientName = string.Empty;
-
-    internal static int _payoutGuard = 0;
 
     public static void SetDebugMode(bool enabled) => _debugMode = enabled;
 

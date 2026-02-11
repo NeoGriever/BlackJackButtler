@@ -102,19 +102,23 @@ public sealed class Plugin : IDalamudPlugin
     {
         if(mainWindow == null) return;
 
+        // Immer aktiv: Spieler-Name cachen (für Chat-Identifikation)
         _cachedLocalName = ObjectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
 
+        // Immer aktiv: Runtime-Context aktuell halten (billig, nur Referenz-Zuweisung)
         GameEngine.SetRuntimeContext(mainWindow.GetPlayers(), mainWindow.GetDealer());
 
-        if (mainWindow.IsRecognitionActive)
+        // ── STANDBY: Alles darunter nur wenn Group Detector aktiv ──
+        if (!mainWindow.IsRecognitionActive) return;
+
+        // Party-Sync (throttled auf 1x/Sekunde)
+        if ((DateTime.Now - _lastSync).TotalMilliseconds > 1000)
         {
-            if ((DateTime.Now - _lastSync).TotalMilliseconds > 1000)
-            {
-                mainWindow.SyncPartyPublic();
-                _lastSync = DateTime.Now;
-            }
+            mainWindow.SyncPartyPublic();
+            _lastSync = DateTime.Now;
         }
 
+        // Auto Initial Deal
         if (Configuration.AutoInitialDeal && GameEngine.CurrentPhase == GamePhase.InitialDeal)
         {
             if (!CommandExecutor.IsRunning)
@@ -128,6 +132,7 @@ public sealed class Plugin : IDalamudPlugin
             }
         }
 
+        // Auto Dealer Draw
         if (Configuration.AutoDealerDraw && GameEngine.CurrentPhase == GamePhase.DealerTurn)
         {
             if (!CommandExecutor.IsRunning)
@@ -154,6 +159,7 @@ public sealed class Plugin : IDalamudPlugin
             }
         }
 
+        // Dropbox + Trade
         DropboxIntegration.Update();
         TradeManager.Tick();
     }

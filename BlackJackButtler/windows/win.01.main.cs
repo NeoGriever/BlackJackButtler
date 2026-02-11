@@ -159,7 +159,7 @@ public partial class BlackJackButtlerWindow
         ImGui.TableSetupColumn("Bet", ImGuiTableColumnFlags.WidthStretch, 1.0f);
         ImGui.TableSetupColumn("Cards", ImGuiTableColumnFlags.WidthFixed, 100);
         ImGui.TableSetupColumn("Points", ImGuiTableColumnFlags.WidthFixed, 55);
-        ImGui.TableSetupColumn("Controls", ImGuiTableColumnFlags.WidthFixed, 150);
+        ImGui.TableSetupColumn("Controls", ImGuiTableColumnFlags.WidthFixed, 200);
     }
 
     private void DrawMainHeader()
@@ -756,7 +756,7 @@ public partial class BlackJackButtlerWindow
             ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
         }
 
-        if (ImGui.SmallButton($"{label}##btn_{label}_{p.UIID}"))
+        if (ImGui.Button($"{label}##btn_{label}_{p.UIID}"))
         {
             highlightField = false;
             onClick?.Invoke();
