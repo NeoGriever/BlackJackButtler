@@ -27,6 +27,8 @@ public static class RegexEngine
 
     public static void ProcessIncoming(ParsedChatMessage msg, Configuration cfg, List<PlayerState> players, PlayerState dealer)
     {
+        var cleanMessage = SanitizeForRegex(msg.Message);
+
         foreach (var entry in cfg.UserRegexes)
         {
             if (!entry.Enabled || entry.Patterns == null || entry.Patterns.Count == 0) continue;
@@ -39,15 +41,15 @@ public static class RegexEngine
                 RRX.Regex rx;
                 try { rx = new RRX.Regex(pattern, options); } catch { continue; }
 
-                if (rx.IsMatch(msg.Message))
+                if (rx.IsMatch(cleanMessage))
                 {
                     if (entry.Mode == RegexEntryMode.Trigger)
                     {
-                        ExecuteAction(entry, pattern, msg, players, dealer, cfg);
+                        ExecuteAction(entry, pattern, msg, cleanMessage, players, dealer, cfg);
                     }
                     else if (entry.Mode == RegexEntryMode.SetVariable)
                     {
-                        VariableManager.SetVariable(entry.Name, msg.Message);
+                        VariableManager.SetVariable(entry.Name, cleanMessage);
                     }
                     break;
                 }
@@ -55,12 +57,12 @@ public static class RegexEngine
         }
     }
 
-    private static void ExecuteAction(UserRegexEntry entry, string matchedPattern, ParsedChatMessage msg, List<PlayerState> players, PlayerState dealer, Configuration cfg)
+    private static void ExecuteAction(UserRegexEntry entry, string matchedPattern, ParsedChatMessage msg, string cleanMessage, List<PlayerState> players, PlayerState dealer, Configuration cfg)
     {
         var p = players.FirstOrDefault(x => x.Name.Equals(msg.Name, StringComparison.OrdinalIgnoreCase));
 
         var options = entry.CaseSensitive ? RRX.RegexOptions.None : RRX.RegexOptions.IgnoreCase;
-        var match = RRX.Regex.Match(msg.Message, matchedPattern, options);
+        var match = RRX.Regex.Match(cleanMessage, matchedPattern, options);
 
         switch (entry.Action)
         {
@@ -89,16 +91,26 @@ public static class RegexEngine
 
             case RegexAction.TradeGilIn:
                 if (match.Success && match.Groups.Count >= 2)
+                {
                     TradeManager.AddGil(match.Groups[1].Value, true);
+                    Plugin.Instance.GetMainWindow().AddDebugLog(
+                        $"[RegexEngine] TradeGilIn matched: +{match.Groups[1].Value}");
+                }
                 break;
 
             case RegexAction.TradeGilOut:
                 if (match.Success && match.Groups.Count >= 2)
+                {
                     TradeManager.AddGil(match.Groups[1].Value, false);
+                    Plugin.Instance.GetMainWindow().AddDebugLog(
+                        $"[RegexEngine] TradeGilOut matched: -{match.Groups[1].Value}");
+                }
                 break;
 
             case RegexAction.TradeCommit:
                 TradeManager.CommitTrade(players);
+                Plugin.Instance.GetMainWindow().AddDebugLog(
+                    "[RegexEngine] TradeCommit matched");
                 break;
 
             case RegexAction.TradeCancel:
@@ -217,6 +229,31 @@ public static class RegexEngine
                     p.HighlightSplit = true;
                 break;
         }
+    }
+
+    private static string SanitizeForRegex(string input)
+    {
+        var sb = new System.Text.StringBuilder(input.Length);
+        bool lastWasSpace = false;
+        foreach (var ch in input)
+        {
+            // FFXIV Private Use Area icons (U+E000–U+F8FF) entfernen
+            if (ch >= '\uE000' && ch <= '\uF8FF')
+                continue;
+
+            // Mehrfach-Leerzeichen zu einem zusammenfassen
+            if (ch == ' ')
+            {
+                if (lastWasSpace) continue;
+                lastWasSpace = true;
+            }
+            else
+            {
+                lastWasSpace = false;
+            }
+            sb.Append(ch);
+        }
+        return sb.ToString().Trim();
     }
 
     private static int? MapValue(int rolled)

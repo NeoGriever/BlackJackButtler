@@ -36,6 +36,9 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _isAliasModalOpen = false;
     private bool _triggerAliasPopup = false;
 
+    private readonly Dictionary<string, long> _bankSnapshot = new();
+    private readonly Dictionary<string, long> _betSnapshot = new();
+
     private Configuration? _tempImportConfig;
     private bool _showImportModal = false;
     private bool _isSidebarVisible = true;

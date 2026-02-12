@@ -20,11 +20,14 @@ public static class DropboxIntegration
     public static bool IsPayoutTarget(string? name)
     {
         if (string.IsNullOrEmpty(name)) return false;
+        var stripped = TradeManager.StripWorldSuffix(name);
         if (_dropboxPayoutTarget != null &&
-            _dropboxPayoutTarget.Equals(name, StringComparison.OrdinalIgnoreCase))
+            (_dropboxPayoutTarget.Equals(name, StringComparison.OrdinalIgnoreCase) ||
+             _dropboxPayoutTarget.Equals(stripped, StringComparison.OrdinalIgnoreCase)))
             return true;
         if (_isHelperActive &&
-            _currentTargetName.Equals(name, StringComparison.OrdinalIgnoreCase))
+            (_currentTargetName.Equals(name, StringComparison.OrdinalIgnoreCase) ||
+             _currentTargetName.Equals(stripped, StringComparison.OrdinalIgnoreCase)))
             return true;
         return false;
     }
