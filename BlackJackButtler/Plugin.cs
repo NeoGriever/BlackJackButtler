@@ -72,6 +72,7 @@ public sealed class Plugin : IDalamudPlugin
             Configuration.Save();
 
         StatsManager.Init(Configuration, () => Configuration.Save());
+        ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
 
         mainWindow = new BlackJackButtlerWindow(Configuration, () => Configuration.Save(), chatLog);
 

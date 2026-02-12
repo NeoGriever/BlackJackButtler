@@ -206,7 +206,7 @@ public static partial class GameEngine
                         bustList.Add(shortName);
                         p.LastRoundResult -= hand.Bet;
                     }
-                    else if (dealerBust || pScore > dealerScore)
+                    else if (dealerBust || pScore > dealerScore || (cfg.PlayerBJWinsOnTie && pScore == 21 && dealerScore == 21))
                     {
                         winList.Add(shortName);
                         float mult = cfg.MultiplierNormalWin;
@@ -263,7 +263,7 @@ public static partial class GameEngine
                         p.LastRoundResult -= hand.Bet;
                         await CommandExecutor.ExecuteGroup("ResultPlayerBusted", p.DisplayName, cfg);
                     }
-                    else if (dealerBust || pScore > dealerScore)
+                    else if (dealerBust || pScore > dealerScore || (cfg.PlayerBJWinsOnTie && pScore == 21 && dealerScore == 21))
                     {
                         float mult = cfg.MultiplierNormalWin;
                         if (hand.IsNaturalBlackJack) mult = cfg.MultiplierBlackjackWin;
@@ -288,6 +288,7 @@ public static partial class GameEngine
             }
         }
 
+        ActivityLogManager.LogRoundEnd(dealer, players);
         StatsManager.RecordRound();
     }
 

@@ -82,6 +82,16 @@ public partial class BlackJackButtlerWindow
         if(level >= (int)UserLevel.Advanced)
         {
             ImGui.Spacing();
+            if (ImGui.Checkbox("Player BJ wins on tie", ref _config.PlayerBJWinsOnTie)) _save();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: If the player has a Blackjack (natural or dirty) and the dealer also has 21, the player wins.\nInactive: Both having 21 results in a push.");
+        } else if (_config.PlayerBJWinsOnTie) {
+            _config.PlayerBJWinsOnTie = false;
+            _save();
+        }
+
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
             if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Collects all results and sends a single compressed message.\nInactive: Sends individual result messages for every player hand.");
         } else if (!_config.SmallResult) {
