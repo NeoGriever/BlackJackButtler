@@ -54,6 +54,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly BlackJackButtlerWindow mainWindow;
     private readonly ChatLogBuffer chatLog = new(20);
     private readonly DebugLogWindow debugLogWindow;
+    private readonly NotepadWindow notepadWindow;
     private DateTime _lastSync = DateTime.MinValue;
 
     public void OpenDebugPopout() => debugLogWindow.IsOpen = true;
@@ -74,7 +75,10 @@ public sealed class Plugin : IDalamudPlugin
         StatsManager.Init(Configuration, () => Configuration.Save());
         ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
 
-        mainWindow = new BlackJackButtlerWindow(Configuration, () => Configuration.Save(), chatLog);
+        notepadWindow = new NotepadWindow(Configuration, () => Configuration.Save());
+        windowSystem.AddWindow(notepadWindow);
+
+        mainWindow = new BlackJackButtlerWindow(Configuration, () => Configuration.Save(), chatLog, notepadWindow);
 
         debugLogWindow = new DebugLogWindow(mainWindow);
         windowSystem.AddWindow(debugLogWindow);

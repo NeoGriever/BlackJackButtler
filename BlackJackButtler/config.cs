@@ -53,6 +53,8 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool dismissDevWarning = false;
 
+    public string NotepadText = "";
+
     public UserLevel CurrentLevel = UserLevel.Beginner;
 
     public static string[] StandardBatchNames => DefaultsManager.GetDefaultMessages().Select(m => m.Name).ToArray();
