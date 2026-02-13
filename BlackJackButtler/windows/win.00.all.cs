@@ -46,11 +46,15 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     private bool _showRestoreSessionButton = false;
 
-    public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog) : base("BlackJack Buttler")
+    private bool _notepadLoaded = false;
+    private readonly NotepadWindow _notepadWindow;
+
+    public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog, NotepadWindow notepadWindow) : base("BlackJack Buttler")
     {
         _config = config;
         _save = save;
         _chatLog = chatLog;
+        _notepadWindow = notepadWindow;
 
         Size = new Vector2(1280, 580);
         SizeCondition = ImGuiCond.FirstUseEver;
@@ -205,6 +209,30 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Stats:        DrawStatsPage(); break;
         }
         ImGui.EndChild();
+
+        if (!_notepadWindow.IsOpen)
+        {
+            var contentMax = ImGui.GetContentRegionMax();
+            var buttonSize = new Vector2(32, 32);
+            ImGui.SetCursorPos(new Vector2(
+                contentMax.X - buttonSize.X - 8,
+                contentMax.Y - buttonSize.Y - 8
+            ));
+            ImGui.PushFont(UiBuilder.IconFont);
+            if (ImGui.Button(FontAwesomeIcon.StickyNote.ToIconString() + "##notepad_btn", buttonSize))
+            {
+                if (!_notepadLoaded)
+                {
+                    _notepadLoaded = true;
+                    _notepadWindow.LoadContent();
+                }
+                _notepadWindow.IsOpen = true;
+            }
+            ImGui.PopFont();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Open Notepad");
+        }
+
         DropboxIntegration.DrawHelperWindow();
         DrawSplitMoneyPopup();
         DrawDDMoneyPopup();
