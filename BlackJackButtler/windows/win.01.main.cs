@@ -64,7 +64,23 @@ public partial class BlackJackButtlerWindow
         }
         {
             float checkboxSize = ImGui.GetFrameHeight();
-            ImGui.SameLine(ImGui.GetContentRegionAvail().X + ImGui.GetCursorPosX() - checkboxSize);
+            float spacing = ImGui.GetStyle().ItemSpacing.X;
+            float rightEdge = ImGui.GetContentRegionAvail().X + ImGui.GetCursorPosX();
+
+            if (!_notepadWindow.IsOpen)
+            {
+                ImGui.SameLine(rightEdge - checkboxSize - spacing - checkboxSize);
+                ImGui.PushFont(UiBuilder.IconFont);
+                if (ImGui.SmallButton(FontAwesomeIcon.StickyNote.ToIconString() + "##notepad_btn"))
+                {
+                    if (!_notepadLoaded) { _notepadLoaded = true; _notepadWindow.LoadContent(); }
+                    _notepadWindow.IsOpen = true;
+                }
+                ImGui.PopFont();
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip("Open Notepad");
+            }
+
+            ImGui.SameLine(rightEdge - checkboxSize);
             if (ImGui.Checkbox("##enable_bank_input", ref _config.EnableBankInput)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Enable Bank input");
         }
