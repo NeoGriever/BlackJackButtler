@@ -75,6 +75,11 @@ public static class DefaultsManager
                 { "Text": "/bstance motion", "Delay": 4.5 },
                 { "Text": "/dice party 13", "Delay": 0.8 }
             ],
+            "SplitDraw": [
+                { "Text": "/p #{Player Split Draw Messages}", "Delay": 0.8 },
+                { "Text": "/bstance motion", "Delay": 4.5 },
+                { "Text": "/dice party 13", "Delay": 0.8 }
+            ],
             "PlayerBJ": [
                 { "Text": "/p #{Player BlackJack Messages} <se.7>", "Delay": 1.3 },
                 { "Text": "/thumbsup motion", "Delay": 0.8 },
@@ -186,45 +191,45 @@ public static class DefaultsManager
             ],
 
             "Player State Messages HSDS": [
-                " <t> - You have splittable <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Double Down] or [Split]? "
+                " ${HandIndex}<t> - You have splittable <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Double Down] or [Split]? "
             ],
 
             "Player State Messages HSD": [
-                " <t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand] or [Double Down]? "
+                " ${HandIndex}<t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand] or [Double Down]? "
             ],
 
             "Player State Messages HS": [
-                " <t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit] or [Stand]? "
+                " ${HandIndex}<t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit] or [Stand]? "
             ],
 
             "Player DD Forced Stand Messages": [
-                " Now you have <points> with ${playerCards}. Since it was a Double Down, this hand is now locked. "
+                " ${HandIndex}Now you have <points> with ${playerCards}. Since it was a Double Down, this hand is now locked. "
             ],
 
             "Player Draw Messages": [
-                " <t> want another card? Then <t> will get another card~. ",
-                " <t> want a card - here it is. ",
-                " <t> decides to hit. ",
-                " And with that, <t> gets another card. ",
-                " I'll draw another card for <t>. "
+                " ${HandIndex}<t> want another card? Then <t> will get another card~. ",
+                " ${HandIndex}<t> want a card - here it is. ",
+                " ${HandIndex}<t> decides to hit. ",
+                " ${HandIndex}And with that, <t> gets another card. ",
+                " ${HandIndex}I'll draw another card for <t>. "
             ],
 
             "Player Stand Messages": [
-                " <t> decides to keep the given hand. Good Luck. ",
-                " This hand stands now on <points> for <t>. "
+                " ${HandIndex}<t> decides to keep the given hand. Good Luck. ",
+                " ${HandIndex}This hand stands now on <points> for <t>. "
             ],
 
             "Player DD Messages": [
-                " <t> want to play a risky game? - DOUBLE DOWN! - Take this card and live with the consequences~. ",
-                " Double Down? Did you say DOUBLE DOWN, <t>? - Well, you want it, you get it! ",
-                " Double bet, double chance. Let's see, what fortuna wanna do with <t>'s hand now. ",
-                " DD! - Let this card speak! ",
-                " <t> wants another card. The last card for <t>'s hand. - Rolling drumsssss~. "
+                " ${HandIndex}<t> want to play a risky game? - DOUBLE DOWN! - Take this card and live with the consequences~. ",
+                " ${HandIndex}Double Down? Did you say DOUBLE DOWN, <t>? - Well, you want it, you get it! ",
+                " ${HandIndex}Double bet, double chance. Let's see, what fortuna wanna do with <t>'s hand now. ",
+                " ${HandIndex}DD! - Let this card speak! ",
+                " ${HandIndex}<t> wants another card. The last card for <t>'s hand. - Rolling drumsssss~. "
             ],
 
             "Player DD Messages Stand": [
-                " <t> drew the DD card. Hand is now locked at <points>. ",
-                " Double Down complete. <t> stands automatically at <points>. "
+                " ${HandIndex}<t> drew the DD card. Hand is now locked at <points>. ",
+                " ${HandIndex}Double Down complete. <t> stands automatically at <points>. "
             ],
 
             "Player Split Messages": [
@@ -233,9 +238,17 @@ public static class DefaultsManager
                 " <t> wants to split. Let's gooo~. "
             ],
 
+            "Player Split Draw Messages": [
+                " ${HandIndex}Now dealing the opening card for <t>'s next hand. ",
+                " ${HandIndex}Next hand for <t> - let's see what we're working with. ",
+                " ${HandIndex}Drawing the starting card for <t>'s split hand. ",
+                " ${HandIndex}<t>'s next hand gets its second card. Let's go. ",
+                " ${HandIndex}Time to set up <t>'s next split hand - here comes the card. "
+            ],
+
             "Player BlackJack Messages": [
-                " Wohoo. <t> got a NATURAL BLACKJACK! Congrats! ",
-                " FANTASTIC. A NATURAL BLACKJACK FOR <t>! Congrats! "
+                " ${HandIndex}Wohoo. <t> got a NATURAL BLACKJACK! Congrats! ",
+                " ${HandIndex}FANTASTIC. A NATURAL BLACKJACK FOR <t>! Congrats! "
             ],
 
             "Player BlackJack Messages Shout": [
@@ -243,43 +256,43 @@ public static class DefaultsManager
             ],
 
             "Player Dirty BlackJack Messages": [
-                " Wohoo. <t> got a blackjack. Fantastic! ",
-                " Unbelievable. A BLACKJACK FOR <t>! CONGRATS! "
+                " ${HandIndex}Wohoo. <t> got a blackjack. Fantastic! ",
+                " ${HandIndex}Unbelievable. A BLACKJACK FOR <t>! CONGRATS! "
             ],
 
             "Player Busts Messages": [
-                " Oh no. <t> got busted with <points>. ",
-                " That's bad luck. <t> busted with <points>. ",
-                " Ouch! <t> busted at <points>. ",
-                " Bust! <t> pushed it to <points> and paid the price. ",
-                " Dealer smiles. <t> went over with <points>. ",
-                " Too hot to handle - <t> burned out at <points>. ",
-                " Unlucky! <t> cracked with <points>. ",
-                " And that's a bust - <t> hits <points>. ",
-                " Over 21 alert: <t> landed on <points>. ",
-                " Greed got the best of <t> at <points>. ",
-                " One card too far - <t> ended on <points>. ",
-                " The cards said 'nope.' <t> busted with <points>. ",
-                " Risky business - <t> busted at <points>. ",
-                " <t> went full send… to <points>. Bust. ",
-                " The dealer thanks you, <t>: <points> is a bust. ",
-                " Close? Not really. <t> busted with <points>. ",
-                " Math check failed: <t> reached <points>. ",
-                " You hate to see it - <t> busted at <points>. ",
-                " <t> hit <points> and instantly regretted it. ",
-                " That last hit was spicy - <t> busted with <points>. ",
-                " Bold move, <t>. <points> is still a bust. ",
-                " Dealer: 'I'll allow it.' Rules: 'No.' <t> has <points>. ",
-                " <t> chased 21 and caught <points>. Bust. ",
-                " Congratulations, <t> - you found <points> the hard way. ",
-                " House wins this round: <t> busted with <points>. ",
-                " Fortune favors the bold… not <t> at <points>. ",
-                " <t> tried to outsmart the deck and got <points>. ",
-                " Too many hits, not enough sense - <t> busted at <points>. ",
-                " <t> went overboard with <points>. ",
-                " The deck giveth, the deck busteth: <t> at <points>. ",
-                " <t> zigged when they should've stayed - <points>. ",
-                " <t> just invented a new number: <points> (aka bust). "
+                " ${HandIndex}Oh no. <t> got busted with <points>. ",
+                " ${HandIndex}That's bad luck. <t> busted with <points>. ",
+                " ${HandIndex}Ouch! <t> busted at <points>. ",
+                " ${HandIndex}Bust! <t> pushed it to <points> and paid the price. ",
+                " ${HandIndex}Dealer smiles. <t> went over with <points>. ",
+                " ${HandIndex}Too hot to handle - <t> burned out at <points>. ",
+                " ${HandIndex}Unlucky! <t> cracked with <points>. ",
+                " ${HandIndex}And that's a bust - <t> hits <points>. ",
+                " ${HandIndex}Over 21 alert: <t> landed on <points>. ",
+                " ${HandIndex}Greed got the best of <t> at <points>. ",
+                " ${HandIndex}One card too far - <t> ended on <points>. ",
+                " ${HandIndex}The cards said 'nope.' <t> busted with <points>. ",
+                " ${HandIndex}Risky business - <t> busted at <points>. ",
+                " ${HandIndex}<t> went full send… to <points>. Bust. ",
+                " ${HandIndex}The dealer thanks you, <t>: <points> is a bust. ",
+                " ${HandIndex}Close? Not really. <t> busted with <points>. ",
+                " ${HandIndex}Math check failed: <t> reached <points>. ",
+                " ${HandIndex}You hate to see it - <t> busted at <points>. ",
+                " ${HandIndex}<t> hit <points> and instantly regretted it. ",
+                " ${HandIndex}That last hit was spicy - <t> busted with <points>. ",
+                " ${HandIndex}Bold move, <t>. <points> is still a bust. ",
+                " ${HandIndex}Dealer: 'I'll allow it.' Rules: 'No.' <t> has <points>. ",
+                " ${HandIndex}<t> chased 21 and caught <points>. Bust. ",
+                " ${HandIndex}Congratulations, <t> - you found <points> the hard way. ",
+                " ${HandIndex}House wins this round: <t> busted with <points>. ",
+                " ${HandIndex}Fortune favors the bold… not <t> at <points>. ",
+                " ${HandIndex}<t> tried to outsmart the deck and got <points>. ",
+                " ${HandIndex}Too many hits, not enough sense - <t> busted at <points>. ",
+                " ${HandIndex}<t> went overboard with <points>. ",
+                " ${HandIndex}The deck giveth, the deck busteth: <t> at <points>. ",
+                " ${HandIndex}<t> zigged when they should've stayed - <points>. ",
+                " ${HandIndex}<t> just invented a new number: <points> (aka bust). "
             ],
 
             "Dealer Draw Messages": [
@@ -377,38 +390,38 @@ public static class DefaultsManager
             ],
 
             "Hand Reaction Messages": [
-                " Will <points> be enough for <t> this round? ",
-                " <t> sits on <points> - bold choice or bad idea? ",
-                " <points> for <t>. The table is watching. ",
-                " <t> has <points>. Now we wait for the dealer's answer. "
+                " ${HandIndex}Will <points> be enough for <t> this round? ",
+                " ${HandIndex}<t> sits on <points> - bold choice or bad idea? ",
+                " ${HandIndex}<points> for <t>. The table is watching. ",
+                " ${HandIndex}<t> has <points>. Now we wait for the dealer's answer. "
             ],
 
             "Win Messages": [
-                " <t> wins the round with <points>. ",
-                " Victory for <t> - <points> takes it. ",
-                " <t> takes the hand: <points>. ",
-                " <t> comes out on top with <points>. "
+                " ${HandIndex}<t> wins the round with <points>. ",
+                " ${HandIndex}Victory for <t> - <points> takes it. ",
+                " ${HandIndex}<t> takes the hand: <points>. ",
+                " ${HandIndex}<t> comes out on top with <points>. "
             ],
 
             "Push Messages": [
-                " Push for <t> at <points>. Full bet returned. ",
-                " It's a push: <t> with <points>. All stakes back. ",
-                " Standoff! <t> pushes with <points>. Complete refund. ",
-                " No winner - push at <points> for <t>. Total bet returned. "
+                " ${HandIndex}Push for <t> at <points>. Full bet returned. ",
+                " ${HandIndex}It's a push: <t> with <points>. All stakes back. ",
+                " ${HandIndex}Standoff! <t> pushes with <points>. Complete refund. ",
+                " ${HandIndex}No winner - push at <points> for <t>. Total bet returned. "
             ],
 
             "Bust Messages": [
-                " <t> busts with <points>. That one hurt. ",
-                " Bust! <t> went over with <points>. ",
-                " <t> pushed too far - <points>. Busted. ",
-                " Unlucky round: <t> busts at <points>. "
+                " ${HandIndex}<t> busts with <points>. That one hurt. ",
+                " ${HandIndex}Bust! <t> went over with <points>. ",
+                " ${HandIndex}<t> pushed too far - <points>. Busted. ",
+                " ${HandIndex}Unlucky round: <t> busts at <points>. "
             ],
 
             "Lost Messages": [
-                " <t> loses this hand with <points>. ",
-                " Not enough - <t> falls short with <points>. ",
-                " <t> doesn't take it this time: <points>. ",
-                " House takes this one - <t> ends on <points>. "
+                " ${HandIndex}<t> loses this hand with <points>. ",
+                " ${HandIndex}Not enough - <t> falls short with <points>. ",
+                " ${HandIndex}<t> doesn't take it this time: <points>. ",
+                " ${HandIndex}House takes this one - <t> ends on <points>. "
             ],
 
             "Payment Reminder": [

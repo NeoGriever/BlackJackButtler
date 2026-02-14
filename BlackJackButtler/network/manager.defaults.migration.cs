@@ -130,13 +130,11 @@ public static class DefaultsMigration
         {
             foreach (var kvp in container.Messages)
             {
-                // Is this entry new (not in the file snapshot)?
                 if (!fileSnapshot.Messages.ContainsKey(kvp.Key))
                 {
-                    // Add to snapshot for later saving
+                    // New entry: add to snapshot and config
                     fileSnapshot.Messages[kvp.Key] = kvp.Value;
 
-                    // Insert into config if not already present
                     if (!config.MessageBatches.Any(b => b.Name == kvp.Key))
                     {
                         config.MessageBatches.Add(new MessageBatch
@@ -148,6 +146,23 @@ public static class DefaultsMigration
                         Plugin.Log.Information($"[DefaultsMigration] Added new message batch: {kvp.Key}");
                     }
                 }
+                else
+                {
+                    // Existing entry: update config if user hasn't changed it
+                    var snapshotMessages = fileSnapshot.Messages[kvp.Key];
+                    var configBatch = config.MessageBatches.FirstOrDefault(b => b.Name == kvp.Key);
+
+                    if (configBatch != null && configBatch.Messages.SequenceEqual(snapshotMessages))
+                    {
+                        // User hasn't modified this batch -> update to new code defaults
+                        configBatch.Messages = new List<string>(kvp.Value);
+                        changed = true;
+                        Plugin.Log.Information($"[DefaultsMigration] Updated unchanged message batch: {kvp.Key}");
+                    }
+
+                    // Always update snapshot to new code defaults
+                    fileSnapshot.Messages[kvp.Key] = kvp.Value;
+                }
             }
         }
 
@@ -156,16 +171,17 @@ public static class DefaultsMigration
         {
             foreach (var kvp in container.Commands)
             {
+                var codeCommands = kvp.Value.Select(c => new SnapshotCommandDto
+                {
+                    Text = c.Text ?? "",
+                    Delay = c.Delay
+                }).ToList();
+
                 if (!fileSnapshot.Commands.ContainsKey(kvp.Key))
                 {
-                    // Add to snapshot
-                    fileSnapshot.Commands[kvp.Key] = kvp.Value.Select(c => new SnapshotCommandDto
-                    {
-                        Text = c.Text ?? "",
-                        Delay = c.Delay
-                    }).ToList();
+                    // New entry: add to snapshot and config
+                    fileSnapshot.Commands[kvp.Key] = codeCommands;
 
-                    // Insert into config if not already present
                     if (!config.CommandGroups.Any(g => g.Name == kvp.Key))
                     {
                         var group = new CommandGroup { Name = kvp.Key };
@@ -178,6 +194,28 @@ public static class DefaultsMigration
                         changed = true;
                         Plugin.Log.Information($"[DefaultsMigration] Added new command group: {kvp.Key}");
                     }
+                }
+                else
+                {
+                    // Existing entry: update config if user hasn't changed it
+                    var snapshotCommands = fileSnapshot.Commands[kvp.Key];
+                    var configGroup = config.CommandGroups.FirstOrDefault(g => g.Name == kvp.Key);
+
+                    if (configGroup != null && CommandsMatchSnapshot(configGroup.Commands, snapshotCommands))
+                    {
+                        // User hasn't modified this group -> update to new code defaults
+                        configGroup.Commands.Clear();
+                        configGroup.Commands.AddRange(kvp.Value.Select(c => new PluginCommand
+                        {
+                            Text = c.Text ?? "",
+                            Delay = c.Delay
+                        }));
+                        changed = true;
+                        Plugin.Log.Information($"[DefaultsMigration] Updated unchanged command group: {kvp.Key}");
+                    }
+
+                    // Always update snapshot to new code defaults
+                    fileSnapshot.Commands[kvp.Key] = codeCommands;
                 }
             }
         }
@@ -217,6 +255,17 @@ public static class DefaultsMigration
         }
 
         return changed;
+    }
+
+    private static bool CommandsMatchSnapshot(List<PluginCommand> configCmds, List<SnapshotCommandDto> snapshotCmds)
+    {
+        if (configCmds.Count != snapshotCmds.Count) return false;
+        for (int i = 0; i < configCmds.Count; i++)
+        {
+            if (configCmds[i].Text != snapshotCmds[i].Text) return false;
+            if (Math.Abs(configCmds[i].Delay - snapshotCmds[i].Delay) > 0.001f) return false;
+        }
+        return true;
     }
 
     /// <summary>

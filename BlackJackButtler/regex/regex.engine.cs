@@ -122,6 +122,12 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantHit:
+                if (!cfg.AutoRun)
+                {
+                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                        p.HighlightHit = true;
+                    break;
+                }
                 if (p != null && p.IsCurrentTurn && !CommandExecutor.IsRunning
                     && GameEngine.CurrentPhase == GamePhase.PlayersTurn
                     && p.HasInitialHandDealt && p.Hands.Count > 0)
@@ -137,6 +143,12 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantStand:
+                if (!cfg.AutoRun)
+                {
+                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                        p.HighlightStand = true;
+                    break;
+                }
                 if (p != null && p.IsCurrentTurn && !CommandExecutor.IsRunning
                     && GameEngine.CurrentPhase == GamePhase.PlayersTurn
                     && p.HasInitialHandDealt && p.Hands.Count > 0)
@@ -151,6 +163,12 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantDD:
+                if (!cfg.AutoRun)
+                {
+                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                        p.HighlightDD = true;
+                    break;
+                }
                 if (p != null && p.IsCurrentTurn && !CommandExecutor.IsRunning
                     && GameEngine.CurrentPhase == GamePhase.PlayersTurn
                     && p.HasInitialHandDealt && p.Hands.Count > 0)
@@ -168,6 +186,12 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantSplit:
+                if (!cfg.AutoRun)
+                {
+                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                        p.HighlightSplit = true;
+                    break;
+                }
                 if (p != null && p.IsCurrentTurn && !CommandExecutor.IsRunning
                     && GameEngine.CurrentPhase == GamePhase.PlayersTurn
                     && p.HasInitialHandDealt && p.Hands.Count > 0)
