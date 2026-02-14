@@ -199,7 +199,8 @@ public static partial class GameEngine
 
                 foreach (var hand in p.Hands)
                 {
-                    int pScore = p.GetBestScore(p.Hands.IndexOf(hand));
+                    p.CurrentHandIndex = p.Hands.IndexOf(hand);
+                    int pScore = p.GetBestScore(p.CurrentHandIndex);
 
                     if (hand.IsBust)
                     {
@@ -256,7 +257,8 @@ public static partial class GameEngine
 
                 foreach (var hand in p.Hands)
                 {
-                    int pScore = p.GetBestScore(p.Hands.IndexOf(hand));
+                    p.CurrentHandIndex = p.Hands.IndexOf(hand);
+                    int pScore = p.GetBestScore(p.CurrentHandIndex);
 
                     if (hand.IsBust)
                     {

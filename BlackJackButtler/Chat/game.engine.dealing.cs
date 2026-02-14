@@ -145,7 +145,7 @@ public static partial class GameEngine
                     {
                         TargetPlayer(p.Name);
                         SetForcedRecipient(p.Name);
-                        try { await CommandExecutor.ExecuteGroup("Hit", p.Name, cfg); }
+                        try { await CommandExecutor.ExecuteGroup("SplitDraw", p.Name, cfg); }
                         finally { ClearForcedRecipient(); }
 
                         if (p.CurrentHandIndex < p.Hands.Count)

@@ -119,6 +119,12 @@ public static class CommandExecutor
             ? dealer
             : players.FirstOrDefault(p => p.DisplayName.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase));
 
+        // Set HandIndex variable for split hand identification
+        if (pState != null && pState.Hands.Count > 1)
+            VariableManager.SetVariable("HandIndex", $"[Hand {pState.CurrentHandIndex + 1}] ");
+        else
+            VariableManager.SetVariable("HandIndex", "");
+
         var group = cfg.CommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase))
                  ?? cfg.CustomCommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
 
@@ -257,6 +263,12 @@ public static class CommandExecutor
         var pState = targetPlayerName.Equals(dealer.Name, StringComparison.OrdinalIgnoreCase)
             ? dealer
             : players.FirstOrDefault(p => p.DisplayName.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase));
+
+        // Set HandIndex variable for split hand identification
+        if (pState != null && pState.Hands.Count > 1)
+            VariableManager.SetVariable("HandIndex", $"[Hand {pState.CurrentHandIndex + 1}] ");
+        else
+            VariableManager.SetVariable("HandIndex", "");
 
         var group = cfg.CommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase))
                  ?? cfg.CustomCommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));

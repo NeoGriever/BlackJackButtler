@@ -8,6 +8,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Windowing;
 using System.Threading.Tasks;
 using BlackJackButtler.Chat;
+using BlackJackButtler.Regex;
 
 namespace BlackJackButtler.Windows;
 
@@ -221,6 +222,31 @@ public partial class BlackJackButtlerWindow
 
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip($"Automatically draws cards for the dealer until {_config.DealerDrawsUntil}, then stands.");
+
+        bool hasAutoTriggers = _config.UserRegexes.Any(r =>
+            r.Enabled && r.Mode == RegexEntryMode.Trigger &&
+            (r.Action == RegexAction.WantHit || r.Action == RegexAction.WantStand ||
+             r.Action == RegexAction.WantDD || r.Action == RegexAction.WantSplit));
+
+        if (hasAutoTriggers)
+        {
+            ImGui.SameLine();
+
+            var auto_run_text = _config.AutoRun ? "● Auto Run" : "○ Auto Run";
+            bool autoRunActive = _config.AutoRun;
+            if (autoRunActive) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
+
+            if (ImGui.Button(auto_run_text))
+            {
+                _config.AutoRun = !_config.AutoRun;
+                _save();
+            }
+
+            if (autoRunActive) ImGui.PopStyleColor();
+
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("When ON, player action triggers (Hit/Stand/DD/Split) execute automatically.\nWhen OFF, they highlight the corresponding button instead.");
+        }
 
         if (IsRecognitionActive && !IsLocalPlayerPartyLeader())
         {
