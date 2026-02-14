@@ -28,7 +28,7 @@ public partial class BlackJackButtlerWindow
                 bool canReset =
                     GameEngine.CurrentPhase == GamePhase.Waiting &&
                     !IsRecognitionActive &&
-                    (_players.Count == 0 || _players.All(p => p.Bank == 0));
+                    _players.All(p => !p.IsActivePlayer || p.Bank == 0);
 
                 var io = ImGui.GetIO();
                 bool holdingModifiers = io.KeyCtrl && io.KeyShift;
@@ -70,5 +70,17 @@ public partial class BlackJackButtlerWindow
 
         string sign = net >= 0 ? "+" : "";
         ImGui.TextColored(color, $"Net:        {sign}{net:N0}");
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        string summary = $"Rounds: {rounds:N0} | Income: {income:N0} | Expense: {expense:N0} | Net: {sign}{net:N0}";
+
+        if (ImGui.SmallButton("Copy"))
+            ImGui.SetClipboardText(summary);
+
+        ImGui.SameLine();
+        ImGui.TextWrapped(summary);
     }
 }

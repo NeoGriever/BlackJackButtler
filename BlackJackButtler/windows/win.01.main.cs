@@ -186,6 +186,7 @@ public partial class BlackJackButtlerWindow
             if (!IsRecognitionActive)
             {
                 SessionManager.ClearSession();
+                _players.RemoveAll(p => !p.IsActivePlayer && p.Bank == 0);
                 AddDebugLog("[SessionManager] Session cleared (Group Detector deactivated)", false);
             }
         }
