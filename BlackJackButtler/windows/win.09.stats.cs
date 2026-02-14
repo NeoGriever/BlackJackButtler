@@ -15,13 +15,13 @@ public partial class BlackJackButtlerWindow
         {
             if (ImGui.BeginTabItem("Session Stats"))
             {
-                DrawStatsBlock(StatsManager.SessionRounds, StatsManager.SessionIncome, StatsManager.SessionExpense);
+                DrawStatsBlock(StatsManager.SessionRounds, StatsManager.SessionIncome, StatsManager.SessionExpense, "session");
                 ImGui.EndTabItem();
             }
 
             if (ImGui.BeginTabItem("Overall Stats"))
             {
-                DrawStatsBlock(_config.OverallRounds, _config.OverallIncome, _config.OverallExpense);
+                DrawStatsBlock(_config.OverallRounds, _config.OverallIncome, _config.OverallExpense, "overall");
 
                 ImGui.Separator();
 
@@ -55,7 +55,7 @@ public partial class BlackJackButtlerWindow
         }
     }
 
-    private void DrawStatsBlock(int rounds, long income, long expense)
+    private void DrawStatsBlock(int rounds, long income, long expense, string id)
     {
         long net = income - expense;
 
@@ -77,7 +77,7 @@ public partial class BlackJackButtlerWindow
 
         string summary = $"Rounds: {rounds:N0} | Income: {income:N0} | Expense: {expense:N0} | Net: {sign}{net:N0}";
 
-        if (ImGui.SmallButton("Copy"))
+        if (ImGui.SmallButton($"Copy##{id}"))
             ImGui.SetClipboardText(summary);
 
         ImGui.SameLine();

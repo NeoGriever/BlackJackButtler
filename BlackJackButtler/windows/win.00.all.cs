@@ -210,29 +210,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         }
         ImGui.EndChild();
 
-        if (!_notepadWindow.IsOpen)
-        {
-            var contentMax = ImGui.GetContentRegionMax();
-            var buttonSize = new Vector2(32, 32);
-            ImGui.SetCursorPos(new Vector2(
-                contentMax.X - buttonSize.X - 8,
-                contentMax.Y - buttonSize.Y - 8
-            ));
-            ImGui.PushFont(UiBuilder.IconFont);
-            if (ImGui.Button(FontAwesomeIcon.StickyNote.ToIconString() + "##notepad_btn", buttonSize))
-            {
-                if (!_notepadLoaded)
-                {
-                    _notepadLoaded = true;
-                    _notepadWindow.LoadContent();
-                }
-                _notepadWindow.IsOpen = true;
-            }
-            ImGui.PopFont();
-            if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Open Notepad");
-        }
-
         DropboxIntegration.DrawHelperWindow();
         DrawSplitMoneyPopup();
         DrawDDMoneyPopup();
