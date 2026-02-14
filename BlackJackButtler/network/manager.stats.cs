@@ -49,6 +49,10 @@ public static class StatsManager
 
     public static void ResetOverall()
     {
+        SessionIncome = 0;
+        SessionExpense = 0;
+        SessionRounds = 0;
+
         if (_config != null)
         {
             _config.OverallIncome = 0;
