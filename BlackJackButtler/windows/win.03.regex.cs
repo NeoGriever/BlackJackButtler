@@ -208,7 +208,9 @@ public partial class BlackJackButtlerWindow
                         "Highlight Hit\0" +
                         "Highlight Stand\0" +
                         "Highlight DD\0" +
-                        "Highlight Split\0"
+                        "Highlight Split\0" +
+                        "NextRound\0" +
+                        "BankTell\0"
                     ))
                     {
                         e.Action = (RegexAction)action;

@@ -16,6 +16,8 @@ public static partial class GameEngine
 
     public static async Task StartInitialDeal(List<PlayerState> players, Configuration cfg)
     {
+        Regex.RegexEngine.ClearNextRoundVotes();
+
         PlayerState? dealer;
         lock (_ctxLock) dealer = _ctxDealer;
         if (dealer == null)

@@ -38,6 +38,7 @@ public class PlayerState
     public bool HighlightPause = false;
     public bool HighlightLeave = false;
     public bool HighlightJoin = false;
+    public bool HighlightTell = false;
     public bool IsInDebt => Bank < 0;
 
     public string DisplayName => !string.IsNullOrWhiteSpace(Alias) ? Alias : Name;
@@ -86,6 +87,7 @@ public class PlayerState
         HighlightPause = false;
         HighlightLeave = false;
         HighlightJoin = false;
+        HighlightTell = false;
     }
 
     public void ResetForNewRound()
@@ -163,7 +165,8 @@ public class PlayerState
             HighlightAlias = HighlightAlias,
             HighlightPause = HighlightPause,
             HighlightLeave = HighlightLeave,
-            HighlightJoin = HighlightJoin
+            HighlightJoin = HighlightJoin,
+            HighlightTell = HighlightTell
         };
     }
 

@@ -45,6 +45,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool AutoRun = false;
     public int DealerDrawsUntil = 17;
     public bool SmallResult = false;
+    public bool AutostartRoundOnlyOnMultiplePlayers = true;
     public Vector4 HighlightColor = new Vector4(1.0f, 1.0f, 0.0f, 1.0f);
     public Vector4 HighlightTextColor = new Vector4(0f, 0f, 0f, 1f);
 

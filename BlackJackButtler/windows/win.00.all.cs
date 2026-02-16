@@ -45,11 +45,12 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private string? _pendingSettingsFocus;
 
     private bool _showRestoreSessionButton = false;
+    private bool _highlightNewRound = false;
 
     private bool _notepadLoaded = false;
     private readonly NotepadWindow _notepadWindow;
 
-    public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog, NotepadWindow notepadWindow) : base("BlackJack Buttler")
+    public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog, NotepadWindow notepadWindow) : base($"BlackJack Buttler v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}")
     {
         _config = config;
         _save = save;
@@ -94,6 +95,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         _showRestoreSessionButton = SessionManager.HasSavedSession();
     }
 
+    public void SetHighlightNewRound() => _highlightNewRound = true;
     public void Dispose() { }
     public void OpenMain() { _page = Page.Main; IsOpen = true; }
     public void OpenSettings() { _page = Page.Settings; IsOpen = true; }

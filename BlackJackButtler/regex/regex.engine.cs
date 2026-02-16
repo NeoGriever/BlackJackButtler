@@ -9,6 +9,10 @@ namespace BlackJackButtler.Regex;
 
 public static class RegexEngine
 {
+    private static readonly HashSet<string> _nextRoundVotes = new(StringComparer.OrdinalIgnoreCase);
+
+    public static void ClearNextRoundVotes() => _nextRoundVotes.Clear();
+
     public static int? LastDetectedCardValue { get; private set; }
 
     public static bool TryConsumeDetectedCard(out int cardValue)
@@ -252,6 +256,58 @@ public static class RegexEngine
                 if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
                     p.HighlightSplit = true;
                 break;
+
+            case RegexAction.NextRound:
+            {
+                var phase = GameEngine.CurrentPhase;
+                if (phase != GamePhase.Waiting && phase != GamePhase.Payout)
+                    break;
+                if (p == null || !p.IsActivePlayer || p.IsOnHold)
+                    break;
+                _nextRoundVotes.Add(p.Name);
+                var activePlayers = players.Where(pl => pl.IsActivePlayer && !pl.IsOnHold).ToList();
+                if (activePlayers.All(pl => _nextRoundVotes.Contains(pl.Name)))
+                {
+                    _nextRoundVotes.Clear();
+                    if (activePlayers.Count == 1 && cfg.AutostartRoundOnlyOnMultiplePlayers)
+                    {
+                        Plugin.Instance.GetMainWindow().SetHighlightNewRound();
+                    }
+                    else if (cfg.AutoRun)
+                    {
+                        Task.Run(() => GameEngine.StartInitialDeal(players, cfg));
+                    }
+                    else
+                    {
+                        Plugin.Instance.GetMainWindow().SetHighlightNewRound();
+                    }
+                }
+                break;
+            }
+
+            case RegexAction.BankTell:
+            {
+                var phase = GameEngine.CurrentPhase;
+                if (phase != GamePhase.Waiting && phase != GamePhase.Payout)
+                    break;
+                if (p == null)
+                    break;
+                if (!cfg.AutoRun)
+                {
+                    p.HighlightTell = true;
+                    break;
+                }
+                var capturedPlayer = p;
+                Task.Run(async () =>
+                {
+                    var previousTarget = GameEngine.GetCurrentTargetName();
+                    GameEngine.TargetPlayer(capturedPlayer.Name);
+                    VariableManager.SetPlayerVariables(capturedPlayer);
+                    await CommandExecutor.ExecuteGroup("BankTell", capturedPlayer.DisplayName, cfg);
+                    GameEngine.TargetPlayer(previousTarget);
+                });
+                break;
+            }
         }
     }
 

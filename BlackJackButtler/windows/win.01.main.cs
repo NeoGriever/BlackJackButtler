@@ -71,7 +71,7 @@ public partial class BlackJackButtlerWindow
             {
                 ImGui.SameLine(rightEdge - checkboxSize - spacing - checkboxSize);
                 ImGui.PushFont(UiBuilder.IconFont);
-                if (ImGui.SmallButton(FontAwesomeIcon.StickyNote.ToIconString() + "##notepad_btn"))
+                if (ImGui.Button(FontAwesomeIcon.StickyNote.ToIconString() + "##notepad_btn", new Vector2(checkboxSize, checkboxSize)))
                 {
                     if (!_notepadLoaded) { _notepadLoaded = true; _notepadWindow.LoadContent(); }
                     _notepadWindow.IsOpen = true;
@@ -502,8 +502,15 @@ public partial class BlackJackButtlerWindow
             // Tell Button
             ImGui.SameLine();
             if (!canTellPlayer) ImGui.BeginDisabled();
+            bool hlTell = p.HighlightTell && canTellPlayer;
+            if (hlTell)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
+                ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
+            }
             if (ImGui.SmallButton($"T##tell_{p.UIID}"))
             {
+                p.HighlightTell = false;
                 Task.Run(async () => {
                     GameEngine.TargetPlayer(p.Name);
                     VariableManager.SetPlayerVariables(p);
@@ -511,6 +518,7 @@ public partial class BlackJackButtlerWindow
                     GameEngine.TargetPlayer(_dealer.Name);
                 });
             }
+            if (hlTell) ImGui.PopStyleColor(2);
             if (!canTellPlayer) ImGui.EndDisabled();
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                 ImGui.SetTooltip("Post bank/bet info for this player to party chat");
@@ -796,11 +804,19 @@ public partial class BlackJackButtlerWindow
 
         if (phase == GamePhase.Waiting || phase == GamePhase.Payout)
         {
+            bool hlNewRound = _highlightNewRound;
+            if (hlNewRound)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
+                ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
+            }
             if (ImGui.SmallButton("Start New Round"))
             {
+                _highlightNewRound = false;
                 BlackJackButtler.Chat.GameLog.PushSnapshot(_players, _dealer, phase, "DealStart");
                 Task.Run(() => GameEngine.StartInitialDeal(_players, _config));
             }
+            if (hlNewRound) ImGui.PopStyleColor(2);
         }
         else if (phase == GamePhase.DealerTurn)
         {

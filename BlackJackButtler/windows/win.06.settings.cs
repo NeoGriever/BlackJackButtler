@@ -92,6 +92,13 @@ public partial class BlackJackButtlerWindow
         if(level >= (int)UserLevel.Advanced)
         {
             ImGui.Spacing();
+            if (ImGui.Checkbox("Autostart round only on multiple players", ref _config.AutostartRoundOnlyOnMultiplePlayers)) _save();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: NextRound trigger only auto-starts when 2+ active players voted.\nWith only 1 player, it highlights the button instead.\nInactive: NextRound auto-starts regardless of player count.");
+        }
+
+        if(level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
             if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Collects all results and sends a single compressed message.\nInactive: Sends individual result messages for every player hand.");
         } else if (!_config.SmallResult) {
