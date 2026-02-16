@@ -36,6 +36,8 @@ public enum RegexAction
     HighlightStand,
     HighlightDD,
     HighlightSplit,
+    NextRound,
+    BankTell,
 }
 
 [Serializable]
