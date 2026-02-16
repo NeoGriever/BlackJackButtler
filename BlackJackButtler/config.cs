@@ -27,6 +27,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool PlayerBJWinsOnTie = false;
     public bool EnableBankInput = false;
     public float CommandSpeedMultiplier = 1.0f;
+    public bool OpenDropboxInsteadOfTrade = true;
 
     public List<CommandGroup> CommandGroups = new();
     public List<CommandGroup> CustomCommandGroups = new();

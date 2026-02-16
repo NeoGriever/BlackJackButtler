@@ -75,7 +75,7 @@ public sealed class Plugin : IDalamudPlugin
         StatsManager.Init(Configuration, () => Configuration.Save());
         ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
 
-        notepadWindow = new NotepadWindow(Configuration, () => Configuration.Save());
+        notepadWindow = new NotepadWindow(Configuration, () => Configuration.Save(), () => mainWindow?.GetWindowRect() ?? (Vector2.Zero, Vector2.Zero));
         windowSystem.AddWindow(notepadWindow);
 
         mainWindow = new BlackJackButtlerWindow(Configuration, () => Configuration.Save(), chatLog, notepadWindow);

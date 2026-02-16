@@ -52,16 +52,6 @@ public static class TradeManager
     {
         if (string.IsNullOrEmpty(_currentPartner)) return;
 
-        if (DropboxIntegration.IsPayoutTarget(_currentPartner))
-        {
-            var window = Plugin.Instance.GetMainWindow();
-            window.AddDebugLog($"[TradeManager] Skipped commit for payout target: {_currentPartner}");
-            DropboxIntegration.ClearDropboxPayoutTarget();
-            _committed = true;
-            Reset();
-            return;
-        }
-
         var p = ResolvePlayer(_currentPartner, players);
         if (p != null && p.IsActivePlayer)
         {
@@ -123,22 +113,14 @@ public static class TradeManager
         // Grace period expired — if regex CommitTrade didn't fire, apply fallback
         if (!_committed && !string.IsNullOrEmpty(_currentPartner) && _buffer != 0)
         {
-            if (DropboxIntegration.IsPayoutTarget(_currentPartner))
+            var players = window.GetPlayers();
+            var p = ResolvePlayer(_currentPartner, players);
+            if (p != null && p.IsActivePlayer)
             {
-                window.AddDebugLog($"[TradeManager] Skipped fallback commit for payout target: {_currentPartner}");
-                DropboxIntegration.ClearDropboxPayoutTarget();
-            }
-            else
-            {
-                var players = window.GetPlayers();
-                var p = ResolvePlayer(_currentPartner, players);
-                if (p != null && p.IsActivePlayer)
-                {
-                    p.Bank += _buffer;
-                    if (_buffer > 0) StatsManager.RecordIncome(_buffer);
-                    else if (_buffer < 0) StatsManager.RecordExpense(-_buffer);
-                    window.AddDebugLog($"[TradeManager] Committed (fallback): {_currentPartner} bank += {_buffer}");
-                }
+                p.Bank += _buffer;
+                if (_buffer > 0) StatsManager.RecordIncome(_buffer);
+                else if (_buffer < 0) StatsManager.RecordExpense(-_buffer);
+                window.AddDebugLog($"[TradeManager] Committed (fallback): {_currentPartner} bank += {_buffer}");
             }
         }
 
