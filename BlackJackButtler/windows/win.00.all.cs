@@ -50,6 +50,9 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _notepadLoaded = false;
     private readonly NotepadWindow _notepadWindow;
 
+    private Vector2 _lastWindowPos;
+    private Vector2 _lastWindowSize;
+
     public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog, NotepadWindow notepadWindow) : base($"BlackJack Buttler v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}")
     {
         _config = config;
@@ -101,6 +104,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     public void OpenSettings() { _page = Page.Settings; IsOpen = true; }
     public List<PlayerState> GetPlayers() => _players;
     public PlayerState GetDealer() => _dealer;
+    public (Vector2 Pos, Vector2 Size) GetWindowRect() => (_lastWindowPos, _lastWindowSize);
 
     public void OnUpdate()
     {
@@ -113,6 +117,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     public override void Draw()
     {
+        _lastWindowPos = ImGui.GetWindowPos();
+        _lastWindowSize = ImGui.GetWindowSize();
 
         if (_showRestoreSessionButton)
         {

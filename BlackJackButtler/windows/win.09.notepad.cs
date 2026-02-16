@@ -12,11 +12,14 @@ public class NotepadWindow : Window
     private bool _loaded = false;
     private readonly Configuration _config;
     private readonly Action _save;
+    private readonly Func<(Vector2, Vector2)>? _getMainWindowRect;
+    private bool _needsPositioning = true;
 
-    public NotepadWindow(Configuration config, Action save) : base("BJB Notepad")
+    public NotepadWindow(Configuration config, Action save, Func<(Vector2, Vector2)>? getMainWindowRect = null) : base("BJB Notepad")
     {
         _config = config;
         _save = save;
+        _getMainWindowRect = getMainWindowRect;
         Size = new Vector2(200, 200);
         SizeCondition = ImGuiCond.FirstUseEver;
     }
@@ -30,6 +33,16 @@ public class NotepadWindow : Window
 
     public override void PreDraw()
     {
+        if (_needsPositioning && _getMainWindowRect != null)
+        {
+            var (pos, size) = _getMainWindowRect();
+            if (size.X > 0)
+            {
+                Position = new Vector2(pos.X + size.X + 10, pos.Y);
+                PositionCondition = ImGuiCond.Appearing;
+                _needsPositioning = false;
+            }
+        }
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
     }
 

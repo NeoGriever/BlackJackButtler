@@ -98,6 +98,18 @@ public partial class BlackJackButtlerWindow
 
         if(level >= (int)UserLevel.Advanced)
         {
+            bool dropboxDetected = DropboxIntegration.IsDropboxAvailable();
+            if (dropboxDetected)
+            {
+                ImGui.Spacing();
+                if (ImGui.Checkbox("Open Dropbox instead of trade", ref _config.OpenDropboxInsteadOfTrade)) _save();
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("Use the Dropbox plugin for payouts instead of manual trade.\nDropbox plugin detected and loaded.");
+            }
+        }
+
+        if(level >= (int)UserLevel.Advanced)
+        {
             ImGui.Spacing();
             if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Collects all results and sends a single compressed message.\nInactive: Sends individual result messages for every player hand.");
