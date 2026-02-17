@@ -292,6 +292,20 @@ public static partial class GameEngine
 
         ActivityLogManager.LogRoundEnd(dealer, players);
         StatsManager.RecordRound();
+
+        try
+        {
+            var webhook = Plugin.Instance.GetMainWindow().GetSelectedWebhook();
+            if (webhook != null)
+            {
+                var playersCopy = players.Where(x => x.IsActivePlayer && !x.IsOnHold).ToList();
+                _ = Task.Run(() => WebhookManager.PostRoundResult(webhook, dealer, playersCopy, cfg));
+            }
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[WebhookManager] Failed to trigger webhook: {ex.Message}");
+        }
     }
 
     private static string FormatResultCategory(List<string> names, string singular, string plural)

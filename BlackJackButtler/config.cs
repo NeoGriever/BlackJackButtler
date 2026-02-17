@@ -33,6 +33,7 @@ public sealed class Configuration : IPluginConfiguration
     public List<CommandGroup> CustomCommandGroups = new();
     public List<MessageBatch> MessageBatches = new();
     public List<UserRegexEntry> UserRegexes = new();
+    public List<WebhookEntry> Webhooks = new();
 
     public long MinBet = 50000;
     public long MaxBet = 500000;
@@ -128,4 +129,13 @@ public sealed class MessageBatch
         return Messages[Random.Shared.Next(Messages.Count)];
     }
   }
+}
+
+[Serializable]
+public sealed class WebhookEntry
+{
+    public string Name = "New Webhook";
+    public string Url = string.Empty;
+    public bool ShowBetAmounts = true;
+    public bool Enabled = true;
 }

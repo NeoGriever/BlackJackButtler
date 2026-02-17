@@ -265,6 +265,34 @@ public partial class BlackJackButtlerWindow
                 ImGui.SetTooltip("When ON, player action triggers (Hit/Stand/DD/Split) execute automatically.\nWhen OFF, they highlight the corresponding button instead.");
         }
 
+        {
+            var enabledWebhooks = _config.Webhooks.FindAll(w => w.Enabled);
+            if (enabledWebhooks.Count > 0)
+            {
+                float comboWidth = 150f;
+                float rightEdge = ImGui.GetContentRegionAvail().X + ImGui.GetCursorPosX();
+                ImGui.SameLine(rightEdge - comboWidth);
+
+                var phase = GameEngine.CurrentPhase;
+                bool locked = phase != GamePhase.Waiting && phase != GamePhase.Payout;
+                if (locked) ImGui.BeginDisabled();
+
+                var labels = new string[enabledWebhooks.Count + 1];
+                labels[0] = "None";
+                for (int i = 0; i < enabledWebhooks.Count; i++)
+                    labels[i + 1] = enabledWebhooks[i].Name;
+
+                int comboIndex = _selectedWebhookIndex + 1;
+                ImGui.SetNextItemWidth(comboWidth);
+                if (ImGui.Combo("##webhook_select", ref comboIndex, labels, labels.Length))
+                    _selectedWebhookIndex = comboIndex - 1;
+
+                if (locked) ImGui.EndDisabled();
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    ImGui.SetTooltip(locked ? "Webhook selection is locked during an active round" : "Select a Discord webhook for round results");
+            }
+        }
+
         if (IsRecognitionActive && !IsLocalPlayerPartyLeader())
         {
             var leaderName = GetPartyLeaderName();
@@ -911,6 +939,14 @@ public partial class BlackJackButtlerWindow
         _players.Add(new PlayerState { Name = "Sit Amet",              IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 3000 });
         _players.Add(new PlayerState { Name = "Consentetuer Adipisci", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 4000 });
         _players.Add(new PlayerState { Name = "Setue Vetue",           IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 5000 });
+    }
+
+    public WebhookEntry? GetSelectedWebhook()
+    {
+        var enabled = _config.Webhooks.FindAll(w => w.Enabled);
+        if (_selectedWebhookIndex < 0 || _selectedWebhookIndex >= enabled.Count)
+            return null;
+        return enabled[_selectedWebhookIndex];
     }
 
     private void SendPaymentTell(PlayerState p, long amount, string action)
