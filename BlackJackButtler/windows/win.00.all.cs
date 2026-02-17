@@ -12,7 +12,7 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow : Window, IDisposable
 {
-    private enum Page { Main, Regexes, Messages, Commands , OwnButtons , Settings , Vars , RoundLog , Debug , MacroImport , Thanks , Stats }
+    private enum Page { Main, Regexes, Messages, Commands , OwnButtons , Settings , Vars , RoundLog , Debug , MacroImport , Thanks , Stats , Webhooks }
     private Page _page = Page.Main;
 
     private readonly Configuration _config;
@@ -46,6 +46,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     private bool _showRestoreSessionButton = false;
     private bool _highlightNewRound = false;
+    private int _selectedWebhookIndex = -1;
 
     private bool _notepadLoaded = false;
     private readonly NotepadWindow _notepadWindow;
@@ -160,6 +161,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             if(level >= UserLevel.Advanced)     NavButton(Page.Messages, "Messages");
             if(level >= UserLevel.Advanced)     NavButton(Page.Commands, "Commands");
             if(level >= UserLevel.Advanced)     NavButton(Page.OwnButtons, "Own Buttons");
+            if(level >= UserLevel.Advanced)     NavButton(Page.Webhooks, "Webhooks");
             ImGui.Separator();                  NavButton(Page.Settings, "Settings");
                                                 NavButton(Page.Stats, "Stats");
             ImGui.Separator();                  NavButton(Page.RoundLog, "Round History");
@@ -215,6 +217,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.MacroImport:  DrawMacroImportPage(); break;
             case Page.Thanks:       DrawThanksPage(); break;
             case Page.Stats:        DrawStatsPage(); break;
+            case Page.Webhooks:     DrawWebhooksPage(); break;
         }
         ImGui.EndChild();
 
