@@ -16,6 +16,8 @@ public static class CommandExecutor
     private static bool _isRunning = false;
     public static bool IsRunning => _isRunning;
 
+    public static event Action? OnGroupCompleted;
+
     private static bool _wait = false;
     private static bool _cancel = false;
 
@@ -220,6 +222,7 @@ public static class CommandExecutor
 
         _isRunning = false;
         _cancel = false;
+        OnGroupCompleted?.Invoke();
         window.AddDebugLog($"[Executor] Chain End: {groupName}");
     }
 

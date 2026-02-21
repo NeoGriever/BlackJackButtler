@@ -76,7 +76,18 @@ public static class DiceResultHandler
                     {
                         window.AddDebugLog("[DiceHandler] Initial deal complete, moving to next turn");
                         CommandExecutor.NotifyDiceResult();
-                        GameEngine.NextTurn(players, cfg);
+                        Task.Run(async () =>
+                        {
+                            if (CommandExecutor.IsRunning)
+                            {
+                                var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                                Action handler = () => tcs.TrySetResult(true);
+                                CommandExecutor.OnGroupCompleted += handler;
+                                try   { await tcs.Task; }
+                                finally { CommandExecutor.OnGroupCompleted -= handler; }
+                            }
+                            GameEngine.NextTurn(players, cfg);
+                        });
                         return;
                     }
                 }
