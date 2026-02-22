@@ -35,6 +35,9 @@ public sealed class Configuration : IPluginConfiguration
     public List<UserRegexEntry> UserRegexes = new();
     public List<WebhookEntry> Webhooks = new();
 
+    public List<PresetEntry> Presets = new();
+    public string? ActivePresetName = null;   // null = "Default"
+
     public long MinBet = 50000;
     public long MaxBet = 500000;
 
@@ -140,4 +143,20 @@ public sealed class WebhookEntry
     public string Url = string.Empty;
     public bool ShowBetAmounts = true;
     public bool Enabled = true;
+}
+
+[Serializable]
+public sealed class PresetEntry
+{
+    public string Name = "New Preset";
+
+    // Welche Kategorien werden beim Anwenden überschrieben
+    public bool ApplySettings = true;
+    public bool ApplyCommands = true;   // CommandGroups + CustomCommandGroups
+    public bool ApplyMessages = true;
+    public bool ApplyRegexes  = true;
+    public bool ApplyWebhooks = true;
+
+    // Vollständiger Config-Snapshot als JSON-String
+    public string SnapshotJson = "{}";
 }

@@ -49,19 +49,19 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.SameLine();
-        if (ImGui.SmallButton("Popout Log")) Plugin.Instance.OpenDebugPopout();
+        if (BJBGui.SmallButton("Popout Log")) Plugin.Instance.OpenDebugPopout();
 
         ImGui.SameLine();
-        if (ImGui.SmallButton("Clear Log")) { lock(_logLock) _debugLog.Clear(); }
+        if (BJBGui.SmallButton("Clear Log")) { lock(_logLock) _debugLog.Clear(); }
 
         ImGui.SameLine();
-        if (ImGui.Button("Run /xllog")) Plugin.CommandManager.ProcessCommand("/xllog");
+        if (BJBGui.Button("Run /xllog")) Plugin.CommandManager.ProcessCommand("/xllog");
 
         ImGui.SameLine();
         ImGui.Checkbox("Verbose", ref _verboseMode);
 
         ImGui.SameLine();
-        if (ImGui.Button("Copy All"))
+        if (BJBGui.Button("Copy All"))
         {
             CopyDebugLogToClipboard();
         }

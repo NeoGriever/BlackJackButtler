@@ -21,7 +21,7 @@ public class DebugLogWindow : Window
 
     public override void Draw()
     {
-        if (ImGui.SmallButton("Clear Log")) { lock(_main.GetLogLock()) _main.GetDebugLog().Clear(); }
+        if (BJBGui.SmallButton("Clear Log")) { lock(_main.GetLogLock()) _main.GetDebugLog().Clear(); }
 
         if (Plugin.IsDebugMode)
         {
@@ -30,7 +30,7 @@ public class DebugLogWindow : Window
         }
 
         ImGui.SameLine();
-        if (ImGui.SmallButton("Copy All"))
+        if (BJBGui.SmallButton("Copy All"))
         {
             CopyLogToClipboard();
         }

@@ -16,7 +16,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private Page _page = Page.Main;
 
     private readonly Configuration _config;
-    private readonly Action _save;
+    private Action _save;
+    private bool _presetDirty = false;
     private readonly ChatLogBuffer _chatLog;
     private readonly Dalamud.Interface.ImGuiFileDialog.FileDialogManager _fileDialogManager = new();
 
@@ -56,10 +57,11 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private Vector2 _lastWindowPos;
     private Vector2 _lastWindowSize;
 
-    public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog, NotepadWindow notepadWindow) : base($"BlackJack Buttler v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version}")
+    public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog, NotepadWindow notepadWindow) : base($"BlackJack Buttler v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version} [Default]###BlackJackButtler")
     {
         _config = config;
-        _save = save;
+        var origSave = save;
+        _save = () => { _presetDirty = true; origSave(); };
         _chatLog = chatLog;
         _notepadWindow = notepadWindow;
 
@@ -116,6 +118,14 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             _lastSync = DateTime.Now;
             SyncParty();
         }
+    }
+
+    public override void PreDraw()
+    {
+        var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        var label = _config.ActivePresetName ?? "Default";
+        var dirty = _presetDirty ? "*" : "";
+        WindowName = $"BlackJack Buttler v{ver} [{label}{dirty}]###BlackJackButtler";
     }
 
     public override void Draw()
@@ -181,6 +191,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             ImGui.SameLine();
         }
 
+        BJBGui.ButtonTextColor = _config.ButtonTextColor;
         var btnHover  = new Vector4(Math.Min(_config.ButtonColor.X * 1.2f, 1f),
                                      Math.Min(_config.ButtonColor.Y * 1.2f, 1f),
                                      Math.Min(_config.ButtonColor.Z * 1.2f, 1f),
@@ -192,12 +203,11 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         ImGui.PushStyleColor(ImGuiCol.Button,        _config.ButtonColor);
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, btnHover);
         ImGui.PushStyleColor(ImGuiCol.ButtonActive,  btnActive);
-        ImGui.PushStyleColor(ImGuiCol.Text,          _config.ButtonTextColor);
         ImGui.BeginChild("bjb.content", new Vector2(0, avail.Y), true);
 
         if (!_isSidebarVisible)
         {
-            if (ImGui.SmallButton(">##show_sidebar")) _isSidebarVisible = true;
+            if (BJBGui.SmallButton(">##show_sidebar")) _isSidebarVisible = true;
             ImGui.SameLine();
             ImGui.TextDisabled($"Page: {_page}");
             ImGui.Separator();
@@ -210,7 +220,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             ImGui.TextColored(new Vector4(0.9f, 0.6f, 0.0f, 1.0f), "Make sure you know what you're doing. Dev mode lets you change everything.");
             ImGui.TextColored(new Vector4(0.9f, 0.6f, 0.0f, 1.0f), "And it's easy to change the wrong thing.");
             ImGui.TextColored(new Vector4(0.9f, 0.6f, 0.0f, 1.0f), "");
-            if (ImGui.Button("I know, what i'm doing")) {
+            if (BJBGui.Button("I know, what i'm doing")) {
                 _config.dismissDevWarning = true;
                 _save();
             }
@@ -236,7 +246,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Presets:      DrawPresetsPage(); break;
         }
         ImGui.EndChild();
-        ImGui.PopStyleColor(4);
+        ImGui.PopStyleColor(3);
 
         _fileDialogManager.Draw();
         DropboxIntegration.DrawHelperWindow();

@@ -151,7 +151,7 @@ public partial class BlackJackButtlerWindow
                     : $"\"{name}\"";
 
                 ImGui.PushStyleColor(ImGuiCol.Text, tagColor);
-                if (ImGui.SmallButton($"{id}##{id}_btn"))
+                if (BJBGui.SmallButton($"{id}##{id}_btn"))
                 {
                     var agent = AgentMacro.Instance();
                     agent->OpenMacro((uint)set, (uint)index);
@@ -203,7 +203,7 @@ public partial class BlackJackButtlerWindow
 
         ImGui.EndChild();
 
-        if (ImGui.Button("Try to import"))
+        if (BJBGui.Button("Try to import"))
         {
             foreach (var kvp in _macroImportSelections)
             {

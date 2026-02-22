@@ -15,7 +15,7 @@ public partial class BlackJackButtlerWindow
 
         if (!keysDown) ImGui.BeginDisabled();
         if (keysDown) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
-        if (ImGui.Button("Reset Commands to Default##res_cmds"))
+        if (BJBGui.Button("Reset Commands to Default##res_cmds"))
         {
             _config.ForceResetCommandGroups();
             _save();
@@ -91,7 +91,7 @@ public partial class BlackJackButtlerWindow
                         bool isLast = i == group.Commands.Count - 1;
 
                         if (isFirst) ImGui.BeginDisabled();
-                        if (ImGui.SmallButton("^##up"))
+                        if (BJBGui.SmallButton("^##up"))
                         {
                             (group.Commands[i - 1], group.Commands[i]) = (group.Commands[i], group.Commands[i - 1]);
                             _save();
@@ -103,7 +103,7 @@ public partial class BlackJackButtlerWindow
                         ImGui.SameLine();
 
                         if (isLast) ImGui.BeginDisabled();
-                        if (ImGui.SmallButton("v##down"))
+                        if (BJBGui.SmallButton("v##down"))
                         {
                             (group.Commands[i], group.Commands[i + 1]) = (group.Commands[i + 1], group.Commands[i]);
                             _save();
@@ -113,7 +113,7 @@ public partial class BlackJackButtlerWindow
                         if (isLast) ImGui.EndDisabled();
 
                         ImGui.TableNextColumn();
-                        if (ImGui.Button("X##del"))
+                        if (BJBGui.Button("X##del"))
                         {
                             group.Commands.RemoveAt(i);
                             _save();
@@ -126,7 +126,7 @@ public partial class BlackJackButtlerWindow
                     ImGui.EndTable();
                 }
 
-                if (ImGui.Button("+ Add Command Step"))
+                if (BJBGui.Button("+ Add Command Step"))
                 {
                     group.Commands.Add(new PluginCommand { Text = "/p New step...", Delay = 1.0f });
                     _save();

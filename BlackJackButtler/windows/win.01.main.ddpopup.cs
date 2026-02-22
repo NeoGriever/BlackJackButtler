@@ -71,7 +71,7 @@ public partial class BlackJackButtlerWindow
             ImGui.SameLine();
             ImGui.SetCursorPosX(ImGui.GetWindowWidth() - 50);
             ImGui.PushFont(UiBuilder.IconFont);
-            if (ImGui.Button($"{FontAwesomeIcon.CommentDots.ToIconString()}##tell_dd"))
+            if (BJBGui.Button($"{FontAwesomeIcon.CommentDots.ToIconString()}##tell_dd"))
             {
                 SendPaymentTell(_ddPopupPlayer, (_ddPopupMissingAmount - bankIncrease), "Double Down");
             }
@@ -119,7 +119,7 @@ public partial class BlackJackButtlerWindow
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 1.0f));
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.3f, 0.8f, 0.3f, 1.0f));
 
-            if (ImGui.Button("Continue Double Down", new Vector2(-1, 40)))
+            if (BJBGui.Button("Continue Double Down", new Vector2(-1, 40)))
             {
                 var playerToProcess = _ddPopupPlayer;
                 var currentConfig = _config;
@@ -145,7 +145,7 @@ public partial class BlackJackButtlerWindow
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.2f, 0.2f, 1.0f));
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1.0f, 0.3f, 0.3f, 1.0f));
 
-            if (ImGui.Button("Cancel Double Down", new Vector2(-1, 40)))
+            if (BJBGui.Button("Cancel Double Down", new Vector2(-1, 40)))
             {
                 AddDebugLog($"[DD] Cancelled for {_ddPopupPlayer.DisplayName} - insufficient funds", false);
                 CloseDDMoneyPopup();

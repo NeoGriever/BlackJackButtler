@@ -22,7 +22,7 @@ public partial class BlackJackButtlerWindow
         if (!keysDown) ImGui.BeginDisabled();
         if (keysDown) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
 
-        if (ImGui.Button("Hard Reset Standard Batches##hard_reset"))
+        if (BJBGui.Button("Hard Reset Standard Batches##hard_reset"))
         {
             _openForceDefaultsPopup = true;
             ImGui.OpenPopup("bjb.restore.confirm");
@@ -42,7 +42,7 @@ public partial class BlackJackButtlerWindow
             ImGui.TextUnformatted("This will delete all standard batches and recreate them.");
             ImGui.Spacing();
 
-            if (ImGui.Button("Yes, do it", new Vector2(120, 0)))
+            if (BJBGui.Button("Yes, do it", new Vector2(120, 0)))
             {
                 _config.ForceResetStandardBatches();
                 _save();
@@ -50,7 +50,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.CloseCurrentPopup();
             }
             ImGui.SameLine();
-            if (ImGui.Button("Cancel", new Vector2(120, 0)))
+            if (BJBGui.Button("Cancel", new Vector2(120, 0)))
             {
                 _openForceDefaultsPopup = false;
                 ImGui.CloseCurrentPopup();
@@ -58,7 +58,7 @@ public partial class BlackJackButtlerWindow
             ImGui.EndPopup();
         }
 
-        if (ImGui.Button("+ New Batch")) { _config.MessageBatches.Add(new MessageBatch()); _save(); }
+        if (BJBGui.Button("+ New Batch")) { _config.MessageBatches.Add(new MessageBatch()); _save(); }
 
         for (int i = 0; i < _config.MessageBatches.Count; i++)
         {
@@ -93,11 +93,11 @@ public partial class BlackJackButtlerWindow
                     ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 40);
                     if (ImGui.InputText($"##msg_{batch.Name}_{m}", ref msg, 256)) { batch.Messages[m] = msg; _save(); }
                     ImGui.SameLine();
-                    if (ImGui.Button($"X##{batch.Name}_{m}")) { batch.Messages.RemoveAt(m); _save(); break; }
+                    if (BJBGui.Button($"X##{batch.Name}_{m}")) { batch.Messages.RemoveAt(m); _save(); break; }
                 }
 
                 // Draw "+ Line" button and mode combo on same line
-                if (ImGui.Button("+ Line")) { batch.Messages.Add(""); _save(); }
+                if (BJBGui.Button("+ Line")) { batch.Messages.Add(""); _save(); }
                 ImGui.SameLine();
                 ImGui.Text("Mode:");
                 ImGui.SameLine();
@@ -112,7 +112,7 @@ public partial class BlackJackButtlerWindow
 
                     if (io.KeyCtrl)
                     {
-                        if (ImGui.Button("Delete (Hold CTRL)", new Vector2(-1, 0)))
+                        if (BJBGui.Button("Delete (Hold CTRL)", new Vector2(-1, 0)))
                         {
                             _config.MessageBatches.RemoveAt(i);
                             _save();
@@ -123,7 +123,7 @@ public partial class BlackJackButtlerWindow
                     else
                     {
                         ImGui.BeginDisabled();
-                        ImGui.Button("Delete (Hold CTRL)", new Vector2(-1, 0));
+                        BJBGui.Button("Delete (Hold CTRL)", new Vector2(-1, 0));
                         ImGui.EndDisabled();
                     }
                 }
