@@ -10,6 +10,11 @@ public partial class BlackJackButtlerWindow
 {
     private void DrawSettingsPage()
     {
+        if (_openImportConfirmPopup) {
+            ImGui.OpenPopup("import_confirm_popup");
+            _openImportConfirmPopup = false;
+        }
+
         ImGui.TextUnformatted("Gameplay Settings");
         ImGui.Separator();
 
@@ -259,24 +264,34 @@ public partial class BlackJackButtlerWindow
         {
             ImGui.Separator();
 
-            ImGui.TextUnformatted("Clipboard: ");
+            ImGui.TextUnformatted("Config File: ");
             ImGui.SameLine();
-            if (ImGui.Button("Export")) {
+            if (ImGui.Button("Export##cfg")) {
                 var json = JsonConvert.SerializeObject(_config, Formatting.Indented);
-                ImGui.SetClipboardText(json);
+                _fileDialogManager.SaveFileDialog(
+                    "Export Config", "JSON Files{.json}", "bjb_config", ".json",
+                    (ok, path) => {
+                        if (ok && !string.IsNullOrWhiteSpace(path))
+                            System.IO.File.WriteAllText(path, json);
+                    });
             }
 
             ImGui.SameLine();
 
-            if (ImGui.Button("Import")) {
-                try {
-                    var json = ImGui.GetClipboardText();
-                    var imported = JsonConvert.DeserializeObject<Configuration>(json);
-                    if (imported != null) {
-                        _tempImportConfig = imported;
-                        ImGui.OpenPopup("import_confirm_popup");
-                    }
-                } catch { /* Log Error */ }
+            if (ImGui.Button("Import##cfg")) {
+                _fileDialogManager.OpenFileDialog(
+                    "Import Config", "JSON Files{.json}",
+                    (ok, path) => {
+                        if (!ok || string.IsNullOrWhiteSpace(path)) return;
+                        try {
+                            var json = System.IO.File.ReadAllText(path);
+                            var imported = JsonConvert.DeserializeObject<Configuration>(json);
+                            if (imported != null) {
+                                _tempImportConfig = imported;
+                                _openImportConfirmPopup = true;
+                            }
+                        } catch { }
+                    });
             }
 
             ImGui.Spacing();

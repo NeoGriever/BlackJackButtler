@@ -12,12 +12,13 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow : Window, IDisposable
 {
-    private enum Page { Main, Regexes, Messages, Commands , OwnButtons , Settings , Vars , RoundLog , Debug , MacroImport , Thanks , Stats , Webhooks }
+    private enum Page { Main, Regexes, Messages, Commands , OwnButtons , Settings , Vars , RoundLog , Debug , MacroImport , Thanks , Stats , Webhooks , Presets }
     private Page _page = Page.Main;
 
     private readonly Configuration _config;
     private readonly Action _save;
     private readonly ChatLogBuffer _chatLog;
+    private readonly Dalamud.Interface.ImGuiFileDialog.FileDialogManager _fileDialogManager = new();
 
     public bool IsRecognitionActive = false;
 
@@ -41,6 +42,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     private Configuration? _tempImportConfig;
     private bool _showImportModal = false;
+    private bool _openImportConfirmPopup = false;
     private bool _isSidebarVisible = true;
     private string? _pendingSettingsFocus;
 
@@ -162,6 +164,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             if(level >= UserLevel.Advanced)     NavButton(Page.Commands, "Commands");
             if(level >= UserLevel.Advanced)     NavButton(Page.OwnButtons, "Own Buttons");
             if(level >= UserLevel.Advanced)     NavButton(Page.Webhooks, "Webhooks");
+            if(level >= UserLevel.Advanced)     NavButton(Page.Presets, "Presets");
             ImGui.Separator();                  NavButton(Page.Settings, "Settings");
                                                 NavButton(Page.Stats, "Stats");
             ImGui.Separator();                  NavButton(Page.RoundLog, "Round History");
@@ -218,9 +221,11 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Thanks:       DrawThanksPage(); break;
             case Page.Stats:        DrawStatsPage(); break;
             case Page.Webhooks:     DrawWebhooksPage(); break;
+            case Page.Presets:      DrawPresetsPage(); break;
         }
         ImGui.EndChild();
 
+        _fileDialogManager.Draw();
         DropboxIntegration.DrawHelperWindow();
         DrawSplitMoneyPopup();
         DrawDDMoneyPopup();
