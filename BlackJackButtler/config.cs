@@ -50,6 +50,8 @@ public sealed class Configuration : IPluginConfiguration
     public bool AutostartRoundOnlyOnMultiplePlayers = true;
     public Vector4 HighlightColor = new Vector4(1.0f, 1.0f, 0.0f, 1.0f);
     public Vector4 HighlightTextColor = new Vector4(0f, 0f, 0f, 1f);
+    public Vector4 ButtonColor     = new Vector4(0.26f, 0.26f, 0.26f, 1.0f); // dark grey
+    public Vector4 ButtonTextColor = new Vector4(1.0f,  1.0f,  1.0f,  1.0f); // white
 
     public long OverallIncome = 0;
     public long OverallExpense = 0;

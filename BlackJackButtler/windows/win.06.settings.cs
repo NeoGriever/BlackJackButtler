@@ -39,6 +39,24 @@ public partial class BlackJackButtlerWindow
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Multiplier applied to all command delays at execution time.\n1.00x = normal speed, 0.50x = twice as fast, 2.00x = twice as slow.\nMinimum effective delay is always 0.3s.");
 
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Button Style");
+        ImGui.SameLine(300f);
+        ImGui.SetNextItemWidth(95f);
+        if (ImGui.ColorEdit4("Bg##btn_color", ref _config.ButtonColor, ImGuiColorEditFlags.NoAlpha))
+        {
+            _config.ButtonColor.W = 1.0f;
+            _save();
+        }
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(95f);
+        if (ImGui.ColorEdit4("Text##btn_text_color", ref _config.ButtonTextColor, ImGuiColorEditFlags.NoAlpha))
+        {
+            _config.ButtonTextColor.W = 1.0f;
+            _save();
+        }
+
         if(level >= (int)UserLevel.Advanced)
         {
             ImGui.Separator();

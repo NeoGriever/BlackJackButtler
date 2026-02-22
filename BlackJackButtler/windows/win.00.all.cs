@@ -181,6 +181,18 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             ImGui.SameLine();
         }
 
+        var btnHover  = new Vector4(Math.Min(_config.ButtonColor.X * 1.2f, 1f),
+                                     Math.Min(_config.ButtonColor.Y * 1.2f, 1f),
+                                     Math.Min(_config.ButtonColor.Z * 1.2f, 1f),
+                                     _config.ButtonColor.W);
+        var btnActive = new Vector4(_config.ButtonColor.X * 0.85f,
+                                     _config.ButtonColor.Y * 0.85f,
+                                     _config.ButtonColor.Z * 0.85f,
+                                     _config.ButtonColor.W);
+        ImGui.PushStyleColor(ImGuiCol.Button,        _config.ButtonColor);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, btnHover);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive,  btnActive);
+        ImGui.PushStyleColor(ImGuiCol.Text,          _config.ButtonTextColor);
         ImGui.BeginChild("bjb.content", new Vector2(0, avail.Y), true);
 
         if (!_isSidebarVisible)
@@ -224,6 +236,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Presets:      DrawPresetsPage(); break;
         }
         ImGui.EndChild();
+        ImGui.PopStyleColor(4);
 
         _fileDialogManager.Draw();
         DropboxIntegration.DrawHelperWindow();
