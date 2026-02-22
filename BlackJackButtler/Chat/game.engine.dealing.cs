@@ -125,8 +125,14 @@ public static partial class GameEngine
             }
             else
             {
-                CurrentPhase = GamePhase.PlayersTurn;
-                if (current != null && IsPlayerFinished(current)) NextTurn(players, cfg);
+                if (current != null && current.HasInitialHandDealt)
+                {
+                    CurrentPhase = GamePhase.PlayersTurn;
+                    if (IsPlayerFinished(current))
+                        NextTurn(players, cfg);
+                    else
+                        SwitchTurnTo(current, activePlayers, cfg);
+                }
             }
             return;
         }
@@ -175,6 +181,14 @@ public static partial class GameEngine
             if (IsPlayerFinished(next))
             {
                 NextTurn(players, cfg);
+            }
+            else if (!next.HasInitialHandDealt && !cfg.FirstDealThenPlay)
+            {
+                // Im deal-and-play Modus: Phase zurück auf InitialDeal, Deal-Button erscheint für nächsten Spieler
+                CurrentPhase = GamePhase.InitialDeal;
+                next.CurrentHandIndex = 0;
+                TargetPlayer(next.Name);
+                VariableManager.SetPlayerVariables(next);
             }
             else
             {
