@@ -29,7 +29,7 @@ public partial class BlackJackButtlerWindow
         bool canAdd = urlValid && nameValid;
 
         if (!canAdd) ImGui.BeginDisabled();
-        if (ImGui.Button("Add Webhook"))
+        if (BJBGui.Button("Add Webhook"))
         {
             _config.Webhooks.Add(new WebhookEntry
             {
@@ -85,7 +85,7 @@ public partial class BlackJackButtlerWindow
                 if (!ctrlHeld) ImGui.BeginDisabled();
                 ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.1f, 0.1f, 1f));
                 ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1f, 0.2f, 0.2f, 1f));
-                if (ImGui.Button("Delete Webhook")) deleteIndex = i;
+                if (BJBGui.Button("Delete Webhook")) deleteIndex = i;
                 ImGui.PopStyleColor(2);
                 if (!ctrlHeld) ImGui.EndDisabled();
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))

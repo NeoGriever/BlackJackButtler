@@ -34,7 +34,7 @@ public partial class BlackJackButtlerWindow
                 bool holdingModifiers = io.KeyCtrl && io.KeyShift;
 
                 ImGui.BeginDisabled(!canReset || !holdingModifiers);
-                if (ImGui.Button("Reset Stats (Ctrl+Shift)"))
+                if (BJBGui.Button("Reset Stats (Ctrl+Shift)"))
                 {
                     StatsManager.ResetOverall();
                 }
@@ -77,7 +77,7 @@ public partial class BlackJackButtlerWindow
 
         string summary = $"Rounds: {rounds:N0} | Income: {income:N0} | Expense: {expense:N0} | Net: {sign}{net:N0}";
 
-        if (ImGui.SmallButton($"Copy##{id}"))
+        if (BJBGui.SmallButton($"Copy##{id}"))
             ImGui.SetClipboardText(summary);
 
         ImGui.SameLine();

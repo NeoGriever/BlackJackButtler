@@ -258,7 +258,7 @@ public partial class BlackJackButtlerWindow
             if (!keysDown) ImGui.BeginDisabled();
             if (keysDown) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
 
-            if (ImGui.Button("Reset Default Config File##reset_defaults_file"))
+            if (BJBGui.Button("Reset Default Config File##reset_defaults_file"))
             {
                 DefaultsMigration.ResetSnapshotFile();
             }
@@ -284,7 +284,7 @@ public partial class BlackJackButtlerWindow
 
             ImGui.TextUnformatted("Config File: ");
             ImGui.SameLine();
-            if (ImGui.Button("Export##cfg")) {
+            if (BJBGui.Button("Export##cfg")) {
                 var json = JsonConvert.SerializeObject(_config, Formatting.Indented);
                 _fileDialogManager.SaveFileDialog(
                     "Export Config", "JSON Files{.json}", "bjb_config", ".json",
@@ -296,7 +296,7 @@ public partial class BlackJackButtlerWindow
 
             ImGui.SameLine();
 
-            if (ImGui.Button("Import##cfg")) {
+            if (BJBGui.Button("Import##cfg")) {
                 _fileDialogManager.OpenFileDialog(
                     "Import Config", "JSON Files{.json}",
                     (ok, path) => {
@@ -319,13 +319,13 @@ public partial class BlackJackButtlerWindow
         if (ImGui.BeginPopupModal("import_confirm_popup", ref _showImportModal, ImGuiWindowFlags.AlwaysAutoResize))
         {
             ImGui.Text("How do you want to import?");
-            if (ImGui.Button("Full Replace (Wipe current)")) {
+            if (BJBGui.Button("Full Replace (Wipe current)")) {
                 DoFullReplace();
                 _showImportModal = false;
                 ImGui.CloseCurrentPopup();
             }
             ImGui.SameLine();
-            if (ImGui.Button("Merge (Keep custom items)")) {
+            if (BJBGui.Button("Merge (Keep custom items)")) {
                 DoMerge();
                 _showImportModal = false;
                 ImGui.CloseCurrentPopup();

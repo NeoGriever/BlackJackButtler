@@ -13,7 +13,10 @@ public partial class BlackJackButtlerWindow
         "Xia Dove",
         "Hadesyra Ravenshadow",
         "LG",
-        "Amystra"
+        "Amystra",
+        "Latency",
+        "Saph",
+        "Lydia"
     };
 
     private List<string> _thanksToNamesSupport = new()
@@ -64,30 +67,64 @@ public partial class BlackJackButtlerWindow
         var nameColor = new Vector4(1.0f, 0.7f, 0.7f, 1.0f);
         var glowColor = new Vector4(0.8f, 0.0f, 0.0f, 0.3f);
 
-        foreach (var name in _thanksToNamesTesting)
+        var colWidth = windowWidth / 2f;
+        int half = (_thanksToNamesTesting.Count + 1) / 2;
+        var leftNames  = _thanksToNamesTesting.Take(half).ToList();
+        var rightNames = _thanksToNamesTesting.Skip(half).ToList();
+
+        // Linke Spalte
+        ImGui.BeginGroup();
+        foreach (var name in leftNames)
         {
             var nameSize = ImGui.CalcTextSize(name);
-            var posX = (windowWidth - nameSize.X) / 2;
+            var posX = (colWidth - nameSize.X) / 2f;
+
+            ImGui.SetCursorPosX(posX);
+            var cursorPos = ImGui.GetCursorScreenPos();
+            var textPos = new Vector2(cursorPos.X, cursorPos.Y);
 
             var drawList = ImGui.GetWindowDrawList();
-            var cursorPos = ImGui.GetCursorScreenPos();
-            var textPos = new Vector2(posX + cursorPos.X, cursorPos.Y);
-
-            for (int offsetX = -2; offsetX <= 2; offsetX++)
-            {
-                for (int offsetY = -2; offsetY <= 2; offsetY++)
+            for (int ox = -2; ox <= 2; ox++)
+                for (int oy = -2; oy <= 2; oy++)
                 {
-                    if (offsetX == 0 && offsetY == 0) continue;
-                    var glowPos = new Vector2(textPos.X + offsetX, textPos.Y + offsetY);
-                    drawList.AddText(glowPos, ImGui.ColorConvertFloat4ToU32(glowColor), name);
+                    if (ox == 0 && oy == 0) continue;
+                    drawList.AddText(new Vector2(textPos.X + ox, textPos.Y + oy),
+                                     ImGui.ColorConvertFloat4ToU32(glowColor), name);
                 }
-            }
 
             ImGui.SetCursorPosX(posX);
             ImGui.TextColored(nameColor, name);
-
             ImGui.Spacing();
         }
+        ImGui.EndGroup();
+
+        ImGui.SameLine(colWidth);
+
+        // Rechte Spalte
+        ImGui.BeginGroup();
+        foreach (var name in rightNames)
+        {
+            var nameSize = ImGui.CalcTextSize(name);
+            var posX = colWidth + (colWidth - nameSize.X) / 2f;
+
+            ImGui.SetCursorPosX(posX);
+            var cursorPos = ImGui.GetCursorScreenPos();
+            var textPos = new Vector2(cursorPos.X, cursorPos.Y);
+
+            var drawList = ImGui.GetWindowDrawList();
+            for (int ox = -2; ox <= 2; ox++)
+                for (int oy = -2; oy <= 2; oy++)
+                {
+                    if (ox == 0 && oy == 0) continue;
+                    drawList.AddText(new Vector2(textPos.X + ox, textPos.Y + oy),
+                                     ImGui.ColorConvertFloat4ToU32(glowColor), name);
+                }
+
+            ImGui.SetCursorPosX(posX);
+            ImGui.TextColored(nameColor, name);
+            ImGui.Spacing();
+        }
+        ImGui.EndGroup();
 
         ImGui.Spacing();
         ImGui.Spacing();

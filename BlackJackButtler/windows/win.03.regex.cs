@@ -35,7 +35,7 @@ public partial class BlackJackButtlerWindow
         if (!keysDown) ImGui.BeginDisabled();
         if (keysDown) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
 
-        if (ImGui.Button("Hard Reset Trade-Regex##regex_hard_reset"))
+        if (BJBGui.Button("Hard Reset Trade-Regex##regex_hard_reset"))
         {
             _openRegexResetPopup = true;
             ImGui.OpenPopup("bjb.regex.hardreset.confirm");
@@ -56,7 +56,7 @@ public partial class BlackJackButtlerWindow
             ImGui.TextUnformatted("Your custom manually created regex entries will not be affected.");
             ImGui.Spacing();
 
-            if (ImGui.Button("Yes", new Vector2(180, 0)))
+            if (BJBGui.Button("Yes", new Vector2(180, 0)))
             {
                 _config.ForceResetStandardRegexes();
                 _save();
@@ -64,7 +64,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.CloseCurrentPopup();
             }
             ImGui.SameLine();
-            if (ImGui.Button("Cancel", new Vector2(120, 0)))
+            if (BJBGui.Button("Cancel", new Vector2(120, 0)))
             {
                 _openRegexResetPopup = false;
                 ImGui.CloseCurrentPopup();
@@ -76,7 +76,7 @@ public partial class BlackJackButtlerWindow
 
         ImGui.Separator();
 
-        if (ImGui.Button("+ Add Custom Regex Entry"))
+        if (BJBGui.Button("+ Add Custom Regex Entry"))
         {
             _config.UserRegexes.Add(new UserRegexEntry { Name = "New User Regex" });
             _save();
@@ -154,7 +154,7 @@ public partial class BlackJackButtlerWindow
                     }
 
                     ImGui.SameLine();
-                    if (ImGui.Button("+"))
+                    if (BJBGui.Button("+"))
                     {
                         e.Patterns.Insert(pIdx + 1, "");
                         _save();
@@ -164,7 +164,7 @@ public partial class BlackJackButtlerWindow
 
                     bool canDeletePattern = e.Patterns.Count > 1;
                     if (!canDeletePattern) ImGui.BeginDisabled();
-                    if (ImGui.Button("X"))
+                    if (BJBGui.Button("X"))
                     {
                         e.Patterns.RemoveAt(pIdx);
                         _save();
@@ -236,7 +236,7 @@ public partial class BlackJackButtlerWindow
                     ImGui.Separator();
                     if (ImGui.GetIO().KeyCtrl)
                     {
-                        if (ImGui.Button("Delete Entry", new Vector2(-1, 0)))
+                        if (BJBGui.Button("Delete Entry", new Vector2(-1, 0)))
                         {
                             _config.UserRegexes.RemoveAt(i);
                             _save();
@@ -247,7 +247,7 @@ public partial class BlackJackButtlerWindow
                     else
                     {
                         ImGui.BeginDisabled();
-                        ImGui.Button("Delete (Hold CTRL)", new Vector2(-1, 0));
+                        BJBGui.Button("Delete (Hold CTRL)", new Vector2(-1, 0));
                         ImGui.EndDisabled();
                     }
                 }
@@ -270,14 +270,14 @@ public partial class BlackJackButtlerWindow
             ImGui.TextUnformatted("Its strongly recommended to leave the standard regex entries untouched. Only unlock the edit mode on it, if you know, what you're doing!");
             ImGui.Spacing();
 
-            if (ImGui.Button("Unlock Edit Mode", new Vector2(170, 0)))
+            if (BJBGui.Button("Unlock Edit Mode", new Vector2(170, 0)))
             {
                 _config.AllowEditingStandardRegex = true;
                 _save();
                 ImGui.CloseCurrentPopup();
             }
             ImGui.SameLine();
-            if (ImGui.Button("Cancel", new Vector2(170, 0)))
+            if (BJBGui.Button("Cancel", new Vector2(170, 0)))
             {
                 ImGui.CloseCurrentPopup();
             }

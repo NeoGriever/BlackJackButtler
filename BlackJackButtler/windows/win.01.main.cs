@@ -45,7 +45,7 @@ public partial class BlackJackButtlerWindow
             var tellPhase = GameEngine.CurrentPhase;
             bool canTell = (tellPhase == GamePhase.Waiting || tellPhase == GamePhase.Payout) && !CommandExecutor.IsRunning;
             if (!canTell) ImGui.BeginDisabled();
-            if (ImGui.SmallButton("Bank /tell"))
+            if (BJBGui.SmallButton("Bank /tell"))
             {
                 var snapshot = _players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
                 Task.Run(async () => {
@@ -71,7 +71,7 @@ public partial class BlackJackButtlerWindow
             {
                 ImGui.SameLine(rightEdge - checkboxSize - spacing - checkboxSize);
                 ImGui.PushFont(UiBuilder.IconFont);
-                if (ImGui.Button(FontAwesomeIcon.StickyNote.ToIconString() + "##notepad_btn", new Vector2(checkboxSize, checkboxSize)))
+                if (BJBGui.Button(FontAwesomeIcon.StickyNote.ToIconString() + "##notepad_btn", new Vector2(checkboxSize, checkboxSize)))
                 {
                     if (!_notepadLoaded) { _notepadLoaded = true; _notepadWindow.LoadContent(); }
                     _notepadWindow.IsOpen = true;
@@ -149,7 +149,7 @@ public partial class BlackJackButtlerWindow
             ImGui.InputText("##alias_input", ref _aliasInputBuffer, 32);
 
             ImGui.Spacing();
-            if (ImGui.Button("Save", new Vector2(120, 0)))
+            if (BJBGui.Button("Save", new Vector2(120, 0)))
             {
                 var input = _aliasInputBuffer.Trim();
                 if (string.IsNullOrWhiteSpace(input) || input.Equals(_editingAliasPlayer.Name, StringComparison.OrdinalIgnoreCase))
@@ -162,7 +162,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.CloseCurrentPopup();
             }
             ImGui.SameLine();
-            if (ImGui.Button("Cancel", new Vector2(120, 0)))
+            if (BJBGui.Button("Cancel", new Vector2(120, 0)))
             {
                 _editingAliasPlayer = null;
                 _isAliasModalOpen = false;
@@ -194,7 +194,7 @@ public partial class BlackJackButtlerWindow
         var auto_deal_text = _config.AutoInitialDeal ? "● Auto Player Hand" : "○ Auto Player Hand";
         var auto_dealer_text = _config.AutoDealerDraw ? "● Auto Dealer Draw" : "○ Auto Dealer Draw";
 
-        if (ImGui.Button(recon_text, new Vector2(200, 0)))
+        if (BJBGui.Button(recon_text, new Vector2(200, 0)))
         {
             IsRecognitionActive = !IsRecognitionActive;
             if(IsRecognitionActive) SyncParty();
@@ -212,7 +212,7 @@ public partial class BlackJackButtlerWindow
         bool autoDealActive = _config.AutoInitialDeal;
         if (autoDealActive) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
 
-        if (ImGui.Button(auto_deal_text))
+        if (BJBGui.Button(auto_deal_text))
         {
             _config.AutoInitialDeal = !_config.AutoInitialDeal;
             _save();
@@ -229,7 +229,7 @@ public partial class BlackJackButtlerWindow
         bool autoDealerActive = _config.AutoDealerDraw;
         if (autoDealerActive) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
 
-        if (ImGui.Button(auto_dealer_text))
+        if (BJBGui.Button(auto_dealer_text))
         {
             _config.AutoDealerDraw = !_config.AutoDealerDraw;
             _save();
@@ -253,7 +253,7 @@ public partial class BlackJackButtlerWindow
             bool autoRunActive = _config.AutoRun;
             if (autoRunActive) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
 
-            if (ImGui.Button(auto_run_text))
+            if (BJBGui.Button(auto_run_text))
             {
                 _config.AutoRun = !_config.AutoRun;
                 _save();
@@ -306,7 +306,7 @@ public partial class BlackJackButtlerWindow
         if (IsRecognitionActive && _config.CurrentLevel == UserLevel.Dev
             && (!IsLocalPlayerPartyLeader() || Plugin.PartyList.Length == 0))
         {
-            if (ImGui.SmallButton("Activate debug mode"))
+            if (BJBGui.SmallButton("Activate debug mode"))
             {
                 IsRecognitionActive = false;
                 SessionManager.ClearSession();
@@ -326,7 +326,7 @@ public partial class BlackJackButtlerWindow
         {
             var group = _config.CustomCommandGroups[i];
             if (i > 0) ImGui.SameLine();
-            if (ImGui.SmallButton($"{group.Name}##custom_{i}"))
+            if (BJBGui.SmallButton($"{group.Name}##custom_{i}"))
             {
                 var targetName = _players.FirstOrDefault(p => p.IsCurrentTurn)?.DisplayName
                               ?? _dealer.DisplayName;
@@ -375,7 +375,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
                 ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
             }
-            if (ImGui.Button($"A##alias_btn_{p.UIID}")) {
+            if (BJBGui.Button($"A##alias_btn_{p.UIID}")) {
                 p.HighlightAlias = false;
                 _editingAliasPlayer = p;
                 _aliasInputBuffer = !string.IsNullOrWhiteSpace(p.Alias) ? p.Alias : p.Name;
@@ -392,7 +392,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
                 ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
             }
-            if (ImGui.Button($">##{p.UIID}", new Vector2(-1, 0))) { p.HighlightJoin = false; p.IsActivePlayer = true; ActivityLogManager.LogPlayerJoin(p.DisplayName); }
+            if (BJBGui.Button($">##{p.UIID}", new Vector2(-1, 0))) { p.HighlightJoin = false; p.IsActivePlayer = true; ActivityLogManager.LogPlayerJoin(p.DisplayName); }
             if (hlJoin) ImGui.PopStyleColor(2);
         }
         else {
@@ -402,7 +402,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
                 ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
             }
-            if (ImGui.Button($"X##{p.UIID}", new Vector2(-1, 0))) {
+            if (BJBGui.Button($"X##{p.UIID}", new Vector2(-1, 0))) {
                 p.HighlightLeave = false;
                 if (p.Bank == 0) ActivityLogManager.LogPlayerLeave(p.DisplayName);
                 p.IsActivePlayer = false;
@@ -457,7 +457,7 @@ public partial class BlackJackButtlerWindow
                 colorsPushed = 2;
             }
 
-            if (ImGui.Button($"H##hold_{p.UIID}"))
+            if (BJBGui.Button($"H##hold_{p.UIID}"))
             {
                 p.HighlightPause = false;
                 if (p.IsCurrentTurn && currentPhase == GamePhase.PlayersTurn && GameEngine.CanMovePlayerToBench(p, _players))
@@ -536,7 +536,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
                 ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
             }
-            if (ImGui.SmallButton($"T##tell_{p.UIID}"))
+            if (BJBGui.SmallButton($"T##tell_{p.UIID}"))
             {
                 p.HighlightTell = false;
                 Task.Run(async () => {
@@ -557,7 +557,7 @@ public partial class BlackJackButtlerWindow
         if (betOutOfRange)
         {
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
-            if (ImGui.SmallButton($"!##bet_warn_{p.UIID}"))
+            if (BJBGui.SmallButton($"!##bet_warn_{p.UIID}"))
             {
                 _page = Page.Settings;
                 _pendingSettingsFocus = p.CurrentBet < _config.MinBet ? "min_bet" : "max_bet";
@@ -701,7 +701,7 @@ public partial class BlackJackButtlerWindow
             {
                 ImGui.SameLine();
                 ImGui.PushFont(UiBuilder.IconFont);
-                if (ImGui.SmallButton($"{FontAwesomeIcon.Crosshairs.ToIconString()}##target_{p.UIID}"))
+                if (BJBGui.SmallButton($"{FontAwesomeIcon.Crosshairs.ToIconString()}##target_{p.UIID}"))
                 {
                     GameEngine.TargetPlayer(p.Name);
                     VariableManager.SetPlayerVariables(p);
@@ -725,7 +725,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
                 ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
             }
-            if (ImGui.SmallButton($"Pay Out##{p.UIID}"))
+            if (BJBGui.SmallButton($"Pay Out##{p.UIID}"))
             {
                 p.HighlightPay = false;
                 DropboxIntegration.PayOut(p);
@@ -755,7 +755,7 @@ public partial class BlackJackButtlerWindow
             }
             else
             {
-                if (ImGui.SmallButton($"Deal Hand##deal_{p.UIID}"))
+                if (BJBGui.SmallButton($"Deal Hand##deal_{p.UIID}"))
                 {
                     Task.Run(() => GameEngine.ActionDealHand(p, _config, _players));
                 }
@@ -838,7 +838,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
                 ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
             }
-            if (ImGui.SmallButton("Start New Round"))
+            if (BJBGui.SmallButton("Start New Round"))
             {
                 _highlightNewRound = false;
                 BlackJackButtler.Chat.GameLog.PushSnapshot(_players, _dealer, phase, "DealStart");
@@ -854,13 +854,13 @@ public partial class BlackJackButtlerWindow
             }
             else
             {
-                if (ImGui.SmallButton("Hit"))
+                if (BJBGui.SmallButton("Hit"))
                 {
                     BlackJackButtler.Chat.GameLog.PushSnapshot(_players, _dealer, phase, "DealerHit");
                     Task.Run(() => GameEngine.DealerHit(_config, _players));
                 }
                 ImGui.SameLine();
-                if (ImGui.SmallButton("Stand"))
+                if (BJBGui.SmallButton("Stand"))
                 {
                     BlackJackButtler.Chat.GameLog.PushSnapshot(_players, _dealer, phase, "DealerStand");
                     Task.Run(async () => {
@@ -883,7 +883,7 @@ public partial class BlackJackButtlerWindow
             ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
         }
 
-        if (ImGui.Button($"{label}##btn_{label}_{p.UIID}"))
+        if (BJBGui.Button($"{label}##btn_{label}_{p.UIID}"))
         {
             highlightField = false;
             onClick?.Invoke();

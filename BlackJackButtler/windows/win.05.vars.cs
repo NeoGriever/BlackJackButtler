@@ -43,19 +43,19 @@ public partial class BlackJackButtlerWindow
                 ImGui.InputText($"##vval_{v.Name}", ref v.Value, 256);
 
                 ImGui.TableNextColumn();
-                if (ImGui.Button($"Copy##c1_{v.Name}", new Vector2(-1, 0)))
+                if (BJBGui.Button($"Copy##c1_{v.Name}", new Vector2(-1, 0)))
                 {
                     ImGui.SetClipboardText("${" + v.Name + "}");
                 }
 
                 ImGui.TableNextColumn();
-                if (ImGui.Button($"Copy##c2_{v.Name}", new Vector2(-1, 0)))
+                if (BJBGui.Button($"Copy##c2_{v.Name}", new Vector2(-1, 0)))
                 {
                     ImGui.SetClipboardText("$${" + v.Name + "}");
                 }
 
                 ImGui.TableNextColumn();
-                if (ImGui.Button($"X##del_{v.Name}", new Vector2(-1, 0)))
+                if (BJBGui.Button($"X##del_{v.Name}", new Vector2(-1, 0)))
                 {
                     VariableManager.Variables.RemoveAt(i);
                     break;
@@ -65,7 +65,7 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.Spacing();
-        if (ImGui.Button("+ Add Manual Variable"))
+        if (BJBGui.Button("+ Add Manual Variable"))
         {
             VariableManager.Variables.Add(new SessionVariable { Name = "new_var", Value = "", IsManual = true });
         }

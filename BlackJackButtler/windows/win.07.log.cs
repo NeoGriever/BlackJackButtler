@@ -13,7 +13,7 @@ public partial class BlackJackButtlerWindow
     {
         ImGui.TextUnformatted("Round Management & Timeline Control");
         ImGui.SameLine();
-        if (ImGui.Button("Clear History")) GameLog.Clear();
+        if (BJBGui.Button("Clear History")) GameLog.Clear();
 
         ImGui.Separator();
         ImGui.TextDisabled("Rewind specific player actions. Note: This resets the entire table state to that point.");
@@ -63,13 +63,13 @@ public partial class BlackJackButtlerWindow
 
                         ImGui.TableNextColumn();
                         if (isCurrent) ImGui.BeginDisabled();
-                        if (ImGui.Button($"[##back_{idx}")) JumpToTimeline(idx, name);
+                        if (BJBGui.Button($"[##back_{idx}")) JumpToTimeline(idx, name);
                         if (isCurrent) ImGui.EndDisabled();
 
                         ImGui.SameLine();
                         bool isFuture = idx > GameLog.CurrentIndex;
                         if (!isFuture) ImGui.BeginDisabled();
-                        if (ImGui.Button($"]##fwd_{idx}")) JumpToTimeline(idx, name);
+                        if (BJBGui.Button($"]##fwd_{idx}")) JumpToTimeline(idx, name);
                         if (!isFuture) ImGui.EndDisabled();
 
                         ImGui.TableNextColumn();
