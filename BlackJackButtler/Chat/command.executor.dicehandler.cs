@@ -121,11 +121,20 @@ public static class DiceResultHandler
 
         if (shouldCancel && !string.IsNullOrEmpty(newGroup))
         {
-            CommandExecutor.CancelCurrentGroup();
-            window.AddDebugLog($"[DiceHandler] Canceled current group, starting new group: {newGroup}");
+            window.AddDebugLog($"[DiceHandler] Completing current group before starting: {newGroup}");
+            CommandExecutor.NotifyDiceResult();
 
             Task.Run(async () =>
             {
+                if (CommandExecutor.IsRunning)
+                {
+                    var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    Action handler = () => tcs.TrySetResult(true);
+                    CommandExecutor.OnGroupCompleted += handler;
+                    try   { await tcs.Task; }
+                    finally { CommandExecutor.OnGroupCompleted -= handler; }
+                }
+
                 await CommandExecutor.ExecuteInternalGroup(newGroup, target.Name, cfg);
 
                 if (!isDealer && (newGroup == "PlayerBust" || newGroup == "PlayerBJ" ||
