@@ -135,6 +135,7 @@ public static class CommandExecutor
         _isRunning = true;
         _cancel = false;
         int step = 0;
+        var processedGroups = new HashSet<int>();
 
         // Wait for target focus to settle before executing commands
         if (!Plugin.IsDebugMode || !Plugin.IsSpeedMode)
@@ -150,17 +151,47 @@ public static class CommandExecutor
                 break;
             }
 
-            if (!cmd.Enabled || string.IsNullOrWhiteSpace(cmd.Text))
+            PluginCommand effectiveCmd;
+
+            if (cmd.GroupId == 0)
             {
-                window.AddDebugLog($"[Executor] Skip Step {step} (Disabled or Empty)");
-                continue;
+                if (!cmd.Enabled || string.IsNullOrWhiteSpace(cmd.Text))
+                {
+                    window.AddDebugLog($"[Executor] Skip Step {step} (Disabled or Empty)");
+                    continue;
+                }
+                effectiveCmd = cmd;
+            }
+            else
+            {
+                if (processedGroups.Contains(cmd.GroupId))
+                {
+                    window.AddDebugLog($"[Executor] Skip Step {step} (Group {cmd.GroupId} already handled)");
+                    continue;
+                }
+                processedGroups.Add(cmd.GroupId);
+
+                if (!group.LineGroups.TryGetValue(cmd.GroupId, out var lineGroup))
+                {
+                    lineGroup = new CommandLineGroup();
+                    group.LineGroups[cmd.GroupId] = lineGroup;
+                }
+
+                var groupCmds = group.Commands.Where(c => c.GroupId == cmd.GroupId).ToList();
+                var selected = lineGroup.PickNext(groupCmds);
+                if (selected == null)
+                {
+                    window.AddDebugLog($"[Executor] Skip Group {cmd.GroupId} (No enabled commands)");
+                    continue;
+                }
+                effectiveCmd = selected;
             }
 
             try
             {
-                window.AddDebugLog($"[Executor] Processing Step {step}: {cmd.Text}");
+                window.AddDebugLog($"[Executor] Processing Step {step}: {effectiveCmd.Text}");
 
-                string processedText = ProcessContextTokens(cmd.Text, pState, targetPlayerName);
+                string processedText = ProcessContextTokens(effectiveCmd.Text, pState, targetPlayerName);
 
                 processedText = ReplacePlayerScoreFirst(processedText);
                 processedText = ReplaceMessageStacks(processedText, cfg, targetPlayerName, pState);
@@ -206,7 +237,7 @@ public static class CommandExecutor
                 }
 
                 float effectiveDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
-                    : Math.Max(MinCommandDelay, cmd.Delay * cfg.CommandSpeedMultiplier);
+                    : Math.Max(MinCommandDelay, effectiveCmd.Delay * cfg.CommandSpeedMultiplier);
 
                 if (effectiveDelay > 0)
                 {
@@ -283,6 +314,7 @@ public static class CommandExecutor
         }
 
         int step = 0;
+        var processedGroups = new HashSet<int>();
 
         // Wait for target focus to settle before executing commands
         if (!Plugin.IsDebugMode || !Plugin.IsSpeedMode)
@@ -291,17 +323,48 @@ public static class CommandExecutor
         foreach (var cmd in group.Commands)
         {
             step++;
-            if (!cmd.Enabled || string.IsNullOrWhiteSpace(cmd.Text))
+
+            PluginCommand effectiveCmd;
+
+            if (cmd.GroupId == 0)
             {
-                window.AddDebugLog($"[Executor-Internal] Skip Step {step} (Disabled or Empty)");
-                continue;
+                if (!cmd.Enabled || string.IsNullOrWhiteSpace(cmd.Text))
+                {
+                    window.AddDebugLog($"[Executor-Internal] Skip Step {step} (Disabled or Empty)");
+                    continue;
+                }
+                effectiveCmd = cmd;
+            }
+            else
+            {
+                if (processedGroups.Contains(cmd.GroupId))
+                {
+                    window.AddDebugLog($"[Executor-Internal] Skip Step {step} (Group {cmd.GroupId} already handled)");
+                    continue;
+                }
+                processedGroups.Add(cmd.GroupId);
+
+                if (!group.LineGroups.TryGetValue(cmd.GroupId, out var lineGroup))
+                {
+                    lineGroup = new CommandLineGroup();
+                    group.LineGroups[cmd.GroupId] = lineGroup;
+                }
+
+                var groupCmds = group.Commands.Where(c => c.GroupId == cmd.GroupId).ToList();
+                var selected = lineGroup.PickNext(groupCmds);
+                if (selected == null)
+                {
+                    window.AddDebugLog($"[Executor-Internal] Skip Group {cmd.GroupId} (No enabled commands)");
+                    continue;
+                }
+                effectiveCmd = selected;
             }
 
             try
             {
-                window.AddDebugLog($"[Executor-Internal] Processing Step {step}: {cmd.Text}");
+                window.AddDebugLog($"[Executor-Internal] Processing Step {step}: {effectiveCmd.Text}");
 
-                string processedText = ProcessContextTokens(cmd.Text, pState, targetPlayerName);
+                string processedText = ProcessContextTokens(effectiveCmd.Text, pState, targetPlayerName);
 
                 processedText = ReplacePlayerScoreFirst(processedText);
                 processedText = ReplaceMessageStacks(processedText, cfg, targetPlayerName, pState);
@@ -313,7 +376,7 @@ public static class CommandExecutor
                 ChatCommandRouter.Send(processedText, cfg, $"{groupName}:internal:{step}");
 
                 float effectiveDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
-                    : Math.Max(MinCommandDelay, cmd.Delay * cfg.CommandSpeedMultiplier);
+                    : Math.Max(MinCommandDelay, effectiveCmd.Delay * cfg.CommandSpeedMultiplier);
 
                 if (effectiveDelay > 0)
                 {

@@ -281,6 +281,26 @@ public partial class BlackJackButtlerWindow
         if(level >= (int)UserLevel.Dev)
         {
             ImGui.Separator();
+            ImGui.TextUnformatted("Wait Timer");
+            bool unlockWait = _config.UnlockWaitTimer;
+            if (ImGui.Checkbox("Unlock wait timer##dev_unlock_wait", ref unlockWait))
+            {
+                _config.UnlockWaitTimer = unlockWait;
+                if (!unlockWait)
+                {
+                    foreach (var g in _config.CommandGroups.Concat(_config.CustomCommandGroups))
+                        foreach (var c in g.Commands)
+                            if (c.Delay > 12f) c.Delay = 12f;
+                }
+                _save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Erhöht die maximale Wait-Zeit auf 30 s.\nBeim Deaktivieren werden alle Einträge über 12 s auf 12 s gesetzt.");
+        }
+
+        if(level >= (int)UserLevel.Dev)
+        {
+            ImGui.Separator();
 
             ImGui.TextUnformatted("Config File: ");
             ImGui.SameLine();
