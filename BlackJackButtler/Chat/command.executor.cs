@@ -36,7 +36,7 @@ public static class CommandExecutor
         _wait = false;
     }
 
-    private static string ProcessContextTokens(string text, PlayerState? pState, string targetName)
+    private static string ProcessContextTokens(string text, PlayerState? pState, string targetName, Configuration cfg)
     {
         if (string.IsNullOrEmpty(text)) return text;
 
@@ -47,17 +47,27 @@ public static class CommandExecutor
             if (v != null) text = text.Replace($"<{varName}>", v.Value);
         }
 
-        string tReplacement;
-        if (pState != null)
+        bool hasAlias = pState != null && !string.IsNullOrWhiteSpace(pState.Alias);
+        string aliasOrT = hasAlias ? pState!.Alias! : "<t>";
+
+        var trimmed = text.TrimStart();
+        bool keepFirstT = hasAlias
+            && (trimmed.StartsWith("/tell ", StringComparison.OrdinalIgnoreCase)
+             || trimmed.StartsWith("/trade ", StringComparison.OrdinalIgnoreCase));
+
+        if (keepFirstT)
         {
-            tReplacement = !string.IsNullOrWhiteSpace(pState.Alias) ? pState.Alias : "<t>";
+            var idx = text.IndexOf("<t>", StringComparison.Ordinal);
+            if (idx >= 0)
+            {
+                var after = text[(idx + 3)..].Replace("<t>", aliasOrT);
+                text = string.Concat(text.AsSpan(0, idx + 3), after);
+            }
         }
         else
         {
-            tReplacement = !string.IsNullOrWhiteSpace(targetName) ? targetName : "<t>";
+            text = text.Replace("<t>", aliasOrT);
         }
-
-        text = text.Replace("<t>", tReplacement);
 
         if (pState != null)
         {
@@ -71,6 +81,9 @@ public static class CommandExecutor
             text = text.Replace("<cards>", cardString);
             text = text.Replace("${playerCards}", cardString);
         }
+
+        text = text.Replace("<minbet>", cfg.MinBet.ToString("N0", CultureInfo.GetCultureInfo("en-US")) + " Gil");
+        text = text.Replace("<maxbet>", cfg.MaxBet.ToString("N0", CultureInfo.GetCultureInfo("en-US")) + " Gil");
 
         return text;
     }
@@ -102,7 +115,7 @@ public static class CommandExecutor
 
             var msg = batch.GetNextMessage() ?? string.Empty;
 
-            msg = ProcessContextTokens(msg, pState, targetPlayerName);
+            msg = ProcessContextTokens(msg, pState, targetPlayerName, cfg);
             msg = ReplacePlayerScoreFirst(msg);
             msg = VariableManager.ProcessMessage(msg);
 
@@ -191,7 +204,7 @@ public static class CommandExecutor
             {
                 window.AddDebugLog($"[Executor] Processing Step {step}: {effectiveCmd.Text}");
 
-                string processedText = ProcessContextTokens(effectiveCmd.Text, pState, targetPlayerName);
+                string processedText = ProcessContextTokens(effectiveCmd.Text, pState, targetPlayerName, cfg);
 
                 processedText = ReplacePlayerScoreFirst(processedText);
                 processedText = ReplaceMessageStacks(processedText, cfg, targetPlayerName, pState);
@@ -262,7 +275,7 @@ public static class CommandExecutor
         if (string.IsNullOrWhiteSpace(text))
             return text;
 
-        text = ProcessContextTokens(text, pState, targetPlayerName);
+        text = ProcessContextTokens(text, pState, targetPlayerName, cfg);
         text = ReplacePlayerScoreFirst(text);
         text = ReplaceMessageStacks(text, cfg, targetPlayerName, pState);
         text = VariableManager.ProcessMessage(text);
@@ -364,7 +377,7 @@ public static class CommandExecutor
             {
                 window.AddDebugLog($"[Executor-Internal] Processing Step {step}: {effectiveCmd.Text}");
 
-                string processedText = ProcessContextTokens(effectiveCmd.Text, pState, targetPlayerName);
+                string processedText = ProcessContextTokens(effectiveCmd.Text, pState, targetPlayerName, cfg);
 
                 processedText = ReplacePlayerScoreFirst(processedText);
                 processedText = ReplaceMessageStacks(processedText, cfg, targetPlayerName, pState);

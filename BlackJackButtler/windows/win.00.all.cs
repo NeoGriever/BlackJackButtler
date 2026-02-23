@@ -48,6 +48,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private string? _pendingSettingsFocus;
 
     private bool _showRestoreSessionButton = false;
+    private bool _showVarRefPanel = false;
     private bool _highlightNewRound = false;
     private int _selectedWebhookIndex = -1;
 
@@ -252,6 +253,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         DropboxIntegration.DrawHelperWindow();
         DrawSplitMoneyPopup();
         DrawDDMoneyPopup();
+        DrawVarRefPanel();
     }
 
     private void RestoreSessionFromFile()

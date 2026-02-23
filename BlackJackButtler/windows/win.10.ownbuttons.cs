@@ -12,6 +12,8 @@ public partial class BlackJackButtlerWindow
     private void DrawOwnButtonsPage()
     {
         ImGui.TextUnformatted("Own Buttons");
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("?##varref_own")) _showVarRefPanel = !_showVarRefPanel;
         ImGui.Separator();
         ImGui.TextDisabled("Create your own command groups. They appear as buttons above the dealer row on the main page.");
         ImGui.TextDisabled("Use <t> for the target player name. Works the same way as the built-in command chains.");

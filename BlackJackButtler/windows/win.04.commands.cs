@@ -10,6 +10,8 @@ public partial class BlackJackButtlerWindow
     {
         ImGui.TextUnformatted("Command Chains");
         ImGui.SameLine();
+        if (BJBGui.SmallButton("?##varref_cmd")) _showVarRefPanel = !_showVarRefPanel;
+        ImGui.SameLine();
 
         var io = ImGui.GetIO();
         bool keysDown = io.KeyCtrl && io.KeyShift;
