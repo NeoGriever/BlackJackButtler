@@ -63,6 +63,9 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool dismissDevWarning = false;
 
+    public float InitialViewDirection = 0f;
+    public bool LookEveryTime = false;
+
     public string NotepadText = "";
 
     public UserLevel CurrentLevel = UserLevel.Beginner;

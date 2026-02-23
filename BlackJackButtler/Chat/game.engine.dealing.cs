@@ -46,6 +46,7 @@ public static partial class GameEngine
 
         Interlocked.Exchange(ref _payoutGuard, 0);
         CurrentPhase = GamePhase.InitialDeal;
+        ViewDirectionManager.ApplyViewDirection(cfg);
 
         TargetPlayer(dealer.Name);
         SetForcedRecipient(dealer.Name);

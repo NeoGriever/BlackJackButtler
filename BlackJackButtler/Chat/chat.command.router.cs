@@ -11,6 +11,13 @@ public static class ChatCommandRouter
         var window = Plugin.Instance.GetMainWindow();
         window.AddDebugLog($"[Router-Request] Context: {context} | Cmd: {commandText}");
 
+        if (ViewDirectionManager.IsInternalCommand(commandText))
+        {
+            ViewDirectionManager.ApplyViewDirection(cfg);
+            window.AddDebugLog("[Router] /initialviewdirection intercepted - rotation applied");
+            return;
+        }
+
         if (Plugin.IsDebugMode)
         {
             Plugin.Instance.InjectChatMessage(64, 0, "SYSTEM", "SYSTEM", commandText);

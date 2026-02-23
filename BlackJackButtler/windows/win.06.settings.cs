@@ -189,6 +189,33 @@ public partial class BlackJackButtlerWindow
             }
         }
 
+        if (level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Separator();
+            ImGui.TextUnformatted("View Direction");
+
+            ImGui.Spacing();
+            float degrees = _config.InitialViewDirection * (180f / MathF.PI);
+            if (degrees < 0) degrees += 360f;
+            ImGui.TextUnformatted("Facing Direction");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (BJBGui.SliderFloat("##view_dir", ref degrees, 0f, 360f, "%.1f\u00b0"))
+            {
+                _config.InitialViewDirection = degrees * (MathF.PI / 180f);
+                _save();
+                ViewDirectionManager.ApplyViewDirection(_config);
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Character facing direction.\nAuto-captured when Group Detector activates.\nChanges apply immediately.");
+
+            ImGui.Spacing();
+            if (ImGui.Checkbox("Look everytime (on self-target)", ref _config.LookEveryTime))
+                _save();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Active: Face this direction whenever you target yourself.\nInactive: Only at round start or via /initialviewdirection command.");
+        }
+
         ImGui.Separator();
 
         ImGui.TextUnformatted("Multipliers");

@@ -197,7 +197,11 @@ public partial class BlackJackButtlerWindow
         if (BJBGui.Button(recon_text, new Vector2(200, 0)))
         {
             IsRecognitionActive = !IsRecognitionActive;
-            if(IsRecognitionActive) SyncParty();
+            if (IsRecognitionActive)
+            {
+                SyncParty();
+                ViewDirectionManager.CaptureCurrentRotation(_config);
+            }
 
             if (!IsRecognitionActive)
             {
