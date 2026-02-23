@@ -319,7 +319,7 @@ public static class CommandExecutor
         var condTokens = conditionPart.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
         if (condTokens.Length == 0)
-            return (true, false, commandPart);
+            return (false, hasSkip, commandPart);
 
         string varValue = condTokens[0];
 
