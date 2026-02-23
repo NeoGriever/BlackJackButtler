@@ -65,75 +65,7 @@ public partial class BlackJackButtlerWindow
                         ImGui.SetTooltip("Hold CTRL to delete this group.");
                 }
 
-                if (ImGui.BeginTable($"table_{group.Name}", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
-                {
-                    ImGui.TableSetupColumn("Act", ImGuiTableColumnFlags.WidthFixed, 30);
-                    ImGui.TableSetupColumn("Command / Chat Message", ImGuiTableColumnFlags.WidthStretch);
-                    ImGui.TableSetupColumn("Wait (s)", ImGuiTableColumnFlags.WidthFixed, 100);
-                    ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, 50);
-                    ImGui.TableSetupColumn("X", ImGuiTableColumnFlags.WidthFixed, 30);
-                    ImGui.TableHeadersRow();
-
-                    for (int i = 0; i < group.Commands.Count; i++)
-                    {
-                        var cmd = group.Commands[i];
-                        ImGui.TableNextRow();
-                        ImGui.PushID(i);
-
-                        ImGui.TableNextColumn();
-                        if (ImGui.Checkbox("##active", ref cmd.Enabled)) _save();
-
-                        ImGui.TableNextColumn();
-                        ImGui.SetNextItemWidth(-1);
-                        if (ImGui.InputText("##text", ref cmd.Text, 256)) _save();
-
-                        ImGui.TableNextColumn();
-                        ImGui.SetNextItemWidth(-1);
-                        if (ImGui.SliderFloat("##delay", ref cmd.Delay, 0.5f, 8.0f, "%.1fs"))
-                        {
-                            if (cmd.Delay < 0.5f) cmd.Delay = 0.5f;
-                            _save();
-                        }
-
-                        ImGui.TableNextColumn();
-                        bool isFirst = i == 0;
-                        bool isLast = i == group.Commands.Count - 1;
-
-                        if (isFirst) ImGui.BeginDisabled();
-                        if (BJBGui.SmallButton("^##up"))
-                        {
-                            (group.Commands[i - 1], group.Commands[i]) = (group.Commands[i], group.Commands[i - 1]);
-                            _save();
-                            ImGui.PopID();
-                            break;
-                        }
-                        if (isFirst) ImGui.EndDisabled();
-
-                        ImGui.SameLine();
-
-                        if (isLast) ImGui.BeginDisabled();
-                        if (BJBGui.SmallButton("v##down"))
-                        {
-                            (group.Commands[i], group.Commands[i + 1]) = (group.Commands[i + 1], group.Commands[i]);
-                            _save();
-                            ImGui.PopID();
-                            break;
-                        }
-                        if (isLast) ImGui.EndDisabled();
-
-                        ImGui.TableNextColumn();
-                        if (BJBGui.Button("X##del"))
-                        {
-                            group.Commands.RemoveAt(i);
-                            _save();
-                            ImGui.PopID();
-                            break;
-                        }
-
-                        ImGui.PopID();
-                    }
-                    ImGui.EndTable();
-                }
+                DrawCommandGroupTable(group);
 
                 if (BJBGui.Button("+ Add Command Step"))
                 {

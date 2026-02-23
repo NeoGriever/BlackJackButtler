@@ -27,6 +27,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool PlayerBJWinsOnTie = false;
     public bool EnableBankInput = false;
     public float CommandSpeedMultiplier = 1.0f;
+    public bool UnlockWaitTimer = false;
     public bool OpenDropboxInsteadOfTrade = true;
 
     public List<CommandGroup> CommandGroups = new();
@@ -126,6 +127,7 @@ public sealed class MessageBatch
       case SelectionMode.First:
         return Messages[0];
       case SelectionMode.Iterative:
+        if (IterativeIndex >= Messages.Count) IterativeIndex = 0;
         var msg = Messages[IterativeIndex];
         IterativeIndex = (IterativeIndex + 1) % Messages.Count;
         return msg;
