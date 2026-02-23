@@ -396,7 +396,15 @@ public partial class BlackJackButtlerWindow
                 ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
                 ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
             }
-            if (BJBGui.Button($">##{p.UIID}", new Vector2(-1, 0))) { p.HighlightJoin = false; p.IsActivePlayer = true; ActivityLogManager.LogPlayerJoin(p.DisplayName); }
+            if (BJBGui.Button($">##{p.UIID}", new Vector2(-1, 0)))
+            {
+                p.HighlightJoin = false;
+                p.IsActivePlayer = true;
+                var joinPhase = GameEngine.CurrentPhase;
+                if (joinPhase == GamePhase.InitialDeal || joinPhase == GamePhase.PlayersTurn || joinPhase == GamePhase.DealerTurn)
+                    p.JoinedMidRound = true;
+                ActivityLogManager.LogPlayerJoin(p.DisplayName);
+            }
             if (hlJoin) ImGui.PopStyleColor(2);
         }
         else {
@@ -408,9 +416,17 @@ public partial class BlackJackButtlerWindow
             }
             if (BJBGui.Button($"X##{p.UIID}", new Vector2(-1, 0))) {
                 p.HighlightLeave = false;
-                if (p.Bank == 0) ActivityLogManager.LogPlayerLeave(p.DisplayName);
-                p.IsActivePlayer = false;
-                p.IsCurrentTurn = false;
+                var leavePhase = GameEngine.CurrentPhase;
+                if (leavePhase == GamePhase.InitialDeal || leavePhase == GamePhase.PlayersTurn || leavePhase == GamePhase.DealerTurn)
+                {
+                    GameEngine.DeactivatePlayerMidRound(p, _players, _config);
+                }
+                else
+                {
+                    if (p.Bank == 0) ActivityLogManager.LogPlayerLeave(p.DisplayName);
+                    p.IsActivePlayer = false;
+                    p.IsCurrentTurn = false;
+                }
             }
             if (hlLeave) ImGui.PopStyleColor(2);
         }
@@ -418,27 +434,21 @@ public partial class BlackJackButtlerWindow
         ImGui.TableNextColumn();
         if (p.IsActivePlayer) {
             var currentPhase = GameEngine.CurrentPhase;
+            bool isActiveRound = currentPhase == GamePhase.InitialDeal || currentPhase == GamePhase.PlayersTurn;
 
-            // Determine if button should be disabled
             bool isDisabled = false;
-
-            // If on bench, can only return if not in DealerTurn or Payout
             if (p.IsOnBench)
             {
                 isDisabled = (currentPhase == GamePhase.DealerTurn || currentPhase == GamePhase.Payout);
             }
-            // If on hold, can toggle off unless dealer has cards (during DealerTurn after dealer drew)
             else if (p.IsOnHold)
             {
-                // Check if dealer has drawn cards
-                bool dealerHasCards = _dealer.Hands.Count > 0 && _dealer.Hands[0].Cards.Count > 0;
-                isDisabled = (currentPhase == GamePhase.DealerTurn && dealerHasCards);
+                isDisabled = false;
             }
-            // If not on bench/hold, can only bench during PlayersTurn if allowed
             else
             {
-                bool canBench = GameEngine.CanMovePlayerToBench(p, _players);
-                isDisabled = (p.IsCurrentTurn && currentPhase == GamePhase.PlayersTurn && !canBench);
+                if (isActiveRound)
+                    isDisabled = !GameEngine.CanMovePlayerToBench(p, _players);
             }
 
             if (isDisabled) ImGui.BeginDisabled();
@@ -464,21 +474,38 @@ public partial class BlackJackButtlerWindow
             if (BJBGui.Button($"H##hold_{p.UIID}"))
             {
                 p.HighlightPause = false;
-                if (p.IsCurrentTurn && currentPhase == GamePhase.PlayersTurn && GameEngine.CanMovePlayerToBench(p, _players))
-                {
-                    GameEngine.MovePlayerToBench(p, _players);
-                    GameEngine.NextTurn(_players, _config);
-                }
-                else if (p.IsOnBench)
+
+                if (p.IsOnBench)
                 {
                     if (currentPhase != GamePhase.DealerTurn && currentPhase != GamePhase.Payout)
-                    {
                         GameEngine.MovePlayerFromBench(p);
+                }
+                else if (p.IsOnHold)
+                {
+                    if (isActiveRound)
+                    {
+                        p.IsOnHold = false;
+                        p.IsOnBench = true;
+                        p.WasOnHoldThisRound = true;
+                    }
+                    else
+                    {
+                        p.IsOnHold = false;
                     }
                 }
                 else
                 {
-                    p.IsOnHold = !p.IsOnHold;
+                    if (isActiveRound && GameEngine.CanMovePlayerToBench(p, _players))
+                    {
+                        bool wasCurrentTurn = p.IsCurrentTurn;
+                        GameEngine.MovePlayerToBench(p, _players);
+                        if (wasCurrentTurn)
+                            GameEngine.NextTurn(_players, _config);
+                    }
+                    else
+                    {
+                        p.IsOnHold = !p.IsOnHold;
+                    }
                 }
                 _save();
             }
@@ -486,21 +513,20 @@ public partial class BlackJackButtlerWindow
             if (colorsPushed > 0) ImGui.PopStyleColor(colorsPushed);
             if (isDisabled) ImGui.EndDisabled();
 
-            if (ImGui.IsItemHovered())
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {
                 if (p.IsOnBench)
-                    ImGui.SetTooltip("On bench - Click to return (if dealer hasn't played yet)");
+                    ImGui.SetTooltip("On bench - Click to return");
+                else if (p.IsOnHold && isActiveRound)
+                    ImGui.SetTooltip("On hold - Click to join via bench (late entry)");
                 else if (p.IsOnHold)
-                    ImGui.SetTooltip("On hold - Won't participate in next round");
-                else if (p.IsCurrentTurn)
-                    ImGui.SetTooltip("Click to move to bench (pause current turn)");
+                    ImGui.SetTooltip("On hold - Click to reactivate for next round");
+                else if (isActiveRound)
+                    ImGui.SetTooltip("Click to move to bench (pause during round)");
                 else
                     ImGui.SetTooltip("Click to hold (skip next round)");
             }
         }
-        /*
-        TODO: Der Pause-Button lässt die UI kaputt gehen (texte werden alle schwarz auch außerhalb des plugins. Irgendwo ist da eine Race-Condition oder sowas)
-        */
 
         ImGui.TableNextColumn();
         var nameColor = p.IsCurrentTurn ? new Vector4(1f, 1f, 0.2f, 1f) : new Vector4(1, 1, 1, 1);

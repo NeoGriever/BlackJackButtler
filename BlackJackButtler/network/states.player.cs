@@ -15,6 +15,7 @@ public class PlayerState
     public bool IsOnHold = false;
     public bool WasOnHoldThisRound = false;
     public bool IsOnBench = false;
+    public bool JoinedMidRound = false;
 
     public bool IsInParty = true;
     public bool IsCurrentTurn = false;
@@ -100,6 +101,7 @@ public class PlayerState
         WasOnHoldThisRound = false;
         IsOnBench = false;
         LastRoundResult = 0;
+        JoinedMidRound = false;
         ResetHighlightsAll();
     }
 
@@ -140,14 +142,21 @@ public class PlayerState
     {
         return new PlayerState
         {
+            IsDebugPlayer = IsDebugPlayer,
             Name = Name,
+            Alias = Alias,
             WorldId = WorldId,
             IsActivePlayer = IsActivePlayer,
 
             IsOnHold = IsOnHold,
+            WasOnHoldThisRound = WasOnHoldThisRound,
+            IsOnBench = IsOnBench,
+            JoinedMidRound = JoinedMidRound,
 
             IsInParty = IsInParty,
             IsCurrentTurn = IsCurrentTurn,
+            HasInitialHandDealt = HasInitialHandDealt,
+            IsDone = IsDone,
 
             Bank = Bank,
             CurrentBet = CurrentBet,
