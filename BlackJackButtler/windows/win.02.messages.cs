@@ -10,6 +10,8 @@ public partial class BlackJackButtlerWindow
     private void DrawMessagesPage()
     {
         ImGui.TextUnformatted("Message Batches");
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("?##varref_msg")) _showVarRefPanel = !_showVarRefPanel;
         ImGui.Separator();
 
         var hideStd = _config.HideStandardBatches;
