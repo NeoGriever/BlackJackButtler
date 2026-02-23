@@ -1,4 +1,4 @@
-`v1.4.0.0`
+`v1.5.2.1`
 
 # BlackJack Buttler
 
@@ -42,6 +42,7 @@ Whether you run a casual table for friends or a high-stakes venue for dozens of 
   - [10.1 User Level](#101-user-level)
   - [10.2 Command Speed](#102-command-speed)
   - [10.3 Bet Limits](#103-bet-limits)
+  - [10.4 Button Style](#104-button-style)
 - [11 Settings (Advanced)](#11-settings-advanced)
   - [11.1 Gameplay Rules](#111-gameplay-rules)
   - [11.2 Max Hands per Player](#112-max-hands-per-player)
@@ -59,22 +60,25 @@ Whether you run a casual table for friends or a high-stakes venue for dozens of 
   - [13.3 Context Tokens](#133-context-tokens)
   - [13.4 Processing Pipeline](#134-processing-pipeline)
   - [13.5 Built-in Command Groups](#135-built-in-command-groups)
+  - [13.6 Command Line Groups](#136-command-line-groups)
 - [14 Own Buttons](#14-own-buttons)
-- [15 Regex](#15-regex)
-  - [15.1 Regex Entries](#151-regex-entries)
-  - [15.2 SetVariable Mode](#152-setvariable-mode)
-  - [15.3 Trigger Actions](#153-trigger-actions)
-  - [15.4 Default Patterns](#154-default-patterns)
-- [16 Variables](#16-variables)
-  - [16.1 Variable Syntax](#161-variable-syntax)
-  - [16.2 Built-in Variables](#162-built-in-variables)
-  - [16.3 Manual Variables](#163-manual-variables)
-- [17 Debug](#17-debug)
-  - [17.1 Debug Mode and Test Data](#171-debug-mode-and-test-data)
-  - [17.2 Log Viewer](#172-log-viewer)
-- [18 Macro Import](#18-macro-import)
-  - [18.1 Import Process](#181-import-process)
-  - [18.2 Wait Time Parsing](#182-wait-time-parsing)
+- [15 Webhooks](#15-webhooks)
+- [16 Presets](#16-presets)
+- [17 Regex](#17-regex)
+  - [17.1 Regex Entries](#171-regex-entries)
+  - [17.2 SetVariable Mode](#172-setvariable-mode)
+  - [17.3 Trigger Actions](#173-trigger-actions)
+  - [17.4 Default Patterns](#174-default-patterns)
+- [18 Variables](#18-variables)
+  - [18.1 Variable Syntax](#181-variable-syntax)
+  - [18.2 Built-in Variables](#182-built-in-variables)
+  - [18.3 Manual Variables](#183-manual-variables)
+- [19 Debug](#19-debug)
+  - [19.1 Debug Mode and Test Data](#191-debug-mode-and-test-data)
+  - [19.2 Log Viewer](#192-log-viewer)
+- [20 Macro Import](#20-macro-import)
+  - [20.1 Import Process](#201-import-process)
+  - [20.2 Wait Time Parsing](#202-wait-time-parsing)
 - [Appendix](#appendix)
   - [A - Processing Pipeline Summary](#a---processing-pipeline-summary)
   - [B - Cross-Reference Index](#b---cross-reference-index)
@@ -104,15 +108,17 @@ BJB uses a three-tier user level system that controls which sidebar pages and se
 
 | Level | Sidebar Pages | Settings Shown |
 |---|---|---|
-| **Beginner** | Main, Settings, Stats, Round History | User Level, Command Speed, Bet Limits, Natural BJ Multiplier |
-| **Advanced** | + Messages, Commands, Own Buttons | + All Gameplay Rules, UI Colors, All Multipliers, Defaults Reset |
-| **Dev** | + Regex, Variables, Debug, Macro Import | + Clipboard Export/Import |
+| **Beginner** | Main, Settings, Stats, Round History | User Level, Command Speed, Bet Limits, Button Style, Natural BJ Multiplier |
+| **Advanced** | + Messages, Commands, Own Buttons, Webhooks, Presets | + All Gameplay Rules, UI Colors, All Multipliers, Defaults Reset |
+| **Dev** | + Regex, Variables, Debug, Macro Import | + Clipboard Export/Import, Unlock Wait Timer |
 
 Change the level in **Settings > User Level**. Lowering the level resets any advanced settings to their defaults.
 
 ---
 
 ## 2 Main Game Page
+
+The main page header includes a **Webhook dropdown** (top-right, see [15 Webhooks](#15-webhooks)) for selecting which webhook receives round results, and a **Bank /tell** button that posts bank/bet info to party chat for all active players.
 
 ### 2.1 Group Detector
 
@@ -128,11 +134,11 @@ Three toggle buttons appear at the top of the main page:
 |---|---|
 | **Auto Player Hand** | Automatically deals the initial hand to each player during the InitialDeal phase. |
 | **Auto Dealer Draw** | Automatically draws cards for the dealer until 17, then stands. |
-| **Auto Run** | Executes player action triggers (Hit/Stand/DD/Split) automatically when detected. Only appears when regex triggers for player actions exist (see [15 Regex](#15-regex)). When OFF, detected actions highlight the corresponding button instead. |
+| **Auto Run** | Executes player action triggers (Hit/Stand/DD/Split) automatically when detected. Only appears when regex triggers for player actions exist (see [17 Regex](#17-regex)). When OFF, detected actions highlight the corresponding button instead. |
 
 ### 2.3 Dealer Section
 
-A 4-column table showing the dealer's name, cards, points, and controls.
+A 4-column table showing the dealer's name, cards, points, and controls. Above the dealer row, **Custom Buttons** from the Own Buttons page appear as a button bar (see [14 Own Buttons](#14-own-buttons)).
 
 - **Waiting/Payout phase**: Shows the "Start New Round" button.
 - **DealerTurn phase**: Shows "Hit" and "Stand" buttons (or "Auto..." if Auto Dealer Draw is on).
@@ -143,11 +149,11 @@ A 9-column table for all players:
 
 | Column | Description |
 |---|---|
-| **A** | Alias button. Opens a popup to set a short name used in `<t>` replacements. |
+| **A** | Alias button. Opens a popup to set a short display name. The alias replaces the character name in `<t>` token replacements and in the Name column. Clear the alias by saving an empty value or matching the original name. |
 | **J** | Join/Leave toggle. `>` to add inactive player, `X` to deactivate. |
 | **P** | Hold/Bench button. Toggles hold (skip next round), bench (pause mid-round), or return. |
 | **Name** | Player display name (alias if set, otherwise character name). Yellow when it is their turn. |
-| **Bank** | Gil balance. Editable when the Bank Input checkbox is enabled. Includes a "T" button for individual bank tell. |
+| **Bank** | Gil balance. Editable when the Bank Input checkbox is enabled. Includes a **"T" button** that executes the `BankTell` command group for this individual player, posting their bank/bet info to party chat. |
 | **Bet** | Current bet amount. Red `!` indicator appears when outside the configured min/max range. |
 | **Cards** | Visual card display with suit colors (red for Hearts/Diamonds, white for Spades/Clubs). |
 | **Points** | Calculated score. Shows "BJ" (green for natural, yellow for dirty), red strikethrough for busts, or min/max for soft hands. |
@@ -209,7 +215,7 @@ Each player's bet is validated against the configured minimum and maximum. A red
 
 Enable the **Bank Input** checkbox (top-right of the player table) to allow manual editing of player banks.
 
-Banks are also updated automatically through trade detection. When a player trades Gil to you, regex patterns detect the trade partner, amounts, and completion (see [15.4 Default Patterns](#154-default-patterns)). The trade amount is applied to the matching player's bank automatically.
+Banks are also updated automatically through trade detection. When a player trades Gil to you, regex patterns detect the trade partner, amounts, and completion (see [17.4 Default Patterns](#174-default-patterns)). The trade amount is applied to the matching player's bank automatically.
 
 ---
 
@@ -293,7 +299,7 @@ Switch between Beginner, Advanced, and Dev. Lowering the level resets affected s
 
 ### 10.2 Command Speed
 
-A multiplier applied to all command step delays at execution time.
+A multiplier applied to all command step delays at execution time. Slider range: 0.1x to 4.0x (rounded to 0.05 increments).
 
 - `1.00x` = normal speed
 - `0.50x` = twice as fast
@@ -303,6 +309,13 @@ A multiplier applied to all command step delays at execution time.
 ### 10.3 Bet Limits
 
 Configure the minimum and maximum allowed bet. Out-of-range bets show a red indicator on the player table.
+
+### 10.4 Button Style
+
+Two color pickers for customizing the appearance of interactive UI elements:
+
+- **Bg**: Background color for buttons (default: dark grey).
+- **Text**: Text color applied to all interactive controls — buttons, inputs, sliders, combo boxes, and dropdowns (default: white).
 
 ---
 
@@ -322,7 +335,6 @@ These settings require **Advanced** user level or higher.
 | Autostart round only on multiple players | On | NextRound trigger only auto-starts with 2+ active player votes. With 1 player, highlights the button instead. |
 | Open Dropbox instead of trade | On | Uses the Dropbox plugin for payouts when available. |
 | Small Result Message | On | Sends one compressed result message instead of individual messages per player hand. |
-| Dealer draws until | 17 | The point threshold at which Auto Dealer Draw stops hitting. |
 
 ### 11.2 Max Hands per Player
 
@@ -405,7 +417,7 @@ The following batches are included by default:
 | Payment Reminder | Payout flow | Tell sent when a player owes Gil for DD/Split. |
 | Bank Tell Messages | `BankTell` | Bank/bet info posted to party chat. |
 
-All default messages support context tokens like `<t>`, `<points>`, `<cards>`, and variable references like `${HandIndex}` and `${dealerpoints}` (see [13.3 Context Tokens](#133-context-tokens) and [16 Variables](#16-variables)).
+All default messages support context tokens like `<t>`, `<points>`, `<cards>`, and variable references like `${HandIndex}` and `${dealerpoints}` (see [13.3 Context Tokens](#133-context-tokens) and [18 Variables](#18-variables)).
 
 ---
 
@@ -419,7 +431,8 @@ A command group is a named sequence of steps. Each step has:
 
 - **Enabled**: Toggle to skip the step without deleting it.
 - **Text**: The command or chat message to send (e.g., `/p Hello` or `/dice party 13`).
-- **Delay**: Wait time after this step (0.5s - 8.0s), multiplied by the Command Speed setting.
+- **Delay**: Wait time after this step (0.5s - 12.0s default, up to 30.0s with Dev Unlock — see [19 Debug](#19-debug)), multiplied by the Command Speed setting.
+- **Grp**: Group assignment (0-9) for Command Line Groups (see [13.6 Command Line Groups](#136-command-line-groups)).
 
 Steps execute sequentially. If a step contains `/dice`, the executor pauses until a dice result is detected (30-second timeout).
 
@@ -449,7 +462,7 @@ These tokens are replaced with live game data during command execution:
 | `<results>` | Combined result string (all categories joined by ` \| `). |
 | `+{PlayerScore}` | Best score of the current target player. |
 
-Context tokens also support variable syntax (`${...}`) for session variables (see [16 Variables](#16-variables)).
+Context tokens also support variable syntax (`${...}`) for session variables (see [18 Variables](#18-variables)).
 
 ### 13.4 Processing Pipeline
 
@@ -491,26 +504,95 @@ See [Appendix A](#a---processing-pipeline-summary) for a visual summary.
 | `StateHS` | *(internal)* | Prompt: Hit, Stand available. |
 | `BankTell` | Bank Tell (Individual) | Bank/bet info tell for a player. |
 
+### 13.6 Command Line Groups
+
+Command Line Groups allow multiple command steps within a group to be tagged with a shared **GroupId** (1-9). When the command group triggers, only **one step per GroupId** is selected and executed. Steps with GroupId 0 (the default) are ungrouped and always execute normally.
+
+**Setting the GroupId**: Each step row shows a **Grp** column with a drag field (0-9). Steps sharing the same GroupId are visually grouped together in the table with a colored header.
+
+**Selection Modes** (per GroupId):
+
+| Mode | Behavior |
+|---|---|
+| **Iterative** | Cycles through the enabled steps in order, advancing the index on each trigger. |
+| **Random** | Randomly picks one enabled step from the group on each trigger. |
+
+Toggle between modes by clicking the mode button in the group header.
+
+**Use case**: Create multiple formulations for the same game event (e.g., three different "Player Hit" messages) and assign them the same GroupId. The plugin selects one per trigger, adding natural variety without duplicating command groups.
+
+Command Line Groups are supported in both built-in command groups and Own Buttons (see [14 Own Buttons](#14-own-buttons)).
+
 ---
 
 ## 14 Own Buttons
 
 *Requires Advanced user level.* See also [13 Commands](#13-commands) for syntax.
 
-Custom command groups that appear as buttons above the dealer row on the main page. They use the same step format and processing pipeline as built-in command groups.
+Custom command groups that appear as buttons above the dealer row on the main page. They use the same step format and processing pipeline as built-in command groups, including support for Command Line Groups (see [13.6 Command Line Groups](#136-command-line-groups)).
 
 - Click "Add Group" to create a new custom group with a unique name.
-- Each group has the same step editor (enable, text, delay, reorder, delete).
+- Each group has the same step editor (enable, text, delay, group assignment, reorder, delete).
 - When clicked on the main page, the group executes against the current turn player (or dealer if no player is active).
 - Delete a group by holding Ctrl and clicking "Delete Group".
 
 ---
 
-## 15 Regex
+## 15 Webhooks
+
+*Requires Advanced user level.*
+
+Webhooks send round results as Discord embeds to a configured Discord channel. Each webhook posts a formatted message containing the dealer's hand and points, all player hands with their results (WIN, BUST, PUSH, LOST, BLACKJACK), and optionally the bet amounts.
+
+**Configuration** (Webhooks page):
+
+| Field | Description |
+|---|---|
+| **Name** | Display name for the webhook (shown in the main window dropdown). |
+| **URL** | Discord webhook URL (must start with `https://discord.com/api/webhooks/`). |
+| **Enabled** | Toggle the webhook on/off. |
+| **Show bet amounts** | When on, win/loss Gil amounts are included in the embed. |
+
+**Usage**: On the main game page, a **Webhook dropdown** appears in the top-right header area (only visible when at least one enabled webhook exists). Select a webhook to receive round results, or "None" to disable posting. The dropdown is locked during active rounds and can only be changed during the Waiting or Payout phase.
+
+Results are posted automatically at the end of each round when a webhook is selected.
+
+---
+
+## 16 Presets
+
+*Requires Advanced user level.*
+
+Presets are configuration snapshots that save and restore your plugin setup. Use them to switch between different table configurations (e.g., casual vs. high-stakes, different venue themes).
+
+**Operations**:
+
+| Action | Description |
+|---|---|
+| **Create** | Saves the entire current configuration as a named snapshot. |
+| **Update Snapshot** | Overwrites the snapshot with the current configuration. |
+| **Apply** | Restores selected categories from the snapshot to the active configuration. |
+| **Delete** | Permanently removes the preset (requires Ctrl key held). |
+
+**Granular Categories**: When applying a preset, you can choose which parts to restore:
+
+| Category | Includes |
+|---|---|
+| **Settings** | Multipliers, gameplay rules, UI colors, bet limits. |
+| **Commands** | Built-in command groups and custom command groups (Own Buttons). |
+| **Messages** | All message batches. |
+| **Regexes** | All user regex entries. |
+| **Webhooks** | All webhook configurations. |
+
+The currently active preset name is displayed in the Presets page. Selecting "Default" restores the base configuration.
+
+---
+
+## 17 Regex
 
 *Requires Dev user level.*
 
-### 15.1 Regex Entries
+### 17.1 Regex Entries
 
 Each regex entry has:
 
@@ -524,11 +606,11 @@ Each regex entry has:
 
 Patterns are evaluated in order. The first matching pattern within an entry wins, and the first matching entry wins (no further entries are checked for that message).
 
-### 15.2 SetVariable Mode
+### 17.2 SetVariable Mode
 
-When mode is `SetVariable`, a match stores the sanitized chat message text as a session variable with the entry's name. This variable can then be used in command steps via `${name}` (see [16 Variables](#16-variables)).
+When mode is `SetVariable`, a match stores the sanitized chat message text as a session variable with the entry's name. This variable can then be used in command steps via `${name}` (see [18 Variables](#18-variables)).
 
-### 15.3 Trigger Actions
+### 17.3 Trigger Actions
 
 When mode is `Trigger`, the matched pattern executes one of these actions:
 
@@ -561,7 +643,7 @@ When mode is `Trigger`, the matched pattern executes one of these actions:
 | `NextRound` | Counts as a "vote" for a new round. When all active players have voted, auto-starts (if Auto Run and 2+ players) or highlights the Start New Round button. | |
 | `BankTell` | If Auto Run is on, sends bank/bet info to party chat. If off, highlights the Tell button. | |
 
-### 15.4 Default Patterns
+### 17.4 Default Patterns
 
 These regex entries are pre-configured and support both English and German game clients:
 
@@ -577,11 +659,11 @@ These regex entries are pre-configured and support both English and German game 
 
 ---
 
-## 16 Variables
+## 18 Variables
 
 *Requires Dev user level.*
 
-### 16.1 Variable Syntax
+### 18.1 Variable Syntax
 
 Two replacement syntaxes are available in command steps and messages:
 
@@ -592,7 +674,7 @@ Two replacement syntaxes are available in command steps and messages:
 
 Variables are processed as the final step of the [processing pipeline](#134-processing-pipeline). `$${...}` replacements are processed before `${...}` to allow one-time values to take priority.
 
-### 16.2 Built-in Variables
+### 18.2 Built-in Variables
 
 These variables are set automatically by the game engine:
 
@@ -612,7 +694,7 @@ These variables are set automatically by the game engine:
 | `missingGil` | Payment reminder | Amount owed for DD/Split. |
 | `action` | Payment reminder | `Double Down` or `Split`. |
 
-### 16.3 Manual Variables
+### 18.3 Manual Variables
 
 On the Variables page, click "+ Add Manual Variable" to create custom variables. These can be referenced in command steps and messages via `${name}` or `$${name}`.
 
@@ -623,17 +705,19 @@ Each variable row shows:
 
 ---
 
-## 17 Debug
+## 19 Debug
 
 *Requires Dev user level.*
 
-### 17.1 Debug Mode and Test Data
+### 19.1 Debug Mode and Test Data
 
 Enabling Debug Mode creates test player data (7 mock players with varying bank/bet values) and allows playing a full game without a real party. Dice commands are simulated internally.
 
 **Fast Tests** mode reduces all command delays to 0.2 seconds.
 
-### 17.2 Log Viewer
+**Dev: Unlock Wait Timer**: Increases the maximum command step delay from 12s to 30s. When deactivated, any steps with delays above 12s are automatically clamped back to 12s. This is useful for command groups that need longer pauses (e.g., emote sequences).
+
+### 19.2 Log Viewer
 
 The debug page shows a reverse-chronological log of all internal events:
 
@@ -651,11 +735,11 @@ Controls:
 
 ---
 
-## 18 Macro Import
+## 20 Macro Import
 
 *Requires Dev user level.* Imports FFXIV macros into command groups (see [13 Commands](#13-commands)).
 
-### 18.1 Import Process
+### 20.1 Import Process
 
 1. The page lists all non-empty macros from both Character (C) and Global (G) macro sets.
 2. For each macro, select a target command group from the dropdown (built-in or custom).
@@ -664,7 +748,7 @@ Controls:
 
 Clicking a macro's tag button (e.g., `C00`) opens the in-game macro editor for that macro.
 
-### 18.2 Wait Time Parsing
+### 20.2 Wait Time Parsing
 
 The importer recognizes two wait time formats:
 
@@ -710,24 +794,31 @@ Command Step Text
 
 | Section | References |
 |---|---|
-| [2.2 Auto Run](#22-auto-toggles) | [15 Regex](#15-regex) (requires regex triggers) |
+| [2.2 Auto Run](#22-auto-toggles) | [17 Regex](#17-regex) (requires regex triggers) |
+| [2.3 Custom Buttons](#23-dealer-section) | [14 Own Buttons](#14-own-buttons) (button bar above dealer row) |
+| [2.4 Bank Tell](#24-player-table) | [13.5 BankTell](#135-built-in-command-groups) (executes BankTell command group) |
 | [2.5 Game Phases](#25-game-phases) | [13.5 Built-in Command Groups](#135-built-in-command-groups) (triggers command groups) |
 | [3.1-3.4 Actions](#3-player-actions) | [13.5 Built-in Command Groups](#135-built-in-command-groups) (triggers the corresponding command group) |
 | [3.3 Double Down](#33-double-down) | [11.1 Gameplay Rules](#111-gameplay-rules) (controlled by Allow DD after Split) |
 | [3.4 Split](#34-split) | [11.1 Gameplay Rules](#111-gameplay-rules) (controlled by Identical Split Only, Max Hands) |
-| [4.2 Bank Input](#42-bank-input-and-trade-detection) | [15.3 Trigger Actions](#153-trigger-actions) (auto-updates via Trade regex actions) |
+| [4.2 Bank Input](#42-bank-input-and-trade-detection) | [17.3 Trigger Actions](#173-trigger-actions) (auto-updates via Trade regex actions) |
 | [5.2 Dropbox](#52-dropbox-integration) | [11.1 Gameplay Rules](#111-gameplay-rules) (Open Dropbox setting) |
 | [12.4 Default Batches](#124-default-batch-list) | [13.2 Message References](#132-message-references) (consumed via `#{...}`) |
+| [13.1 Command Line Groups](#131-command-groups-and-steps) | [13.6 Command Line Groups](#136-command-line-groups) (GroupId column) |
 | [13.2 Message References](#132-message-references) | [12 Messages](#12-messages) (pulls from batch) |
-| [13.3 Context Tokens](#133-context-tokens) | [16 Variables](#16-variables) (also supports `${...}`) |
-| [13.4 Processing Pipeline](#134-processing-pipeline) | [12 Messages](#12-messages) + [16 Variables](#16-variables) (full processing order) |
+| [13.3 Context Tokens](#133-context-tokens) | [18 Variables](#18-variables) (also supports `${...}`) |
+| [13.4 Processing Pipeline](#134-processing-pipeline) | [12 Messages](#12-messages) + [18 Variables](#18-variables) (full processing order) |
+| [13.6 Command Line Groups](#136-command-line-groups) | [13 Commands](#13-commands), [14 Own Buttons](#14-own-buttons) (shared GroupId system) |
 | [14 Own Buttons](#14-own-buttons) | [13 Commands](#13-commands) (same syntax and pipeline) |
-| [15.2 SetVariable](#152-setvariable-mode) | [16 Variables](#16-variables) (creates variables) |
-| [15.3 TakeBatch](#153-trigger-actions) | [12 Messages](#12-messages) (executes batch) |
-| [15.3 Trade actions](#153-trigger-actions) | [4 Betting and Bank](#4-betting-and-bank) (updates banks) |
-| [15.3 Auto actions](#153-trigger-actions) | [3 Player Actions](#3-player-actions) (executes game actions) |
-| [16 Variables](#16-variables) | [13.4 Processing Pipeline](#134-processing-pipeline) (consumed during pipeline) |
-| [18 Macro Import](#18-macro-import) | [13 Commands](#13-commands) (imports into groups) |
+| [15 Webhooks](#15-webhooks) | [2 Main Game Page](#2-main-game-page) (dropdown in header) |
+| [16 Presets](#16-presets) | Settings, Commands, Messages, Regexes, Webhooks (selective restore) |
+| [17.2 SetVariable](#172-setvariable-mode) | [18 Variables](#18-variables) (creates variables) |
+| [17.3 TakeBatch](#173-trigger-actions) | [12 Messages](#12-messages) (executes batch) |
+| [17.3 Trade actions](#173-trigger-actions) | [4 Betting and Bank](#4-betting-and-bank) (updates banks) |
+| [17.3 Auto actions](#173-trigger-actions) | [3 Player Actions](#3-player-actions) (executes game actions) |
+| [18 Variables](#18-variables) | [13.4 Processing Pipeline](#134-processing-pipeline) (consumed during pipeline) |
+| [19 Debug](#19-debug) | [13.1 Commands](#131-command-groups-and-steps) (Unlock Wait Timer extends delay range) |
+| [20 Macro Import](#20-macro-import) | [13 Commands](#13-commands) (imports into groups) |
 
 ### C - Technical Notes
 
@@ -735,6 +826,7 @@ Command Step Text
 - **Persistence**: Game state is saved after every action (players, dealer, phase, deck). On next launch, a "Restore Previous Session" button appears if a saved session exists. The session file is cleared when the Group Detector is deactivated.
 - **Activity Log**: Player joins, leaves, bank changes, bet changes, and round results are logged internally for debugging purposes.
 - **Dependencies**: Requires ECommons. Optional: Dropbox plugin for streamlined payouts.
+- **Defaults Migration**: On plugin updates, a smart merge process compares the previous defaults snapshot with the new code defaults. New entries are added automatically. Existing entries are only updated if the user has not modified them from the previous defaults — user customizations are preserved.
 
 ## Commands
 
