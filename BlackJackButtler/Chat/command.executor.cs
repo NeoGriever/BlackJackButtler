@@ -213,6 +213,24 @@ public static class CommandExecutor
 
                 window.AddDebugLog($"[Executor] Final Text Step {step}: {processedText}");
 
+                var (shouldExecute, skipDelay, resolvedCommand) = EvaluateIfCondition(processedText);
+                if (!shouldExecute)
+                {
+                    window.AddDebugLog($"[Executor] Step {step} skipped (/if condition false)");
+                    if (!skipDelay)
+                    {
+                        float skipEffDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
+                            : Math.Max(MinCommandDelay, effectiveCmd.Delay * cfg.CommandSpeedMultiplier);
+                        if (skipEffDelay > 0)
+                        {
+                            window.AddDebugLog($"[Executor] Waiting delay {skipEffDelay}s despite skip...");
+                            await Task.Delay(TimeSpan.FromSeconds(skipEffDelay));
+                        }
+                    }
+                    continue;
+                }
+                processedText = resolvedCommand;
+
                 bool isDiceCommand = processedText.Trim().StartsWith("/dice", StringComparison.OrdinalIgnoreCase);
 
                 if (isDiceCommand)
@@ -281,6 +299,49 @@ public static class CommandExecutor
         text = VariableManager.ProcessMessage(text);
 
         return text;
+    }
+
+    private static (bool execute, bool skipDelay, string command) EvaluateIfCondition(string text)
+    {
+        if (!text.TrimStart().StartsWith("/if ", StringComparison.OrdinalIgnoreCase))
+            return (true, false, text);
+
+        var parts = text.Substring(text.IndexOf("/if ", StringComparison.OrdinalIgnoreCase) + 4)
+                        .Split('|');
+
+        if (parts.Length < 2)
+            return (true, false, text);
+
+        string conditionPart = parts[0].Trim();
+        string commandPart = parts[1].Trim();
+        bool hasSkip = parts.Length >= 3 && parts[2].Trim().Equals("skip", StringComparison.OrdinalIgnoreCase);
+
+        var condTokens = conditionPart.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (condTokens.Length == 0)
+            return (true, false, commandPart);
+
+        string varValue = condTokens[0];
+
+        if (condTokens.Length == 1)
+        {
+            bool notEmpty = !string.IsNullOrWhiteSpace(varValue);
+            return (notEmpty, hasSkip && !notEmpty, commandPart);
+        }
+
+        string targetStr = condTokens[condTokens.Length - 1];
+
+        string numStr = varValue.Contains('/') ? varValue.Split('/')[^1] : varValue;
+        numStr = RRX.Regex.Replace(numStr, @"[^\d\.\-]", "");
+
+        if (int.TryParse(numStr, out int actual) && int.TryParse(targetStr, out int target))
+        {
+            bool match = actual == target;
+            return (match, hasSkip && !match, commandPart);
+        }
+
+        bool strMatch = varValue.Equals(targetStr, StringComparison.OrdinalIgnoreCase);
+        return (strMatch, hasSkip && !strMatch, commandPart);
     }
 
     private static bool TryHandleDebugDice(string processedText)
@@ -385,6 +446,24 @@ public static class CommandExecutor
                 processedText = VariableManager.ProcessMessage(processedText);
 
                 window.AddDebugLog($"[Executor-Internal] Final Text Step {step}: {processedText}");
+
+                var (shouldExecuteInt, skipDelayInt, resolvedCommandInt) = EvaluateIfCondition(processedText);
+                if (!shouldExecuteInt)
+                {
+                    window.AddDebugLog($"[Executor-Internal] Step {step} skipped (/if condition false)");
+                    if (!skipDelayInt)
+                    {
+                        float skipEffDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
+                            : Math.Max(MinCommandDelay, effectiveCmd.Delay * cfg.CommandSpeedMultiplier);
+                        if (skipEffDelay > 0)
+                        {
+                            window.AddDebugLog($"[Executor-Internal] Waiting delay {skipEffDelay}s despite skip...");
+                            await Task.Delay(TimeSpan.FromSeconds(skipEffDelay));
+                        }
+                    }
+                    continue;
+                }
+                processedText = resolvedCommandInt;
 
                 ChatCommandRouter.Send(processedText, cfg, $"{groupName}:internal:{step}");
 
