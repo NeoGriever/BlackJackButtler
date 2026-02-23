@@ -183,9 +183,8 @@ public static partial class GameEngine
             {
                 NextTurn(players, cfg);
             }
-            else if (!next.HasInitialHandDealt && !cfg.FirstDealThenPlay)
+            else if (!next.HasInitialHandDealt)
             {
-                // Im deal-and-play Modus: Phase zurück auf InitialDeal, Deal-Button erscheint für nächsten Spieler
                 CurrentPhase = GamePhase.InitialDeal;
                 next.CurrentHandIndex = 0;
                 TargetPlayer(next.Name);
@@ -201,20 +200,29 @@ public static partial class GameEngine
             if (benchPlayers.Count > 0)
             {
                 ActivateAllBenchPlayers(players);
+                var newActive = GetActivePlayers(players);
+                var firstFromBench = newActive.FirstOrDefault(p => p.WasOnHoldThisRound);
 
-                var firstFromBench = GetActivePlayers(players).FirstOrDefault(p => p.WasOnHoldThisRound);
                 if (firstFromBench != null)
                 {
                     Plugin.Instance.GetMainWindow().AddDebugLog($"[Bench] Starting with bench player: {firstFromBench.DisplayName}", false);
+                    foreach (var pl in newActive) pl.IsCurrentTurn = false;
                     firstFromBench.IsCurrentTurn = true;
 
-                    if (IsPlayerFinished(firstFromBench))
+                    if (!firstFromBench.HasInitialHandDealt)
+                    {
+                        CurrentPhase = GamePhase.InitialDeal;
+                        firstFromBench.CurrentHandIndex = 0;
+                        TargetPlayer(firstFromBench.Name);
+                        VariableManager.SetPlayerVariables(firstFromBench);
+                    }
+                    else if (IsPlayerFinished(firstFromBench))
                     {
                         NextTurn(players, cfg);
                     }
                     else
                     {
-                        SwitchTurnTo(firstFromBench, GetActivePlayers(players), cfg);
+                        SwitchTurnTo(firstFromBench, newActive, cfg);
                     }
                     return;
                 }
@@ -479,7 +487,7 @@ public static partial class GameEngine
 
     private static List<PlayerState> GetActivePlayers(List<PlayerState> players)
     {
-        return players.Where(p => p.IsActivePlayer && !p.IsOnHold && !p.IsOnBench).ToList();
+        return players.Where(p => p.IsActivePlayer && !p.IsOnHold && !p.IsOnBench && !p.JoinedMidRound).ToList();
     }
 
     private static List<PlayerState> GetBenchPlayers(List<PlayerState> players)
@@ -489,12 +497,13 @@ public static partial class GameEngine
 
     public static bool CanMovePlayerToBench(PlayerState player, List<PlayerState> allPlayers)
     {
-        if (player.WasOnHoldThisRound) return false;
+        if (player.IsOnBench) return false;
 
         var activePlayers = GetActivePlayers(allPlayers);
         var benchPlayers = GetBenchPlayers(allPlayers);
 
-        if (activePlayers.Count == 1 && benchPlayers.Count == 0)
+        int remainingActive = activePlayers.Count(p => p != player);
+        if (remainingActive == 0 && benchPlayers.Count == 0)
             return false;
 
         return true;
@@ -506,7 +515,8 @@ public static partial class GameEngine
 
         player.IsOnBench = true;
         player.WasOnHoldThisRound = true;
-        player.IsCurrentTurn = false;
+        if (player.IsCurrentTurn)
+            player.IsCurrentTurn = false;
 
         Plugin.Instance.GetMainWindow().AddDebugLog($"[Bench] {player.DisplayName} moved to bench.", false);
     }
@@ -531,6 +541,29 @@ public static partial class GameEngine
         {
             MovePlayerFromBench(p);
         }
+    }
+
+    public static void DeactivatePlayerMidRound(PlayerState player, List<PlayerState> allPlayers, Configuration cfg)
+    {
+        bool wasCurrentTurn = player.IsCurrentTurn;
+
+        if (player.HasInitialHandDealt)
+        {
+            foreach (var hand in player.Hands)
+                player.Bank += hand.Bet;
+        }
+
+        player.Hands.Clear();
+        player.Hands.Add(new HandState(player.CurrentBet));
+        player.IsActivePlayer = false;
+        player.IsCurrentTurn = false;
+        player.IsOnBench = false;
+        player.HasInitialHandDealt = false;
+
+        Plugin.Instance.GetMainWindow().AddDebugLog($"[Engine] {player.DisplayName} deactivated mid-round (bet refunded: {player.HasInitialHandDealt}).", false);
+
+        if (wasCurrentTurn && CurrentPhase != GamePhase.Waiting && CurrentPhase != GamePhase.Payout)
+            NextTurn(allPlayers, cfg);
     }
 
     private static void SaveSessionIfNeeded(List<PlayerState> players)
