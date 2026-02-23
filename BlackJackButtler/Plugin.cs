@@ -116,6 +116,8 @@ public sealed class Plugin : IDalamudPlugin
         // ── STANDBY: Alles darunter nur wenn Group Detector aktiv ──
         if (!mainWindow.IsRecognitionActive) return;
 
+        ViewDirectionManager.TickLookEveryTime(Configuration);
+
         // Party-Sync (throttled auf 1x/Sekunde)
         if ((DateTime.Now - _lastSync).TotalMilliseconds > 1000)
         {
