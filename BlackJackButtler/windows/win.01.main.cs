@@ -284,7 +284,7 @@ public partial class BlackJackButtlerWindow
 
                 int comboIndex = _selectedWebhookIndex + 1;
                 ImGui.SetNextItemWidth(comboWidth);
-                if (ImGui.Combo("##webhook_select", ref comboIndex, labels, labels.Length))
+                if (BJBGui.Combo("##webhook_select", ref comboIndex, labels, labels.Length))
                     _selectedWebhookIndex = comboIndex - 1;
 
                 if (locked) ImGui.EndDisabled();
@@ -512,7 +512,7 @@ public partial class BlackJackButtlerWindow
             long bankBefore = p.Bank;
             if (!_config.EnableBankInput) ImGui.BeginDisabled();
             ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - tButtonWidth - ImGui.GetStyle().ItemSpacing.X);
-            if (ImGui.InputLong($"##bank_{p.UIID}", ref p.Bank, 1000, 10000)) _save();
+            if (BJBGui.InputLong($"##bank_{p.UIID}", ref p.Bank, 1000, 10000)) _save();
             if (ImGui.IsItemActivated()) _bankSnapshot[p.UIID] = bankBefore;
             if (ImGui.IsItemDeactivatedAfterEdit())
             {
@@ -580,7 +580,7 @@ public partial class BlackJackButtlerWindow
         }
         long betBefore = p.CurrentBet;
         ImGui.SetNextItemWidth(-1);
-        if (ImGui.InputLong($"##bet_{p.UIID}", ref p.CurrentBet, 500, 5000))
+        if (BJBGui.InputLong($"##bet_{p.UIID}", ref p.CurrentBet, 500, 5000))
         {
             p.HighlightBet = false;
             _save();

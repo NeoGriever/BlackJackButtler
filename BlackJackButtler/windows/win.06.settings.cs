@@ -22,7 +22,7 @@ public partial class BlackJackButtlerWindow
         ImGui.SameLine(300f);
         ImGui.SetNextItemWidth(200f);
         int level = (int)_config.CurrentLevel;
-        if (ImGui.Combo("##user_level", ref level, "Beginner\0Advanced\0Dev\0")) {
+        if (BJBGui.Combo("##user_level", ref level, "Beginner\0Advanced\0Dev\0")) {
             _config.CurrentLevel = (UserLevel)level;
             _save();
         }
@@ -30,7 +30,7 @@ public partial class BlackJackButtlerWindow
         ImGui.TextUnformatted("Command Speed");
         ImGui.SameLine(300f);
         ImGui.SetNextItemWidth(200f);
-        if (ImGui.SliderFloat("##cmd_speed", ref _config.CommandSpeedMultiplier, 0.1f, 4.0f, "%.2fx"))
+        if (BJBGui.SliderFloat("##cmd_speed", ref _config.CommandSpeedMultiplier, 0.1f, 4.0f, "%.2fx"))
         {
             _config.CommandSpeedMultiplier = (float)(Math.Round(_config.CommandSpeedMultiplier / 0.05) * 0.05);
             _config.CommandSpeedMultiplier = Math.Clamp(_config.CommandSpeedMultiplier, 0.1f, 4.0f);
@@ -147,7 +147,7 @@ public partial class BlackJackButtlerWindow
             ImGui.TextUnformatted("Max Hands per Player (Splits)");
             ImGui.SameLine(300f);
             ImGui.SetNextItemWidth(200f);
-            if (ImGui.InputInt("##max_hands", ref _config.MaxHandsPerPlayer, 1))
+            if (BJBGui.InputInt("##max_hands", ref _config.MaxHandsPerPlayer, 1))
             {
                 _config.MaxHandsPerPlayer = Math.Clamp(_config.MaxHandsPerPlayer, 2, 10);
                 _save();
@@ -225,7 +225,7 @@ public partial class BlackJackButtlerWindow
             ImGui.SetKeyboardFocusHere();
             _pendingSettingsFocus = null;
         }
-        if (ImGui.InputLong("##min_bet", ref _config.MinBet, 1, 1000))
+        if (BJBGui.InputLong("##min_bet", ref _config.MinBet, 1, 1000))
         {
             _config.MinBet = Math.Clamp(_config.MinBet, 1, _config.MaxBet);
             _save();
@@ -240,7 +240,7 @@ public partial class BlackJackButtlerWindow
             ImGui.SetKeyboardFocusHere();
             _pendingSettingsFocus = null;
         }
-        if (ImGui.InputLong("##max_bet", ref _config.MaxBet, 1, 10000))
+        if (BJBGui.InputLong("##max_bet", ref _config.MaxBet, 1, 10000))
         {
             _config.MaxBet = Math.Max(_config.MaxBet, _config.MinBet);
             _save();
@@ -359,7 +359,7 @@ public partial class BlackJackButtlerWindow
         ImGui.TextUnformatted(label);
         ImGui.SameLine(300f);
         ImGui.SetNextItemWidth(200f);
-        if (ImGui.InputFloat($"##input_{label}", ref value, 0.25f, 0.5f, "%.2fx"))
+        if (BJBGui.InputFloat($"##input_{label}", ref value, 0.25f, 0.5f, "%.2fx"))
         {
             value = Math.Clamp(value, 0.0f, 5.0f);
             _save();

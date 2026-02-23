@@ -220,6 +220,9 @@ public static class DefaultsMigration
             }
         }
 
+        // --- Fix Gil regex patterns (period -> comma) ---
+        FixGilRegexPatterns(config);
+
         // --- Regex ---
         if (container.TradeRegex != null)
         {
@@ -255,6 +258,26 @@ public static class DefaultsMigration
         }
 
         return changed;
+    }
+
+    private static void FixGilRegexPatterns(Configuration config)
+    {
+        var names = new[] { "Trade: Gil In", "Trade: Gil Out" };
+        foreach (var name in names)
+        {
+            var entry = config.UserRegexes.FirstOrDefault(x => x.Name == name);
+            if (entry == null) continue;
+
+            for (int i = 0; i < entry.Patterns.Count; i++)
+            {
+                // Nur englische Variante fixen: enthält "gil" (lowercase) und falsch [\d.]+
+                if (entry.Patterns[i].Contains(@"[\d.]") && entry.Patterns[i].Contains("gil"))
+                {
+                    entry.Patterns[i] = entry.Patterns[i].Replace(@"[\d.]", @"[\d,]");
+                    Plugin.Log.Information($"[DefaultsMigration] Fixed Gil pattern (period->comma) in: {name}");
+                }
+            }
+        }
     }
 
     private static bool CommandsMatchSnapshot(List<PluginCommand> configCmds, List<SnapshotCommandDto> snapshotCmds)
