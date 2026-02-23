@@ -151,7 +151,7 @@ public partial class BlackJackButtlerWindow
             {
                 int gid = cmd.GroupId;
                 ImGui.SetNextItemWidth(-1);
-                if (ImGui.DragInt("##grp", ref gid, 0.15f, 0, 9, gid == 0 ? "-" : "%d"))
+                if (BJBGui.DragInt("##grp", ref gid, 0.15f, 0, 9, gid == 0 ? "-" : "%d"))
                 {
                     cmd.GroupId = Math.Clamp(gid, 0, 9);
                     _save();
@@ -171,7 +171,7 @@ public partial class BlackJackButtlerWindow
             ImGui.TableNextColumn();
             ImGui.SetNextItemWidth(-1);
             float maxDelay = _config.UnlockWaitTimer ? 30f : 12f;
-            if (ImGui.SliderFloat("##delay", ref cmd.Delay, 0.5f, maxDelay, "%.1fs"))
+            if (BJBGui.SliderFloat("##delay", ref cmd.Delay, 0.5f, maxDelay, "%.1fs"))
             {
                 cmd.Delay = Math.Clamp(cmd.Delay, 0.5f, maxDelay);
                 _save();

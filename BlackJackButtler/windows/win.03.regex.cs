@@ -133,7 +133,7 @@ public partial class BlackJackButtlerWindow
                 int modeInt = (int)e.Mode;
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(250f);
-                if (ImGui.Combo("##opMode", ref modeInt, "Regex-To-Variable\0Regex-Trigger\0"))
+                if (BJBGui.Combo("##opMode", ref modeInt, "Regex-To-Variable\0Regex-Trigger\0"))
                 {
                     e.Mode = (RegexEntryMode)modeInt;
                     _save();
@@ -182,7 +182,7 @@ public partial class BlackJackButtlerWindow
                 {
                     ImGui.TextColored(new Vector4(0.4f, 1f, 0.4f, 1f), "Action Settings");
                     var action = (int)e.Action;
-                    if (ImGui.Combo(
+                    if (BJBGui.Combo(
                         "Trigger Action",
                         ref action,
                         "None\0" +

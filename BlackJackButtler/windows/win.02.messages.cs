@@ -103,7 +103,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(120);
                 int mode = (int)batch.Mode;
-                if (ImGui.Combo($"##mode_{batch.Name}", ref mode, "Random\0First\0Iterative\0")) { batch.Mode = (SelectionMode)mode; _save(); }
+                if (BJBGui.Combo($"##mode_{batch.Name}", ref mode, "Random\0First\0Iterative\0")) { batch.Mode = (SelectionMode)mode; _save(); }
 
                 if (!isStd)
                 {

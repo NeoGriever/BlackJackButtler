@@ -179,7 +179,7 @@ public partial class BlackJackButtlerWindow
 
                 var sel = _macroImportSelections[id];
                 ImGui.SetNextItemWidth(300f);
-                if (ImGui.Combo($"##{id}", ref sel, groupArray, groupArray.Length))
+                if (BJBGui.Combo($"##{id}", ref sel, groupArray, groupArray.Length))
                 {
                     _macroImportSelections[id] = sel;
                     _macroPreviewCache.Remove(id);
