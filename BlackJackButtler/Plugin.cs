@@ -20,6 +20,7 @@ using ECommons;
 using System.Numerics;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
@@ -74,7 +75,7 @@ public sealed class Plugin : IDalamudPlugin
 
         StatsManager.Init(Configuration, () => Configuration.Save());
         ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
-        VenueManager.Init(PluginInterface.GetPluginConfigDirectory());
+        VenueManager.Init(Path.GetDirectoryName(PluginInterface.GetPluginConfigDirectory())!);
 
         notepadWindow = new NotepadWindow(Configuration, () => Configuration.Save(), () => mainWindow?.GetWindowRect() ?? (Vector2.Zero, Vector2.Zero));
         windowSystem.AddWindow(notepadWindow);
