@@ -273,6 +273,62 @@ public partial class BlackJackButtlerWindow
             _save();
         }
 
+        ImGui.Spacing();
+        ImGui.TextUnformatted("VIP Bet Tiers");
+
+        for (int i = 0; i < _config.VipBetTiers.Count; i++)
+        {
+            var tier = _config.VipBetTiers[i];
+            ImGui.PushID($"vip_tier_{i}");
+
+            ImGui.SetNextItemWidth(150f);
+            if (ImGui.InputText("##tier_name", ref tier.Name, 32)) _save();
+
+            ImGui.SameLine();
+            ImGui.TextUnformatted("Max:");
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(150f);
+            if (BJBGui.InputLong("##tier_max", ref tier.MaxBet, 10000, 100000))
+            {
+                tier.MaxBet = Math.Max(tier.MaxBet, 1);
+                _save();
+            }
+
+            ImGui.SameLine();
+            var io = ImGui.GetIO();
+            bool ctrlDown = io.KeyCtrl;
+            if (!ctrlDown) ImGui.BeginDisabled();
+            if (BJBGui.SmallButton("X##del_tier"))
+            {
+                int tierIndex = i + 1;
+                VenueManager.RemoveTierFromAllVenues(tierIndex);
+                _config.VipBetTiers.RemoveAt(i);
+                _save();
+                ImGui.PopID();
+                break;
+            }
+            if (!ctrlDown)
+            {
+                ImGui.EndDisabled();
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    ImGui.SetTooltip("Hold CTRL to delete this tier.\nPlayers with this tier will be reset.");
+            }
+
+            ImGui.PopID();
+        }
+
+        if (BJBGui.SmallButton("+##add_vip_tier"))
+        {
+            int n = _config.VipBetTiers.Count + 1;
+            _config.VipBetTiers.Add(new VipBetTier
+            {
+                Name = $"VIP {n}",
+                MaxBet = _config.MaxBet * 2
+            });
+            _save();
+        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Add a new VIP tier");
+
         if(level >= (int)UserLevel.Advanced)
         {
             ImGui.Separator();

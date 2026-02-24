@@ -179,6 +179,32 @@ public class PlayerState
         };
     }
 
+    public long GetEffectiveMaxBet(Configuration cfg)
+    {
+        var venue = VenueManager.GetCurrentVenue();
+        if (venue != null)
+        {
+            string worldName = VenueManager.ResolveWorldName(WorldId);
+            int tier = VenueManager.GetPlayerTier(venue, Name, worldName);
+            if (tier > 0 && tier <= cfg.VipBetTiers.Count)
+                return cfg.VipBetTiers[tier - 1].MaxBet;
+        }
+        return cfg.MaxBet;
+    }
+
+    public string GetVipTierName(Configuration cfg)
+    {
+        var venue = VenueManager.GetCurrentVenue();
+        if (venue != null)
+        {
+            string worldName = VenueManager.ResolveWorldName(WorldId);
+            int tier = VenueManager.GetPlayerTier(venue, Name, worldName);
+            if (tier > 0 && tier <= cfg.VipBetTiers.Count)
+                return cfg.VipBetTiers[tier - 1].Name;
+        }
+        return string.Empty;
+    }
+
     public string GetShortName(List<PlayerState> allActivePlayers)
     {
         if (!string.IsNullOrWhiteSpace(Alias) && !Alias.Equals(Name, System.StringComparison.OrdinalIgnoreCase))

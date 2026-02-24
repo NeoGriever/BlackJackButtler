@@ -42,6 +42,8 @@ public sealed class Configuration : IPluginConfiguration
     public long MinBet = 50000;
     public long MaxBet = 500000;
 
+    public List<VipBetTier> VipBetTiers = new();
+
     public bool DefaultBatchesSeeded = false;
     public bool DefaultRegexSeeded = false;
     public bool DefaultCommandsSeeded = false;
@@ -164,4 +166,11 @@ public sealed class PresetEntry
 
     // Vollständiger Config-Snapshot als JSON-String
     public string SnapshotJson = "{}";
+}
+
+[Serializable]
+public sealed class VipBetTier
+{
+    public string Name = "VIP";
+    public long MaxBet = 1000000;
 }
