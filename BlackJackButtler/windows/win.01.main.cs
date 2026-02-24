@@ -67,9 +67,14 @@ public partial class BlackJackButtlerWindow
             float spacing = ImGui.GetStyle().ItemSpacing.X;
             float rightEdge = ImGui.GetContentRegionAvail().X + ImGui.GetCursorPosX();
 
+            var io = ImGui.GetIO();
+            bool showPanic = io.KeyCtrl && io.KeyShift;
+            float panicWidth = showPanic ? 60f : 0f;
+            float panicOffset = showPanic ? panicWidth + spacing : 0f;
+
             if (!_notepadWindow.IsOpen)
             {
-                ImGui.SameLine(rightEdge - checkboxSize - spacing - checkboxSize);
+                ImGui.SameLine(rightEdge - checkboxSize - spacing - checkboxSize - panicOffset);
                 ImGui.PushFont(UiBuilder.IconFont);
                 if (BJBGui.Button(FontAwesomeIcon.StickyNote.ToIconString() + "##notepad_btn", new Vector2(checkboxSize, checkboxSize)))
                 {
@@ -80,9 +85,29 @@ public partial class BlackJackButtlerWindow
                 if (ImGui.IsItemHovered()) ImGui.SetTooltip("Open Notepad");
             }
 
-            ImGui.SameLine(rightEdge - checkboxSize);
+            ImGui.SameLine(rightEdge - checkboxSize - panicOffset);
             if (ImGui.Checkbox("##enable_bank_input", ref _config.EnableBankInput)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Enable Bank input");
+
+            if (showPanic)
+            {
+                ImGui.SameLine(rightEdge - panicWidth);
+
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.5f, 0.0f, 0.0f, 1.0f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.65f, 0.0f, 0.0f, 1.0f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.4f, 0.0f, 0.0f, 1.0f));
+                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(1f, 1f, 0f, 1f));
+                ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 2.0f);
+
+                if (ImGui.Button("PANIC##panic_btn", new Vector2(panicWidth, checkboxSize)))
+                {
+                    _panicConfirmStage = 1;
+                }
+
+                ImGui.PopStyleVar();
+                ImGui.PopStyleColor(5);
+            }
         }
         if (ImGui.BeginTable("bjb_main_table", 10, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable | ImGuiTableFlags.ScrollY))
         {
@@ -122,6 +147,59 @@ public partial class BlackJackButtlerWindow
             _triggerVenuePopup = false;
         }
         DrawVenueNameModal();
+
+        if (_panicConfirmStage == 1)
+            ImGui.OpenPopup("panic_confirm_1");
+
+        bool panicOpen1 = true;
+        if (ImGui.BeginPopupModal("panic_confirm_1", ref panicOpen1,
+            ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoSavedSettings))
+        {
+            ImGui.TextUnformatted("Are you sure?");
+            ImGui.TextUnformatted("This will stop this round and jump back to the round start.");
+            ImGui.Spacing();
+            if (ImGui.Button("Yes##panic1_yes"))
+            {
+                _panicConfirmStage = 2;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("No##panic1_no"))
+            {
+                _panicConfirmStage = 0;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.EndPopup();
+        }
+        else if (_panicConfirmStage == 1)
+            _panicConfirmStage = 0;
+
+        if (_panicConfirmStage == 2)
+            ImGui.OpenPopup("panic_confirm_2");
+
+        bool panicOpen2 = true;
+        if (ImGui.BeginPopupModal("panic_confirm_2", ref panicOpen2,
+            ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoSavedSettings))
+        {
+            ImGui.TextColored(new Vector4(1, 0.3f, 0.3f, 1), "Are you REALLY sure?");
+            ImGui.TextUnformatted("This is only a rescue option if the round is stuck.");
+            ImGui.Spacing();
+            if (ImGui.Button("Yes, PANIC##panic2_yes"))
+            {
+                ExecutePanic();
+                _panicConfirmStage = 0;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.SameLine();
+            if (ImGui.Button("No##panic2_no"))
+            {
+                _panicConfirmStage = 0;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.EndPopup();
+        }
+        else if (_panicConfirmStage == 2)
+            _panicConfirmStage = 0;
     }
 
     private void DrawDealerRow()
@@ -1178,6 +1256,44 @@ public partial class BlackJackButtlerWindow
         if (_selectedWebhookIndex < 0 || _selectedWebhookIndex >= enabled.Count)
             return null;
         return enabled[_selectedWebhookIndex];
+    }
+
+    private void ExecutePanic()
+    {
+        if (CommandExecutor.IsRunning)
+            CommandExecutor.CancelCurrentGroup();
+
+        foreach (var p in _players)
+        {
+            p.Hands.Clear();
+            p.Hands.Add(new HandState(p.CurrentBet));
+            p.CurrentHandIndex = 0;
+            p.IsCurrentTurn = false;
+            p.HasInitialHandDealt = false;
+            p.IsDone = false;
+            p.LastRoundResult = 0;
+            p.JoinedMidRound = false;
+            p.IsOnHold = false;
+            p.WasOnHoldThisRound = false;
+            p.IsOnBench = false;
+            p.ResetHighlightsAll();
+        }
+
+        if (_dealer != null)
+        {
+            _dealer.Hands.Clear();
+            _dealer.Hands.Add(new HandState(0));
+            _dealer.CurrentHandIndex = 0;
+            _dealer.IsCurrentTurn = false;
+            _dealer.HasInitialHandDealt = false;
+            _dealer.IsDone = false;
+            _dealer.ResetHighlightsAll();
+        }
+
+        DeckManager.Reshuffle();
+        GameEngine.CurrentPhase = GamePhase.Waiting;
+
+        AddDebugLog("[PANIC] Round force-aborted. Phase reset to Waiting.", false);
     }
 
     private void SendPaymentTell(PlayerState p, long amount, string action)

@@ -62,6 +62,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     private bool _showRestoreSessionButton = false;
     private bool _showVarRefPanel = false;
+    private int _panicConfirmStage = 0;
     private bool _highlightNewRound = false;
     private int _selectedWebhookIndex = -1;
 
@@ -149,21 +150,38 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
         if (_showRestoreSessionButton)
         {
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f)); // Orange
+            float availWidth = ImGui.GetContentRegionAvail().X;
+            float xBtnWidth = 40f;
+            float spacing = ImGui.GetStyle().ItemSpacing.X;
+
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1.0f, 0.6f, 0.1f, 1.0f));
-
-            if (ImGui.Button("⚠ RESTORE PREVIOUS SESSION ⚠", new Vector2(-1, 40)))
-            {
+            if (ImGui.Button("⚠ RESTORE PREVIOUS SESSION ⚠", new Vector2(availWidth - xBtnWidth - spacing, 40)))
                 RestoreSessionFromFile();
-            }
-
             ImGui.PopStyleColor(2);
 
             ImGui.SameLine();
-            if (ImGui.SmallButton("X##dismiss_restore"))
+
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.4f, 0.4f, 0.4f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.5f, 0.5f, 0.5f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.3f, 0.3f, 0.3f, 1.0f));
+            if (ImGui.Button("X##dismiss_restore", new Vector2(xBtnWidth, 40)))
+                ImGui.OpenPopup("dismiss_session_popup");
+            ImGui.PopStyleColor(3);
+
+            if (ImGui.BeginPopup("dismiss_session_popup"))
             {
-                _showRestoreSessionButton = false;
-                SessionManager.ClearSession();
+                ImGui.TextUnformatted("Dismiss session backup? (irreversible)");
+                if (ImGui.Button("Yes##dismiss_yes"))
+                {
+                    _showRestoreSessionButton = false;
+                    SessionManager.ClearSession();
+                    ImGui.CloseCurrentPopup();
+                }
+                ImGui.SameLine();
+                if (ImGui.Button("No##dismiss_no"))
+                    ImGui.CloseCurrentPopup();
+                ImGui.EndPopup();
             }
 
             ImGui.Separator();
