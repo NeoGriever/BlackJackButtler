@@ -43,7 +43,7 @@ public static class VenueManager
 
     public static void Init(string configDir)
     {
-        _filePath = Path.Combine(configDir, "venues.json");
+        _filePath = Path.Combine(configDir, "BJB.venues.json");
         Load();
     }
 
@@ -185,21 +185,6 @@ public static class VenueManager
         }
 
         return string.Empty;
-    }
-
-    public static void RemoveTierFromAllVenues(int tierIndex)
-    {
-        foreach (var venue in _venues)
-        {
-            for (int i = venue.Vips.Count - 1; i >= 0; i--)
-            {
-                if (venue.Vips[i].Tier == tierIndex)
-                    venue.Vips.RemoveAt(i);
-                else if (venue.Vips[i].Tier > tierIndex)
-                    venue.Vips[i].Tier--;
-            }
-        }
-        Save();
     }
 
     private static string GetHousingAreaName(ushort territoryId)

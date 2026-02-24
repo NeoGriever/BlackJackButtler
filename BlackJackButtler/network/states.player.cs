@@ -186,8 +186,11 @@ public class PlayerState
         {
             string worldName = VenueManager.ResolveWorldName(WorldId);
             int tier = VenueManager.GetPlayerTier(venue, Name, worldName);
-            if (tier > 0 && tier <= cfg.VipBetTiers.Count)
-                return cfg.VipBetTiers[tier - 1].MaxBet;
+            if (tier > 0 && cfg.VipBetTiers.Count > 0)
+            {
+                int effectiveIndex = System.Math.Min(tier, cfg.VipBetTiers.Count) - 1;
+                return cfg.VipBetTiers[effectiveIndex].MaxBet;
+            }
         }
         return cfg.MaxBet;
     }
@@ -199,8 +202,11 @@ public class PlayerState
         {
             string worldName = VenueManager.ResolveWorldName(WorldId);
             int tier = VenueManager.GetPlayerTier(venue, Name, worldName);
-            if (tier > 0 && tier <= cfg.VipBetTiers.Count)
-                return cfg.VipBetTiers[tier - 1].Name;
+            if (tier > 0 && cfg.VipBetTiers.Count > 0)
+            {
+                int effectiveIndex = System.Math.Min(tier, cfg.VipBetTiers.Count) - 1;
+                return cfg.VipBetTiers[effectiveIndex].Name;
+            }
         }
         return string.Empty;
     }

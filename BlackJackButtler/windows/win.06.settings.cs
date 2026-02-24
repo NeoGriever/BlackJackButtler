@@ -300,8 +300,6 @@ public partial class BlackJackButtlerWindow
             if (!ctrlDown) ImGui.BeginDisabled();
             if (BJBGui.SmallButton("X##del_tier"))
             {
-                int tierIndex = i + 1;
-                VenueManager.RemoveTierFromAllVenues(tierIndex);
                 _config.VipBetTiers.RemoveAt(i);
                 _save();
                 ImGui.PopID();
@@ -311,7 +309,7 @@ public partial class BlackJackButtlerWindow
             {
                 ImGui.EndDisabled();
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                    ImGui.SetTooltip("Hold CTRL to delete this tier.\nPlayers with this tier will be reset.");
+                    ImGui.SetTooltip("Hold CTRL to delete this tier.\nExisting VIP assignments remain unchanged.");
             }
 
             ImGui.PopID();
