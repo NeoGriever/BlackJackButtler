@@ -10,6 +10,13 @@ public static class DiceResultHandler
     public static void HandleDiceResult(int cardValue, Configuration cfg, List<PlayerState> players, PlayerState dealer)
     {
         var window = Plugin.Instance.GetMainWindow();
+
+        if (!CommandExecutor.IsRunning || CommandExecutor.IsCancelling)
+        {
+            window.AddDebugLog("[DiceHandler] Ignored - executor not running or cancelled");
+            return;
+        }
+
         window.AddDebugLog($"[DiceHandler] Processing card value: {cardValue}");
 
         GameEngine.ApplyCardToCurrentTarget(cardValue, players, dealer);

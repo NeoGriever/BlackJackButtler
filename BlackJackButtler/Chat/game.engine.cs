@@ -159,6 +159,7 @@ public static partial class GameEngine
     private static async Task ExecutePlayerAction(PlayerState p, string actionName, Configuration cfg, List<PlayerState> players, Func<Task> logic)
     {
         Chat.GameLog.PushSnapshot(players, _ctxDealer!, CurrentPhase, $"{actionName}:{p.Name}");
+        CommandExecutor.SetPreActionSnapshot(Chat.GameLog.CurrentIndex);
 
         long cost = 0;
         if (actionName == "Initial") cost = p.CurrentBet;

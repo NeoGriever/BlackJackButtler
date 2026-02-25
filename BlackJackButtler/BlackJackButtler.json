@@ -4,12 +4,12 @@
     "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
     "Description": "/bjb - opens the blackjack buttler tool",
     "InternalName": "BlackJackButtler",
-    "AssemblyVersion": "1.5.4.0",
+    "AssemblyVersion": "1.5.4.1",
     "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 14,
     "TestingDalamudApiLevel": 14,
     "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/BlackJackButtler/images/icon.png",
     "Tags": ["BlackJack", "Helper", "Chat"],
-    "Changelog": "v1.5.4.0:\n- Fix: Split-hand blackjack no longer skips the next player's turn\n- Fix: Dealer dice rolls are now only recognized while a command group is executing\n- Fix: BankTell automation rebuilt with debug logging and active-player filter — now properly fires for active players only\n- New: Hand editor overlay — double-click a player's cards column to manually edit their hand (4x4 card grid with suit selection, live point preview)\n- Added \"Club: Calisto\" to the testers page"
+    "Changelog": "v1.5.4.1:\n- New: Emergency Stop (X) button — abort a running player action mid-execution, restore game state to before the action, and disable Auto Run\n- Enhancement: CommandExecutor delays are now cancellable via CancellationToken for instant abort response\n- Fix: Race condition guard in DiceResultHandler prevents card application after cancel"
 }

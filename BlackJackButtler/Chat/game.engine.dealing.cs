@@ -150,8 +150,10 @@ public static partial class GameEngine
                 else if (current.Hands[current.CurrentHandIndex].Cards.Count < 2)
                 {
                     var p = current;
+                    Chat.GameLog.PushSnapshot(players, _ctxDealer!, CurrentPhase, $"SplitDraw:{p.Name}");
                     Task.Run(async () =>
                     {
+                        CommandExecutor.SetPreActionSnapshot(Chat.GameLog.CurrentIndex);
                         TargetPlayer(p.Name);
                         SetForcedRecipient(p.Name);
                         try { await CommandExecutor.ExecuteGroup("SplitDraw", p.Name, cfg); }
@@ -349,6 +351,7 @@ public static partial class GameEngine
         if (p.Hands.Count >= cfg.MaxHandsPerPlayer) return;
 
         Chat.GameLog.PushSnapshot(players, _ctxDealer!, CurrentPhase, $"Split:{p.Name}");
+        CommandExecutor.SetPreActionSnapshot(Chat.GameLog.CurrentIndex);
 
         if (p.Bank < p.CurrentBet)
         {
