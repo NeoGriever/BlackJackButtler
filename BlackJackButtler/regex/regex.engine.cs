@@ -74,6 +74,8 @@ public static class RegexEngine
                 var window = Plugin.Instance.GetMainWindow();
                 if (!window.IsRecognitionActive && !Plugin.IsDebugMode)
                     break;
+                if (!CommandExecutor.IsRunning)
+                    break;
                 if (match.Success && match.Groups.Count >= 2)
                 {
                     if (int.TryParse(match.Groups[1].Value, out var rolled))
@@ -287,24 +289,43 @@ public static class RegexEngine
 
             case RegexAction.BankTell:
             {
+                var btWindow = Plugin.Instance.GetMainWindow();
                 var phase = GameEngine.CurrentPhase;
+
                 if (phase != GamePhase.Waiting && phase != GamePhase.Payout)
+                {
+                    btWindow.AddDebugLog($"[RegexEngine] BankTell blocked: wrong phase {phase}");
                     break;
+                }
+
                 if (p == null)
+                {
+                    btWindow.AddDebugLog($"[RegexEngine] BankTell blocked: player not found for '{msg.Name}'");
                     break;
+                }
+
+                if (!p.IsActivePlayer || p.IsOnHold || p.IsOnBench || p.JoinedMidRound)
+                {
+                    btWindow.AddDebugLog($"[RegexEngine] BankTell blocked: {p.DisplayName} not active");
+                    break;
+                }
+
                 if (!cfg.AutoRun)
                 {
                     p.HighlightTell = true;
+                    btWindow.AddDebugLog($"[RegexEngine] BankTell highlight set for {p.DisplayName} (AutoRun off)");
                     break;
                 }
+
+                btWindow.AddDebugLog($"[RegexEngine] BankTell executing for {p.DisplayName}");
+                p.HighlightTell = false;
                 var capturedPlayer = p;
                 Task.Run(async () =>
                 {
-                    var previousTarget = GameEngine.GetCurrentTargetName();
                     GameEngine.TargetPlayer(capturedPlayer.Name);
                     VariableManager.SetPlayerVariables(capturedPlayer);
                     await CommandExecutor.ExecuteGroup("BankTell", capturedPlayer.DisplayName, cfg);
-                    GameEngine.TargetPlayer(previousTarget);
+                    GameEngine.TargetPlayer(btWindow.GetDealer().Name);
                 });
                 break;
             }

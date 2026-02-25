@@ -918,6 +918,9 @@ public partial class BlackJackButtlerWindow
     private void DrawMultiHandCards(PlayerState p)
     {
         if (p.Hands.Count == 0) { ImGui.Text("-"); return; }
+
+        var startPos = ImGui.GetCursorPos();
+
         for (int i = 0; i < p.Hands.Count; i++)
         {
             var cards = p.Hands[i].Cards;
@@ -937,6 +940,18 @@ public partial class BlackJackButtlerWindow
                 ImGui.SameLine(0, 4);
             }
             ImGui.Text(" ");
+        }
+
+        bool isDealer = _dealer != null && ReferenceEquals(p, _dealer);
+        if (!isDealer && !p.IsCurrentTurn && !CommandExecutor.IsRunning)
+        {
+            var endPos = ImGui.GetCursorPos();
+            ImGui.SetCursorPos(startPos);
+            var regionSize = new Vector2(ImGui.GetColumnWidth(), endPos.Y - startPos.Y);
+            ImGui.InvisibleButton($"##cardsclick_{p.UIID}", regionSize);
+            if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+                OpenHandEditPopup(p, p.CurrentHandIndex);
+            ImGui.SetCursorPos(endPos);
         }
     }
 

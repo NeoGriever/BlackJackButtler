@@ -16,7 +16,8 @@ public partial class BlackJackButtlerWindow
         "Amystra",
         "Latency",
         "Saph",
-        "Lydia"
+        "Lydia",
+        "Club: Calisto"
     };
 
     private List<string> _thanksToNamesSupport = new()
