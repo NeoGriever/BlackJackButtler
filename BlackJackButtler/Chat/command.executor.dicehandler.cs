@@ -83,17 +83,22 @@ public static class DiceResultHandler
                     {
                         window.AddDebugLog("[DiceHandler] Initial deal complete, moving to next turn");
                         CommandExecutor.NotifyDiceResult();
+                        CommandExecutor.SignalFollowUpPending();
                         Task.Run(async () =>
                         {
-                            if (CommandExecutor.IsRunning)
+                            try
                             {
-                                var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                                Action handler = () => tcs.TrySetResult(true);
-                                CommandExecutor.OnGroupCompleted += handler;
-                                try   { await tcs.Task; }
-                                finally { CommandExecutor.OnGroupCompleted -= handler; }
+                                if (CommandExecutor.IsRunning)
+                                {
+                                    var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                                    Action handler = () => tcs.TrySetResult(true);
+                                    CommandExecutor.OnGroupCompleted += handler;
+                                    try   { await tcs.Task; }
+                                    finally { CommandExecutor.OnGroupCompleted -= handler; }
+                                }
+                                GameEngine.NextTurn(players, cfg);
                             }
-                            GameEngine.NextTurn(players, cfg);
+                            finally { CommandExecutor.ClearFollowUpPending(); }
                         });
                         return;
                     }
@@ -130,30 +135,35 @@ public static class DiceResultHandler
         {
             window.AddDebugLog($"[DiceHandler] Completing current group before starting: {newGroup}");
             CommandExecutor.NotifyDiceResult();
+            CommandExecutor.SignalFollowUpPending();
 
             Task.Run(async () =>
             {
-                if (CommandExecutor.IsRunning)
+                try
                 {
-                    var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    Action handler = () => tcs.TrySetResult(true);
-                    CommandExecutor.OnGroupCompleted += handler;
-                    try   { await tcs.Task; }
-                    finally { CommandExecutor.OnGroupCompleted -= handler; }
-                }
+                    if (CommandExecutor.IsRunning)
+                    {
+                        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+                        Action handler = () => tcs.TrySetResult(true);
+                        CommandExecutor.OnGroupCompleted += handler;
+                        try   { await tcs.Task; }
+                        finally { CommandExecutor.OnGroupCompleted -= handler; }
+                    }
 
-                await CommandExecutor.ExecuteInternalGroup(newGroup, target.Name, cfg);
+                    await CommandExecutor.ExecuteInternalGroup(newGroup, target.Name, cfg);
 
-                if (!isDealer && (newGroup == "PlayerBust" || newGroup == "PlayerBJ" ||
-                    newGroup == "PlayerDirtyBJ" || newGroup == "PlayerDDForcedStand"))
-                {
-                    GameEngine.NextTurn(players, cfg);
+                    if (!isDealer && (newGroup == "PlayerBust" || newGroup == "PlayerBJ" ||
+                        newGroup == "PlayerDirtyBJ" || newGroup == "PlayerDDForcedStand"))
+                    {
+                        GameEngine.NextTurn(players, cfg);
+                    }
+                    else if (isDealer && (newGroup == "DealerBJ" || newGroup == "DealerBust"))
+                    {
+                        GameEngine.CurrentPhase = GamePhase.Payout;
+                        await GameEngine.EvaluateFinalResults(players, dealer, cfg);
+                    }
                 }
-                else if (isDealer && (newGroup == "DealerBJ" || newGroup == "DealerBust"))
-                {
-                    GameEngine.CurrentPhase = GamePhase.Payout;
-                    await GameEngine.EvaluateFinalResults(players, dealer, cfg);
-                }
+                finally { CommandExecutor.ClearFollowUpPending(); }
             });
         }
         else
