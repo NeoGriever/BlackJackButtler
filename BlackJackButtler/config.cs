@@ -43,6 +43,7 @@ public sealed class Configuration : IPluginConfiguration
     public long MaxBet = 500000;
 
     public List<VipBetTier> VipBetTiers = new();
+    public bool ShortBetFormat = true;
 
     public bool DefaultBatchesSeeded = false;
     public bool DefaultRegexSeeded = false;

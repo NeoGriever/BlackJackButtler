@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 
 namespace BlackJackButtler;
 
@@ -45,4 +46,9 @@ public class CommandGroup
     public string Name = string.Empty;
     public List<PluginCommand> Commands = new();
     public Dictionary<int, CommandLineGroup> LineGroups = new();
+
+    public bool UseCustomButtonColor = false;
+    public bool UseCustomTextColor = false;
+    public Vector4 CustomButtonColor = new(0.26f, 0.26f, 0.26f, 1.0f);
+    public Vector4 CustomTextColor = new(1.0f, 1.0f, 1.0f, 1.0f);
 }

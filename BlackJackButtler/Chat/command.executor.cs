@@ -55,6 +55,26 @@ public static class CommandExecutor
         _delayCts?.Cancel();
     }
 
+    private static string FormatGilAmount(long amount, bool shortFormat)
+    {
+        if (!shortFormat)
+            return amount.ToString("N0", CultureInfo.GetCultureInfo("en-US")) + " Gil";
+
+        if (amount >= 1_000_000)
+        {
+            double millions = amount / 1_000_000.0;
+            return (millions == Math.Floor(millions))
+                ? $"{(long)millions}m" : $"{millions:0.#}m";
+        }
+        if (amount >= 1_000)
+        {
+            double thousands = amount / 1_000.0;
+            return (thousands == Math.Floor(thousands))
+                ? $"{(long)thousands}k" : $"{thousands:0.#}k";
+        }
+        return amount.ToString();
+    }
+
     private static string ProcessContextTokens(string text, PlayerState? pState, string targetName, Configuration cfg)
     {
         if (string.IsNullOrEmpty(text)) return text;
@@ -103,6 +123,20 @@ public static class CommandExecutor
 
         text = text.Replace("<minbet>", cfg.MinBet.ToString("N0", CultureInfo.GetCultureInfo("en-US")) + " Gil");
         text = text.Replace("<maxbet>", cfg.MaxBet.ToString("N0", CultureInfo.GetCultureInfo("en-US")) + " Gil");
+
+        if (text.Contains("<betrange>"))
+        {
+            string min = FormatGilAmount(cfg.MinBet, cfg.ShortBetFormat);
+            string max = FormatGilAmount(cfg.MaxBet, cfg.ShortBetFormat);
+            string range = $"Min: {min} - Max: {max}";
+            if (cfg.VipBetTiers.Count > 0)
+            {
+                var tierParts = cfg.VipBetTiers
+                    .Select(t => $"{t.Name}: {FormatGilAmount(t.MaxBet, cfg.ShortBetFormat)}");
+                range += $" ({string.Join(", ", tierParts)})";
+            }
+            text = text.Replace("<betrange>", range);
+        }
 
         return text;
     }

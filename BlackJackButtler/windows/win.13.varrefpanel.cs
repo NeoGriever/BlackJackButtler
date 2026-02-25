@@ -28,6 +28,7 @@ public partial class BlackJackButtlerWindow
         CopyRow("<cards>", "Current hand cards");
         CopyRow("<minbet>", $"Min bet ({_config.MinBet.ToString("N0", culture)} Gil)");
         CopyRow("<maxbet>", $"Max bet ({_config.MaxBet.ToString("N0", culture)} Gil)");
+        CopyRow("<betrange>", "Bet range with VIP tiers");
         CopyRow("<winners>", "Winner names (after payout)");
         CopyRow("<pushed>", "Push names (after payout)");
         CopyRow("<loosers>", "Loser names (after payout)");
