@@ -4,12 +4,12 @@
     "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
     "Description": "/bjb - opens the blackjack buttler tool",
     "InternalName": "BlackJackButtler",
-    "AssemblyVersion": "1.5.4.1",
+    "AssemblyVersion": "1.5.4.2",
     "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 14,
     "TestingDalamudApiLevel": 14,
     "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/BlackJackButtler/images/icon.png",
     "Tags": ["BlackJack", "Helper", "Chat"],
-    "Changelog": "v1.5.4.1:\n- New: Emergency Stop (X) button — abort a running player action mid-execution, restore game state to before the action, and disable Auto Run\n- Enhancement: CommandExecutor delays are now cancellable via CancellationToken for instant abort response\n- Fix: Race condition guard in DiceResultHandler prevents card application after cancel"
+    "Changelog": "v1.5.4.2:\n- Fix: VIP tier toggle now updates immediately (cache invalidation after SetPlayerTier)\n- Fix: VIP data persists when indoors, in apartments, or in debug mode (fallback to last selected venue)\n- New: <betrange> context token — shows min/max bet with optional VIP tiers\n- New: Short Bet Format toggle (50k, 1m vs 50,000 Gil, 1,000,000 Gil)\n- New: Own Buttons can be renamed inline\n- New: Own Buttons support individual button and text colors"
 }

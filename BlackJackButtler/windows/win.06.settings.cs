@@ -327,6 +327,11 @@ public partial class BlackJackButtlerWindow
         }
         if (ImGui.IsItemHovered()) ImGui.SetTooltip("Add a new VIP tier");
 
+        ImGui.Spacing();
+        if (ImGui.Checkbox("Short Bet Format", ref _config.ShortBetFormat)) _save();
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("On: 50k, 1m, 5m\nOff: 50,000 Gil, 1,000,000 Gil");
+
         if(level >= (int)UserLevel.Advanced)
         {
             ImGui.Separator();
@@ -461,6 +466,7 @@ public partial class BlackJackButtlerWindow
         _config.MaxHandsPerPlayer = _tempImportConfig.MaxHandsPerPlayer;
         _config.MinBet = _tempImportConfig.MinBet;
         _config.MaxBet = _tempImportConfig.MaxBet;
+        _config.ShortBetFormat = _tempImportConfig.ShortBetFormat;
 
         _save();
     }

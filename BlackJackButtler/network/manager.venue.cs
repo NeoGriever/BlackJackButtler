@@ -39,7 +39,10 @@ public static class VenueManager
     private static List<VenueData> _venues = new();
 
     private static VenueData? _cachedVenue;
+    private static VenueData? _selectedVenue;
     private static long _cacheFrame = -1;
+
+    public static void InvalidateCache() { _cacheFrame = -1; }
 
     public static void Init(string configDir)
     {
@@ -117,7 +120,9 @@ public static class VenueManager
             Address = addr
         };
         _venues.Add(venue);
+        _selectedVenue = venue;
         Save();
+        InvalidateCache();
         return venue;
     }
 
@@ -148,6 +153,7 @@ public static class VenueManager
                 venue.Vips.Add(new VipPlayerEntry { Name = name, World = world, Tier = tier });
         }
         Save();
+        InvalidateCache();
     }
 
     public static VenueData? GetCurrentVenue()
@@ -159,6 +165,12 @@ public static class VenueManager
         _cacheFrame = frame;
         var addr = GetCurrentAddress();
         _cachedVenue = addr != null ? FindVenueByAddress(addr) : null;
+
+        if (_cachedVenue != null)
+            _selectedVenue = _cachedVenue;
+        else if (_selectedVenue != null && _venues.Contains(_selectedVenue))
+            _cachedVenue = _selectedVenue;
+
         return _cachedVenue;
     }
 

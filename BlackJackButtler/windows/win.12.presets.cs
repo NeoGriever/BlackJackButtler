@@ -132,6 +132,7 @@ public partial class BlackJackButtlerWindow
             _config.OpenDropboxInsteadOfTrade          = snap.OpenDropboxInsteadOfTrade;
             _config.MinBet                             = snap.MinBet;
             _config.MaxBet                             = snap.MaxBet;
+            _config.ShortBetFormat                     = snap.ShortBetFormat;
             _config.AutoInitialDeal                    = snap.AutoInitialDeal;
             _config.AutoDealerDraw                     = snap.AutoDealerDraw;
             _config.AutoRun                            = snap.AutoRun;

@@ -540,7 +540,28 @@ public partial class BlackJackButtlerWindow
         {
             var group = _config.CustomCommandGroups[i];
             if (i > 0) ImGui.SameLine();
-            if (BJBGui.SmallButton($"{group.Name}##custom_{i}"))
+
+            int colorPushCount = 0;
+            if (group.UseCustomButtonColor)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button, group.CustomButtonColor);
+                colorPushCount++;
+            }
+            if (group.UseCustomTextColor)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, group.CustomTextColor);
+                colorPushCount++;
+            }
+
+            bool clicked;
+            if (colorPushCount > 0 && group.UseCustomTextColor)
+                clicked = ImGui.SmallButton($"{group.Name}##custom_{i}");
+            else
+                clicked = BJBGui.SmallButton($"{group.Name}##custom_{i}");
+
+            if (colorPushCount > 0) ImGui.PopStyleColor(colorPushCount);
+
+            if (clicked)
             {
                 var targetName = _players.FirstOrDefault(p => p.IsCurrentTurn)?.DisplayName
                               ?? _dealer.DisplayName;

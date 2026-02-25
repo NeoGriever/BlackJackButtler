@@ -8,6 +8,8 @@ namespace BlackJackButtler.Windows;
 public partial class BlackJackButtlerWindow
 {
     private string _newCustomGroupName = string.Empty;
+    private string _renameBuffer = string.Empty;
+    private int _renamingGroupIndex = -1;
 
     private void DrawOwnButtonsPage()
     {
@@ -42,14 +44,56 @@ public partial class BlackJackButtlerWindow
         ImGui.Separator();
         ImGui.Spacing();
 
-        CommandGroup? toRemove = null;
+        int toRemoveIndex = -1;
 
-        foreach (var group in _config.CustomCommandGroups)
+        for (int i = 0; i < _config.CustomCommandGroups.Count; i++)
         {
-            ImGui.PushID($"custom_group_{group.Name}");
+            var group = _config.CustomCommandGroups[i];
+            ImGui.PushID($"custom_group_{i}");
 
-            if (ImGui.CollapsingHeader(group.Name, ImGuiTreeNodeFlags.DefaultOpen))
+            if (ImGui.CollapsingHeader($"{group.Name}###custom_grp_{i}", ImGuiTreeNodeFlags.DefaultOpen))
             {
+                if (_renamingGroupIndex == i)
+                {
+                    ImGui.SetNextItemWidth(300f);
+                    ImGui.InputText("##rename_group", ref _renameBuffer, 64);
+                    if (ImGui.IsItemDeactivatedAfterEdit())
+                    {
+                        var trimmed = _renameBuffer.Trim();
+                        bool nameValid = !string.IsNullOrWhiteSpace(trimmed)
+                            && !_config.CustomCommandGroups.Where((g, idx) => idx != i).Any(g => g.Name.Equals(trimmed, StringComparison.OrdinalIgnoreCase))
+                            && !_config.CommandGroups.Any(g => g.Name.Equals(trimmed, StringComparison.OrdinalIgnoreCase));
+                        if (nameValid) { group.Name = trimmed; _save(); }
+                        _renamingGroupIndex = -1;
+                    }
+                    ImGui.SameLine();
+                    if (BJBGui.SmallButton("Cancel##rename_cancel")) _renamingGroupIndex = -1;
+                }
+                else
+                {
+                    if (BJBGui.SmallButton("Rename##rename_start"))
+                    {
+                        _renamingGroupIndex = i;
+                        _renameBuffer = group.Name;
+                    }
+                }
+
+                if (ImGui.Checkbox("Button Color##btn_col", ref group.UseCustomButtonColor)) _save();
+                if (group.UseCustomButtonColor)
+                {
+                    ImGui.SameLine();
+                    if (ImGui.ColorEdit4("##btn_col_pick", ref group.CustomButtonColor,
+                        ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.NoLabel)) _save();
+                }
+
+                if (ImGui.Checkbox("Text Color##txt_col", ref group.UseCustomTextColor)) _save();
+                if (group.UseCustomTextColor)
+                {
+                    ImGui.SameLine();
+                    if (ImGui.ColorEdit4("##txt_col_pick", ref group.CustomTextColor,
+                        ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.NoLabel)) _save();
+                }
+
                 var io = ImGui.GetIO();
                 bool ctrlHeld = io.KeyCtrl;
 
@@ -57,7 +101,7 @@ public partial class BlackJackButtlerWindow
                 if (ctrlHeld) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
                 if (BJBGui.SmallButton("Delete Group"))
                 {
-                    toRemove = group;
+                    toRemoveIndex = i;
                 }
                 if (ctrlHeld) ImGui.PopStyleColor();
                 if (!ctrlHeld)
@@ -80,9 +124,10 @@ public partial class BlackJackButtlerWindow
             ImGui.Spacing();
         }
 
-        if (toRemove != null)
+        if (toRemoveIndex >= 0)
         {
-            _config.CustomCommandGroups.Remove(toRemove);
+            if (_renamingGroupIndex == toRemoveIndex) _renamingGroupIndex = -1;
+            _config.CustomCommandGroups.RemoveAt(toRemoveIndex);
             _save();
         }
     }
