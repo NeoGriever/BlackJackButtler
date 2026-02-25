@@ -157,12 +157,6 @@ public static partial class GameEngine
                         try { await CommandExecutor.ExecuteGroup("SplitDraw", p.Name, cfg); }
                         finally { ClearForcedRecipient(); }
 
-                        if (p.CurrentHandIndex < p.Hands.Count)
-                        {
-                            var hand = p.Hands[p.CurrentHandIndex];
-                            if (hand.IsStand || hand.IsBust)
-                                NextTurn(players, cfg);
-                        }
                         SaveSessionIfNeeded(players);
                     });
                 }

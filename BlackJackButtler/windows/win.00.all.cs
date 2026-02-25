@@ -284,6 +284,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         DropboxIntegration.DrawHelperWindow();
         DrawSplitMoneyPopup();
         DrawDDMoneyPopup();
+        DrawHandEditPopup();
         DrawVarRefPanel();
     }
 
