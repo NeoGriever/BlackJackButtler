@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using BlackJackButtler.Chat;
 using RRX = System.Text.RegularExpressions;
@@ -21,11 +22,28 @@ public static class CommandExecutor
     private static bool _wait = false;
     private static bool _cancel = false;
 
+    private static string _currentGroupName = string.Empty;
+    private static string _currentTargetPlayer = string.Empty;
+    private static bool _currentGroupHasDice = false;
+    private static int _preActionSnapshotIndex = -1;
+    private static CancellationTokenSource? _delayCts = null;
+
+    public static string CurrentGroupName => _currentGroupName;
+    public static string CurrentTargetPlayer => _currentTargetPlayer;
+    public static bool CurrentGroupHasDice => _currentGroupHasDice;
+    public static int PreActionSnapshotIndex => _preActionSnapshotIndex;
+    public static bool IsCancelling => _cancel;
+
     public static void NotifyDiceResult()
     {
         var window = Plugin.Instance.GetMainWindow();
         window.AddDebugLog("[Executor] NotifyDiceResult called - releasing wait");
         _wait = false;
+    }
+
+    public static void SetPreActionSnapshot(int snapshotIndex)
+    {
+        _preActionSnapshotIndex = snapshotIndex;
     }
 
     public static void CancelCurrentGroup()
@@ -34,6 +52,7 @@ public static class CommandExecutor
         window.AddDebugLog("[Executor] CancelCurrentGroup called - setting cancel flag");
         _cancel = true;
         _wait = false;
+        _delayCts?.Cancel();
     }
 
     private static string ProcessContextTokens(string text, PlayerState? pState, string targetName, Configuration cfg)
@@ -145,6 +164,13 @@ public static class CommandExecutor
 
         if (group == null) return;
 
+        _currentGroupName = groupName;
+        _currentTargetPlayer = targetPlayerName;
+        _currentGroupHasDice = group.Commands.Any(c =>
+            c.Enabled && !string.IsNullOrWhiteSpace(c.Text) &&
+            c.Text.TrimStart().StartsWith("/dice", StringComparison.OrdinalIgnoreCase));
+        _delayCts = new CancellationTokenSource();
+
         _isRunning = true;
         _cancel = false;
         int step = 0;
@@ -152,7 +178,7 @@ public static class CommandExecutor
 
         // Wait for target focus to settle before executing commands
         if (!Plugin.IsDebugMode || !Plugin.IsSpeedMode)
-            await Task.Delay(300);
+            try { await Task.Delay(300, _delayCts.Token); } catch (OperationCanceledException) { }
 
         foreach (var cmd in group.Commands)
         {
@@ -224,7 +250,7 @@ public static class CommandExecutor
                         if (skipEffDelay > 0)
                         {
                             window.AddDebugLog($"[Executor] Waiting delay {skipEffDelay}s despite skip...");
-                            await Task.Delay(TimeSpan.FromSeconds(skipEffDelay));
+                            try { await Task.Delay(TimeSpan.FromSeconds(skipEffDelay), _delayCts!.Token); } catch (OperationCanceledException) { }
                         }
                     }
                     continue;
@@ -273,7 +299,7 @@ public static class CommandExecutor
                 if (effectiveDelay > 0)
                 {
                     window.AddDebugLog($"[Executor] Delaying {effectiveDelay}s...");
-                    await Task.Delay(TimeSpan.FromSeconds(effectiveDelay));
+                    try { await Task.Delay(TimeSpan.FromSeconds(effectiveDelay), _delayCts!.Token); } catch (OperationCanceledException) { }
                 }
             }
             catch (Exception ex)
@@ -284,6 +310,12 @@ public static class CommandExecutor
 
         _isRunning = false;
         _cancel = false;
+        _currentGroupName = string.Empty;
+        _currentTargetPlayer = string.Empty;
+        _currentGroupHasDice = false;
+        _preActionSnapshotIndex = -1;
+        _delayCts?.Dispose();
+        _delayCts = null;
         OnGroupCompleted?.Invoke();
         window.AddDebugLog($"[Executor] Chain End: {groupName}");
     }
@@ -363,6 +395,7 @@ public static class CommandExecutor
 
     public static async Task ExecuteInternalGroup(string groupName, string targetPlayerName, Configuration cfg)
     {
+        if (_cancel) return;
         var window = Plugin.Instance.GetMainWindow();
         window.AddDebugLog($"[Executor-Internal] Start Chain: {groupName} -> {targetPlayerName}");
         var players = window.GetPlayers();
