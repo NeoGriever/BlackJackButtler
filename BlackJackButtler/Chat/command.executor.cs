@@ -17,6 +17,11 @@ public static class CommandExecutor
     private static bool _isRunning = false;
     public static bool IsRunning => _isRunning;
 
+    private static volatile bool _followUpPending = false;
+    public static bool IsFollowUpPending => _followUpPending;
+    public static void SignalFollowUpPending() => _followUpPending = true;
+    public static void ClearFollowUpPending() => _followUpPending = false;
+
     public static event Action? OnGroupCompleted;
 
     private static bool _wait = false;

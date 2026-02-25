@@ -57,6 +57,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly DebugLogWindow debugLogWindow;
     private readonly NotepadWindow notepadWindow;
     private DateTime _lastSync = DateTime.MinValue;
+    private volatile bool _autoActionInFlight = false;
 
     public void OpenDebugPopout() => debugLogWindow.IsOpen = true;
     public BlackJackButtlerWindow GetMainWindow() => mainWindow;
@@ -130,13 +131,17 @@ public sealed class Plugin : IDalamudPlugin
         // Auto Initial Deal
         if (Configuration.AutoInitialDeal && GameEngine.CurrentPhase == GamePhase.InitialDeal)
         {
-            if (!CommandExecutor.IsRunning)
+            if (!CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending && !_autoActionInFlight)
             {
                 var players = mainWindow.GetPlayers();
                 var currentPlayer = players.FirstOrDefault(p => p.IsCurrentTurn);
                 if (currentPlayer != null && currentPlayer.IsActivePlayer && !currentPlayer.IsOnHold && !currentPlayer.HasInitialHandDealt)
                 {
-                    Task.Run(() => GameEngine.ActionDealHand(currentPlayer, Configuration, players));
+                    _autoActionInFlight = true;
+                    Task.Run(async () => {
+                        try { await GameEngine.ActionDealHand(currentPlayer, Configuration, players); }
+                        finally { _autoActionInFlight = false; }
+                    });
                 }
             }
         }
@@ -144,25 +149,37 @@ public sealed class Plugin : IDalamudPlugin
         // Auto Dealer Draw
         if (Configuration.AutoDealerDraw && GameEngine.CurrentPhase == GamePhase.DealerTurn)
         {
-            if (!CommandExecutor.IsRunning)
+            if (!CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending && !_autoActionInFlight)
             {
                 var dealer = mainWindow.GetDealer();
                 if (dealer != null && dealer.Hands.Count > 0 && dealer.Hands[0].Cards.Count > 0)
                 {
-                    var (min, max) = dealer.CalculatePoints(0);
-                    int score = (max.HasValue && max.Value <= 21) ? max.Value : min;
-                    if (score < Configuration.DealerDrawsUntil)
+                    var hand = dealer.Hands[0];
+                    if (!hand.IsBust && !hand.IsStand)
                     {
-                        var players = mainWindow.GetPlayers();
-                        Task.Run(() => GameEngine.DealerHit(Configuration, players));
-                    }
-                    else
-                    {
-                        var players = mainWindow.GetPlayers();
-                        Task.Run(async () => {
-                            await GameEngine.DealerStand(Configuration, players);
-                            await GameEngine.EvaluateFinalResults(players, dealer, Configuration);
-                        });
+                        var (min, max) = dealer.CalculatePoints(0);
+                        int score = (max.HasValue && max.Value <= 21) ? max.Value : min;
+                        if (score < Configuration.DealerDrawsUntil)
+                        {
+                            _autoActionInFlight = true;
+                            var players = mainWindow.GetPlayers();
+                            Task.Run(async () => {
+                                try { await GameEngine.DealerHit(Configuration, players); }
+                                finally { _autoActionInFlight = false; }
+                            });
+                        }
+                        else
+                        {
+                            _autoActionInFlight = true;
+                            var players = mainWindow.GetPlayers();
+                            Task.Run(async () => {
+                                try {
+                                    await GameEngine.DealerStand(Configuration, players);
+                                    await GameEngine.EvaluateFinalResults(players, dealer, Configuration);
+                                }
+                                finally { _autoActionInFlight = false; }
+                            });
+                        }
                     }
                 }
             }
