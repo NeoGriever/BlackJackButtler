@@ -120,6 +120,7 @@ public partial class BlackJackButtlerWindow
     private void EnableDebugMode()
     {
         Plugin.IsDebugMode = true;
+        GameEngine.SetDebugMode(true);
         CreateTestData();
     }
 
@@ -128,6 +129,7 @@ public partial class BlackJackButtlerWindow
         _players.Clear();
         _dealer = new PlayerState { Name = "Dealer", IsActivePlayer = true };
         GameEngine.CurrentPhase = GamePhase.Waiting;
+        GameEngine.SetDebugMode(false);
         GameEngine.SetRuntimeContext(_players, _dealer);
         GameLog.Clear();
         IsRecognitionActive = false;
