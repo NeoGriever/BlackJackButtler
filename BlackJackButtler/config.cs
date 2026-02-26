@@ -71,6 +71,10 @@ public sealed class Configuration : IPluginConfiguration
 
     public string NotepadText = "";
 
+    public List<string> NearbyFavorites = new();
+    public float NearbyDistanceCap = 30f;
+    public bool ShowNearbyPlayers = true;
+
     public UserLevel CurrentLevel = UserLevel.Beginner;
 
     public static string[] StandardBatchNames => DefaultsManager.GetDefaultMessages().Select(m => m.Name).ToArray();

@@ -57,6 +57,11 @@ public partial class BlackJackButtlerWindow
             _save();
         }
 
+        ImGui.Spacing();
+        if (ImGui.Checkbox("Show Nearby Players", ref _config.ShowNearbyPlayers)) _save();
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Show a list of nearby players below the player table.");
+
         if(level >= (int)UserLevel.Advanced)
         {
             ImGui.Separator();
