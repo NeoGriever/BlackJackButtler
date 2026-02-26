@@ -48,7 +48,7 @@ public static class NearbyPlayersManager
             var name = pc.Name.TextValue;
             if (name == localName) continue;
 
-            var world = pc.CurrentWorld.Value.Name.ToString();
+            var world = pc.HomeWorld.Value.Name.ToString();
             var dist = Vector3.Distance(localPos, pc.Position);
 
             result.Add(new NearbyPlayerInfo
