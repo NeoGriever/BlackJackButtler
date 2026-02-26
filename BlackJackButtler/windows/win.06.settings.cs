@@ -215,10 +215,10 @@ public partial class BlackJackButtlerWindow
                 ImGui.SetTooltip("Character facing direction.\nAuto-captured when Group Detector activates.\nChanges apply immediately.");
 
             ImGui.Spacing();
-            if (ImGui.Checkbox("Look everytime (on self-target)", ref _config.LookEveryTime))
+            if (ImGui.Checkbox("Auto-Rotate on phase change", ref _config.LookEveryTime))
                 _save();
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Active: Face this direction whenever you target yourself.\nInactive: Only at round start or via /initialviewdirection command.");
+                ImGui.SetTooltip("Active: Face the configured direction when entering Waiting, Deal, Dealer, or Payout phase.\nInactive: Only at round start or via /initialviewdirection command.");
         }
 
         ImGui.Separator();

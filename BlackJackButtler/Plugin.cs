@@ -59,6 +59,7 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime _lastSync = DateTime.MinValue;
     private volatile bool _autoActionInFlight = false;
     private DateTime _lastAutoLog = DateTime.MinValue;
+    private GamePhase _lastPhase = GamePhase.Waiting;
 
     public void OpenDebugPopout() => debugLogWindow.IsOpen = true;
     public BlackJackButtlerWindow GetMainWindow() => mainWindow;
@@ -120,7 +121,17 @@ public sealed class Plugin : IDalamudPlugin
         // ── STANDBY: Alles darunter nur wenn Group Detector aktiv ──
         if (!mainWindow.IsRecognitionActive) return;
 
-        ViewDirectionManager.TickLookEveryTime(Configuration);
+        var currentPhase = GameEngine.CurrentPhase;
+        if (currentPhase != _lastPhase)
+        {
+            _lastPhase = currentPhase;
+            if (Configuration.LookEveryTime &&
+                currentPhase is GamePhase.Waiting or GamePhase.InitialDeal
+                             or GamePhase.DealerTurn or GamePhase.Payout)
+            {
+                ViewDirectionManager.ApplyViewDirectionImmediate(Configuration);
+            }
+        }
 
         // Party-Sync (throttled auf 1x/Sekunde)
         if ((DateTime.Now - _lastSync).TotalMilliseconds > 1000)
