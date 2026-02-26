@@ -32,18 +32,6 @@ public static class ViewDirectionManager
         SetRotation(lp.Address, cfg.InitialViewDirection);
     }
 
-    public static void TickLookEveryTime(Configuration cfg)
-    {
-        if (!cfg.LookEveryTime) return;
-        var lp = Plugin.ObjectTable.LocalPlayer;
-        var target = Plugin.TargetManager.Target;
-        if (lp != null && target != null
-            && target.GameObjectId == lp.GameObjectId)
-        {
-            SetRotation(lp.Address, cfg.InitialViewDirection);
-        }
-    }
-
     public static bool IsInternalCommand(string text)
     {
         return text.TrimStart().StartsWith("/initialviewdirection", StringComparison.OrdinalIgnoreCase);
