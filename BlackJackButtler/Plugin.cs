@@ -58,6 +58,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly NotepadWindow notepadWindow;
     private DateTime _lastSync = DateTime.MinValue;
     private volatile bool _autoActionInFlight = false;
+    private DateTime _lastAutoLog = DateTime.MinValue;
 
     public void OpenDebugPopout() => debugLogWindow.IsOpen = true;
     public BlackJackButtlerWindow GetMainWindow() => mainWindow;
@@ -137,11 +138,32 @@ public sealed class Plugin : IDalamudPlugin
                 var currentPlayer = players.FirstOrDefault(p => p.IsCurrentTurn);
                 if (currentPlayer != null && currentPlayer.IsActivePlayer && !currentPlayer.IsOnHold && !currentPlayer.HasInitialHandDealt)
                 {
+                    mainWindow.AddDebugLog($"[AutoDeal] Starting deal for {currentPlayer.DisplayName}");
                     _autoActionInFlight = true;
                     Task.Run(async () => {
-                        try { await GameEngine.ActionDealHand(currentPlayer, Configuration, players); }
+                        try
+                        {
+                            await GameEngine.ActionDealHand(currentPlayer, Configuration, players);
+                            mainWindow.AddDebugLog($"[AutoDeal] Deal completed for {currentPlayer.DisplayName}");
+                        }
                         finally { _autoActionInFlight = false; }
                     });
+                }
+                else
+                {
+                    if ((DateTime.Now - _lastAutoLog).TotalSeconds >= 2)
+                    {
+                        mainWindow.AddDebugLog($"[AutoDeal] No eligible player found (current={currentPlayer?.DisplayName ?? "null"}, isActive={currentPlayer?.IsActivePlayer}, isOnHold={currentPlayer?.IsOnHold}, hasDealt={currentPlayer?.HasInitialHandDealt})");
+                        _lastAutoLog = DateTime.Now;
+                    }
+                }
+            }
+            else
+            {
+                if ((DateTime.Now - _lastAutoLog).TotalSeconds >= 2)
+                {
+                    mainWindow.AddDebugLog($"[AutoDeal] Blocked: IsRunning={CommandExecutor.IsRunning}, FollowUp={CommandExecutor.IsFollowUpPending}, InFlight={_autoActionInFlight}");
+                    _lastAutoLog = DateTime.Now;
                 }
             }
         }
@@ -161,6 +183,7 @@ public sealed class Plugin : IDalamudPlugin
                         int score = (max.HasValue && max.Value <= 21) ? max.Value : min;
                         if (score < Configuration.DealerDrawsUntil)
                         {
+                            mainWindow.AddDebugLog($"[AutoDealer] Hit: score={score} < {Configuration.DealerDrawsUntil}");
                             _autoActionInFlight = true;
                             var players = mainWindow.GetPlayers();
                             Task.Run(async () => {
@@ -170,17 +193,27 @@ public sealed class Plugin : IDalamudPlugin
                         }
                         else
                         {
+                            mainWindow.AddDebugLog($"[AutoDealer] Stand: score={score} >= {Configuration.DealerDrawsUntil}");
                             _autoActionInFlight = true;
                             var players = mainWindow.GetPlayers();
                             Task.Run(async () => {
                                 try {
                                     await GameEngine.DealerStand(Configuration, players);
                                     await GameEngine.EvaluateFinalResults(players, dealer, Configuration);
+                                    mainWindow.AddDebugLog("[AutoDealer] DealerStand + EvaluateFinalResults completed");
                                 }
                                 finally { _autoActionInFlight = false; }
                             });
                         }
                     }
+                }
+            }
+            else
+            {
+                if ((DateTime.Now - _lastAutoLog).TotalSeconds >= 2)
+                {
+                    mainWindow.AddDebugLog($"[AutoDealer] Blocked: IsRunning={CommandExecutor.IsRunning}, FollowUp={CommandExecutor.IsFollowUpPending}, InFlight={_autoActionInFlight}");
+                    _lastAutoLog = DateTime.Now;
                 }
             }
         }

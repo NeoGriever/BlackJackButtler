@@ -77,6 +77,7 @@ public static partial class GameEngine
 
     public static async Task ActionDealHand(PlayerState p, Configuration cfg, List<PlayerState> players)
     {
+        Plugin.Instance.GetMainWindow().AddDebugLog($"[ActionDealHand] Start: {p.DisplayName}");
         await ExecutePlayerAction(p, "Initial", cfg, players, async () => {
             TargetPlayer(p.Name);
             SetForcedRecipient(p.Name);
@@ -84,18 +85,24 @@ public static partial class GameEngine
             finally { ClearForcedRecipient(); }
             p.HasInitialHandDealt = true;
         });
+        Plugin.Instance.GetMainWindow().AddDebugLog($"[ActionDealHand] Complete: {p.DisplayName}, HasInitialHandDealt={p.HasInitialHandDealt}");
     }
 
     public static void NextTurn(List<PlayerState> players, Configuration cfg)
     {
+        var window = Plugin.Instance.GetMainWindow();
         var activePlayers = GetActivePlayers(players);
         var benchPlayers = GetBenchPlayers(players);
+
+        var currentDbg = activePlayers.FirstOrDefault(p => p.IsCurrentTurn);
+        window.AddDebugLog($"[NextTurn] Entry: Phase={CurrentPhase}, ActiveCount={activePlayers.Count}, BenchCount={benchPlayers.Count}, Current={currentDbg?.DisplayName ?? "none"}");
 
         foreach (var pl in activePlayers)
             pl.ResetHighlightsOnceConsistent();
 
         if (activePlayers.Count == 0 && benchPlayers.Count == 0)
         {
+            window.AddDebugLog("[NextTurn] No active or bench players, returning to Waiting");
             CurrentPhase = GamePhase.Waiting;
             return;
         }
@@ -107,18 +114,21 @@ public static partial class GameEngine
             if (cfg.FirstDealThenPlay)
             {
                 var nextToDeal = activePlayers.FirstOrDefault(p => !p.HasInitialHandDealt);
+                window.AddDebugLog($"[NextTurn] InitialDeal/FirstDealThenPlay: nextToDeal={nextToDeal?.DisplayName ?? "none"}");
                 if (nextToDeal != null)
                 {
                     SwitchTurnTo(nextToDeal, activePlayers, cfg);
                     return;
                 }
 
+                window.AddDebugLog("[NextTurn] InitialDeal complete, switching to PlayersTurn");
                 CurrentPhase = GamePhase.PlayersTurn;
 
                 foreach (var pl in activePlayers) pl.IsCurrentTurn = false;
                 activePlayers[0].IsCurrentTurn = true;
 
                 if (IsPlayerFinished(activePlayers[0])) {
+                    window.AddDebugLog($"[NextTurn] First player {activePlayers[0].DisplayName} already finished, recursing");
                     NextTurn(players, cfg);
                 } else {
                     SwitchTurnTo(activePlayers[0], activePlayers, cfg);
@@ -126,11 +136,15 @@ public static partial class GameEngine
             }
             else
             {
+                window.AddDebugLog($"[NextTurn] InitialDeal/DealAndPlay: current={current?.DisplayName ?? "none"}, hasDealt={current?.HasInitialHandDealt}");
                 if (current != null && current.HasInitialHandDealt)
                 {
                     CurrentPhase = GamePhase.PlayersTurn;
                     if (IsPlayerFinished(current))
+                    {
+                        window.AddDebugLog($"[NextTurn] Current player {current.DisplayName} already finished, recursing");
                         NextTurn(players, cfg);
+                    }
                     else
                         SwitchTurnTo(current, activePlayers, cfg);
                 }
@@ -143,6 +157,7 @@ public static partial class GameEngine
             current.CurrentHandIndex++;
             if (current.CurrentHandIndex < current.Hands.Count)
             {
+                window.AddDebugLog($"[NextTurn] {current.DisplayName} advancing to hand {current.CurrentHandIndex}");
                 if (current.Hands[current.CurrentHandIndex].IsStand || current.Hands[current.CurrentHandIndex].IsBust)
                 {
                     NextTurn(players, cfg);
@@ -174,6 +189,7 @@ public static partial class GameEngine
         {
             var next = activePlayers[currentIndex + 1];
             next.IsCurrentTurn = true;
+            window.AddDebugLog($"[NextTurn] Advancing to next player: {next.DisplayName} (finished={IsPlayerFinished(next)}, hasDealt={next.HasInitialHandDealt})");
 
             if (IsPlayerFinished(next))
             {
@@ -181,6 +197,7 @@ public static partial class GameEngine
             }
             else if (!next.HasInitialHandDealt)
             {
+                window.AddDebugLog($"[NextTurn] Player {next.DisplayName} needs initial deal, switching to InitialDeal phase");
                 CurrentPhase = GamePhase.InitialDeal;
                 next.CurrentHandIndex = 0;
                 TargetPlayer(next.Name);
@@ -229,12 +246,13 @@ public static partial class GameEngine
 
             if (!anyPlayerAlive)
             {
-                Plugin.Instance.GetMainWindow().AddDebugLog("[Engine] All players busted. Skipping Dealer turn.");
+                window.AddDebugLog("[NextTurn] All players busted, skipping Dealer turn");
                 CurrentPhase = GamePhase.Payout;
                 Task.Run(async () => await EvaluateFinalResults(players, _ctxDealer!, cfg));
             }
             else
             {
+                window.AddDebugLog("[NextTurn] All players done, transitioning to DealerTurn");
                 CurrentPhase = GamePhase.DealerTurn;
                 if (_ctxDealer != null)
                 {
@@ -254,6 +272,8 @@ public static partial class GameEngine
 
     private static void SwitchTurnTo(PlayerState target, List<PlayerState> allActive, Configuration cfg)
     {
+        var window = Plugin.Instance.GetMainWindow();
+        window.AddDebugLog($"[SwitchTurn] -> {target.DisplayName}, Hands={target.Hands.Count}, Phase={CurrentPhase}");
         foreach (var pl in allActive) pl.IsCurrentTurn = false;
         target.IsCurrentTurn = true;
         target.CurrentHandIndex = 0;
@@ -262,6 +282,7 @@ public static partial class GameEngine
         if (target.Hands.Count > 0 && target.Hands[target.CurrentHandIndex].Cards.Count >= 2)
         {
             string promptGroup = GetStatePromptGroup(target, cfg);
+            window.AddDebugLog($"[SwitchTurn] Triggering prompt group: {promptGroup}");
             Task.Run(async () => await CommandExecutor.ExecuteGroup(promptGroup, target.DisplayName, cfg));
         }
     }

@@ -88,17 +88,33 @@ public static class DiceResultHandler
                         {
                             try
                             {
+                                window.AddDebugLog($"[DiceHandler-FollowUp] Task started, IsRunning={CommandExecutor.IsRunning}");
                                 if (CommandExecutor.IsRunning)
                                 {
                                     var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                                     Action handler = () => tcs.TrySetResult(true);
                                     CommandExecutor.OnGroupCompleted += handler;
+                                    window.AddDebugLog("[DiceHandler-FollowUp] Subscribed to OnGroupCompleted, awaiting...");
                                     try   { await tcs.Task; }
                                     finally { CommandExecutor.OnGroupCompleted -= handler; }
+                                    window.AddDebugLog("[DiceHandler-FollowUp] OnGroupCompleted fired, calling NextTurn");
+                                }
+                                else
+                                {
+                                    window.AddDebugLog("[DiceHandler-FollowUp] Skipped wait (executor already finished), calling NextTurn");
                                 }
                                 GameEngine.NextTurn(players, cfg);
+                                window.AddDebugLog("[DiceHandler-FollowUp] NextTurn completed");
                             }
-                            finally { CommandExecutor.ClearFollowUpPending(); }
+                            catch (Exception ex)
+                            {
+                                window.AddDebugLog($"[DiceHandler-FollowUp] EXCEPTION: {ex.Message}");
+                            }
+                            finally
+                            {
+                                window.AddDebugLog("[DiceHandler-FollowUp] ClearFollowUpPending");
+                                CommandExecutor.ClearFollowUpPending();
+                            }
                         });
                         return;
                     }
@@ -141,29 +157,50 @@ public static class DiceResultHandler
             {
                 try
                 {
+                    window.AddDebugLog($"[DiceHandler-Cancel] Task started for {newGroup}, IsRunning={CommandExecutor.IsRunning}");
                     if (CommandExecutor.IsRunning)
                     {
                         var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
                         Action handler = () => tcs.TrySetResult(true);
                         CommandExecutor.OnGroupCompleted += handler;
+                        window.AddDebugLog("[DiceHandler-Cancel] Subscribed to OnGroupCompleted, awaiting...");
                         try   { await tcs.Task; }
                         finally { CommandExecutor.OnGroupCompleted -= handler; }
+                        window.AddDebugLog("[DiceHandler-Cancel] OnGroupCompleted fired");
+                    }
+                    else
+                    {
+                        window.AddDebugLog("[DiceHandler-Cancel] Skipped wait (executor already finished)");
                     }
 
+                    window.AddDebugLog($"[DiceHandler-Cancel] Executing internal group: {newGroup}");
                     await CommandExecutor.ExecuteInternalGroup(newGroup, target.Name, cfg);
+                    window.AddDebugLog($"[DiceHandler-Cancel] Internal group {newGroup} completed");
 
                     if (!isDealer && (newGroup == "PlayerBust" || newGroup == "PlayerBJ" ||
                         newGroup == "PlayerDirtyBJ" || newGroup == "PlayerDDForcedStand"))
                     {
+                        window.AddDebugLog($"[DiceHandler-Cancel] Calling NextTurn after {newGroup}");
                         GameEngine.NextTurn(players, cfg);
+                        window.AddDebugLog("[DiceHandler-Cancel] NextTurn completed");
                     }
                     else if (isDealer && (newGroup == "DealerBJ" || newGroup == "DealerBust"))
                     {
+                        window.AddDebugLog($"[DiceHandler-Cancel] Dealer {newGroup}, transitioning to Payout");
                         GameEngine.CurrentPhase = GamePhase.Payout;
                         await GameEngine.EvaluateFinalResults(players, dealer, cfg);
+                        window.AddDebugLog("[DiceHandler-Cancel] EvaluateFinalResults completed");
                     }
                 }
-                finally { CommandExecutor.ClearFollowUpPending(); }
+                catch (Exception ex)
+                {
+                    window.AddDebugLog($"[DiceHandler-Cancel] EXCEPTION: {ex.Message}");
+                }
+                finally
+                {
+                    window.AddDebugLog("[DiceHandler-Cancel] ClearFollowUpPending");
+                    CommandExecutor.ClearFollowUpPending();
+                }
             });
         }
         else
