@@ -74,6 +74,7 @@ public sealed class Configuration : IPluginConfiguration
     public List<string> NearbyFavorites = new();
     public float NearbyDistanceCap = 30f;
     public bool ShowNearbyPlayers = true;
+    public bool NearbySticky = false;
 
     public UserLevel CurrentLevel = UserLevel.Beginner;
 
