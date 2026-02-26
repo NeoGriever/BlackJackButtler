@@ -122,6 +122,7 @@ public partial class BlackJackButtlerWindow
         Plugin.IsDebugMode = true;
         GameEngine.SetDebugMode(true);
         CreateTestData();
+        IsRecognitionActive = true;
     }
 
     private void DisableDebugMode()
