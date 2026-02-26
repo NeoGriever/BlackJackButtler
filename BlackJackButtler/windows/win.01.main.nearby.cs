@@ -26,6 +26,8 @@ public partial class BlackJackButtlerWindow
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1f, 1f), "NEARBY PLAYERS");
         ImGui.SameLine();
         ImGui.TextColored(NearbyColorWorld, "(click name to /tell)");
+        ImGui.SameLine(ImGui.GetContentRegionAvail().X - 50f);
+        if (ImGui.Checkbox("Sticky", ref _config.NearbySticky)) _save();
 
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
         if (BJBGui.SliderFloat("##nearby_dist_cap", ref _config.NearbyDistanceCap, 5f, 100f, "%.0f yalms"))
@@ -52,8 +54,13 @@ public partial class BlackJackButtlerWindow
         int visibleRows = Math.Clamp(totalRows, 3, 15);
         float childHeight = visibleRows * rowHeight + 8f;
 
+        NearbyPlayersManager.PauseSorting = _config.NearbySticky;
+
         if (ImGui.BeginChild("bjb_nearby_scroll", new Vector2(availWidth, childHeight), true))
         {
+            if (ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows))
+                NearbyPlayersManager.PauseSorting = true;
+
             for (int i = 0; i < allPlayers.Count; i++)
             {
                 var p = allPlayers[i];

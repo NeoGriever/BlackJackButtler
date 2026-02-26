@@ -21,6 +21,8 @@ public static class NearbyPlayersManager
     private static DateTime _lastScan = DateTime.MinValue;
     private const double ScanIntervalMs = 500;
 
+    public static bool PauseSorting { get; set; }
+
     public static List<NearbyPlayerInfo> GetNearbyPlayers(Configuration config)
     {
         if ((DateTime.Now - _lastScan).TotalMilliseconds < ScanIntervalMs)
@@ -37,6 +39,24 @@ public static class NearbyPlayersManager
 
         var localPos = local.Position;
         var localName = local.Name.TextValue;
+
+        if (PauseSorting)
+        {
+            foreach (var info in _cached)
+            {
+                foreach (var obj in Plugin.ObjectTable)
+                {
+                    if (obj.ObjectKind != ObjectKind.Player) continue;
+                    if (obj is not IPlayerCharacter pc) continue;
+                    if (pc.Name.TextValue == info.Name && pc.HomeWorld.Value.Name.ToString() == info.World)
+                    {
+                        info.Distance = Vector3.Distance(localPos, pc.Position);
+                        break;
+                    }
+                }
+            }
+            return _cached;
+        }
 
         var result = new List<NearbyPlayerInfo>();
 
