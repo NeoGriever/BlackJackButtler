@@ -109,7 +109,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.PopStyleColor(5);
             }
         }
-        if (ImGui.BeginTable("bjb_main_table", 10, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable | ImGuiTableFlags.ScrollY))
+        if (ImGui.BeginTable("bjb_main_table", 10, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
         {
             SetupTableColumns();
             ImGui.TableHeadersRow();
@@ -122,6 +122,8 @@ public partial class BlackJackButtlerWindow
             }
             ImGui.EndTable();
         }
+
+        DrawNearbyPlayersSection();
 
         if (_triggerAliasPopup)
         {
