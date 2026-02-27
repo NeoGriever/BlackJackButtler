@@ -51,7 +51,42 @@ public partial class BlackJackButtlerWindow
             var group = _config.CustomCommandGroups[i];
             ImGui.PushID($"custom_group_{i}");
 
-            if (ImGui.CollapsingHeader($"{group.Name}###custom_grp_{i}", ImGuiTreeNodeFlags.DefaultOpen))
+            bool isFirstGroup = i == 0;
+            bool isLastGroup = i == _config.CustomCommandGroups.Count - 1;
+
+            float reorderWidth = 52f;
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - reorderWidth);
+            bool headerOpen = ImGui.CollapsingHeader($"{group.Name}###custom_grp_{i}", ImGuiTreeNodeFlags.DefaultOpen);
+
+            ImGui.SameLine(ImGui.GetWindowWidth() - reorderWidth - ImGui.GetStyle().WindowPadding.X);
+            if (isFirstGroup) ImGui.BeginDisabled();
+            if (BJBGui.SmallButton($"^##grp_up_{i}"))
+            {
+                (_config.CustomCommandGroups[i - 1], _config.CustomCommandGroups[i]) =
+                    (_config.CustomCommandGroups[i], _config.CustomCommandGroups[i - 1]);
+                if (_renamingGroupIndex == i) _renamingGroupIndex = i - 1;
+                else if (_renamingGroupIndex == i - 1) _renamingGroupIndex = i;
+                _save();
+                ImGui.PopID();
+                break;
+            }
+            if (isFirstGroup) ImGui.EndDisabled();
+
+            ImGui.SameLine();
+            if (isLastGroup) ImGui.BeginDisabled();
+            if (BJBGui.SmallButton($"v##grp_down_{i}"))
+            {
+                (_config.CustomCommandGroups[i], _config.CustomCommandGroups[i + 1]) =
+                    (_config.CustomCommandGroups[i + 1], _config.CustomCommandGroups[i]);
+                if (_renamingGroupIndex == i) _renamingGroupIndex = i + 1;
+                else if (_renamingGroupIndex == i + 1) _renamingGroupIndex = i;
+                _save();
+                ImGui.PopID();
+                break;
+            }
+            if (isLastGroup) ImGui.EndDisabled();
+
+            if (headerOpen)
             {
                 if (_renamingGroupIndex == i)
                 {
