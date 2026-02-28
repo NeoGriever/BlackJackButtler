@@ -32,6 +32,7 @@ public static class CommandExecutor
     private static bool _currentGroupHasDice = false;
     private static int _preActionSnapshotIndex = -1;
     private static CancellationTokenSource? _delayCts = null;
+    private static string _lastSentRawText = string.Empty;
 
     public static string CurrentGroupName => _currentGroupName;
     public static string CurrentTargetPlayer => _currentTargetPlayer;
@@ -111,6 +112,11 @@ public static class CommandExecutor
         else
         {
             text = text.Replace("<t>", aliasOrT);
+        }
+
+        if (Plugin.IsDebugMode && !hasAlias)
+        {
+            text = text.Replace("<t>", targetName);
         }
 
         if (pState != null)
@@ -267,6 +273,12 @@ public static class CommandExecutor
 
             try
             {
+                if (cfg.EnableAntiDouble && effectiveCmd.NonDoubled && effectiveCmd.Text == _lastSentRawText)
+                {
+                    window.AddDebugLog($"[Executor] Step {step} skipped (Anti-Double: same as last sent)");
+                    continue;
+                }
+
                 window.AddDebugLog($"[Executor] Processing Step {step}: {effectiveCmd.Text}");
 
                 string processedText = ProcessContextTokens(effectiveCmd.Text, pState, targetPlayerName, cfg);
@@ -305,6 +317,7 @@ public static class CommandExecutor
                 }
 
                 ChatCommandRouter.Send(processedText, cfg, $"{groupName}:{step}");
+                _lastSentRawText = effectiveCmd.Text;
 
                 if (isDiceCommand)
                 {
@@ -508,6 +521,12 @@ public static class CommandExecutor
 
             try
             {
+                if (cfg.EnableAntiDouble && effectiveCmd.NonDoubled && effectiveCmd.Text == _lastSentRawText)
+                {
+                    window.AddDebugLog($"[Executor-Internal] Step {step} skipped (Anti-Double: same as last sent)");
+                    continue;
+                }
+
                 window.AddDebugLog($"[Executor-Internal] Processing Step {step}: {effectiveCmd.Text}");
 
                 string processedText = ProcessContextTokens(effectiveCmd.Text, pState, targetPlayerName, cfg);
@@ -538,6 +557,7 @@ public static class CommandExecutor
                 processedText = resolvedCommandInt;
 
                 ChatCommandRouter.Send(processedText, cfg, $"{groupName}:internal:{step}");
+                _lastSentRawText = effectiveCmd.Text;
 
                 float effectiveDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
                     : Math.Max(MinCommandDelay, effectiveCmd.Delay * cfg.CommandSpeedMultiplier);

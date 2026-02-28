@@ -564,7 +564,16 @@ public partial class BlackJackButtlerWindow
             var group = _config.CustomCommandGroups.FirstOrDefault(g => g.Name == entry);
             if (group == null) continue;
 
-            if (prevWasButton) ImGui.SameLine();
+            if (prevWasButton)
+            {
+                float estPadH = group.UseCustomPadding ? group.CustomPaddingH : _config.CustomButtonPaddingH;
+                float textWidth = ImGui.CalcTextSize(group.Name).X;
+                float buttonWidth = textWidth + estPadH * 2 + ImGui.GetStyle().ItemSpacing.X;
+                float availableWidth = ImGui.GetContentRegionAvail().X;
+
+                if (buttonWidth <= availableWidth)
+                    ImGui.SameLine();
+            }
 
             bool useMono = group.UseCustomFont ? group.CustomUseMono : _config.CustomButtonUseMono;
             if (useMono) ImGui.PushFont(UiBuilder.MonoFont);

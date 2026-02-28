@@ -56,6 +56,7 @@ public sealed class Configuration : IPluginConfiguration
     public int DealerDrawsUntil = 17;
     public bool SmallResult = false;
     public bool AutostartRoundOnlyOnMultiplePlayers = true;
+    public bool EnableAntiDouble = false;
     public Vector4 HighlightColor = new Vector4(1.0f, 1.0f, 0.0f, 1.0f);
     public Vector4 HighlightTextColor = new Vector4(0f, 0f, 0f, 1f);
     public Vector4 ButtonColor     = new Vector4(0.26f, 0.26f, 0.26f, 1.0f); // dark grey
