@@ -76,6 +76,7 @@ public sealed class Configuration : IPluginConfiguration
     public float NearbyDistanceCap = 2.5f;
     public bool ShowNearbyPlayers = true;
     public bool NearbySticky = false;
+    public int NearbyColumns = 2;
 
     public UserLevel CurrentLevel = UserLevel.Beginner;
 
