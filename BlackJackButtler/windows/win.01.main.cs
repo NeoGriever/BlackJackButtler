@@ -533,15 +533,38 @@ public partial class BlackJackButtlerWindow
 
     private void DrawCustomButtonBar()
     {
-        if (_config.CustomCommandGroups.Count == 0) return;
+        if (_config.CustomButtonOrder.Count == 0 && _config.CustomCommandGroups.Count == 0) return;
 
         bool isRunning = CommandExecutor.IsRunning;
         if (isRunning) ImGui.BeginDisabled();
 
-        for (int i = 0; i < _config.CustomCommandGroups.Count; i++)
+        bool prevWasButton = false;
+
+        for (int i = 0; i < _config.CustomButtonOrder.Count; i++)
         {
-            var group = _config.CustomCommandGroups[i];
-            if (i > 0) ImGui.SameLine();
+            var entry = _config.CustomButtonOrder[i];
+
+            if (entry == "---")
+            {
+                if (prevWasButton)
+                {
+                    bool hasButtonAfter = false;
+                    for (int j = i + 1; j < _config.CustomButtonOrder.Count; j++)
+                    {
+                        if (_config.CustomButtonOrder[j] == "---") continue;
+                        if (_config.CustomCommandGroups.Any(g => g.Name == _config.CustomButtonOrder[j]))
+                        { hasButtonAfter = true; break; }
+                    }
+                    if (!hasButtonAfter) continue;
+                    prevWasButton = false;
+                }
+                continue;
+            }
+
+            var group = _config.CustomCommandGroups.FirstOrDefault(g => g.Name == entry);
+            if (group == null) continue;
+
+            if (prevWasButton) ImGui.SameLine();
 
             int colorPushCount = 0;
             if (group.UseCustomButtonColor)
@@ -570,6 +593,8 @@ public partial class BlackJackButtlerWindow
                 var groupName = group.Name;
                 Task.Run(() => CommandExecutor.ExecuteGroup(groupName, targetName, _config));
             }
+
+            prevWasButton = true;
         }
 
         if (isRunning) ImGui.EndDisabled();

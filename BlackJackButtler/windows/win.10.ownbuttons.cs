@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
@@ -11,8 +12,19 @@ public partial class BlackJackButtlerWindow
     private string _renameBuffer = string.Empty;
     private int _renamingGroupIndex = -1;
 
+    private void EnsureButtonOrderMigration()
+    {
+        if (_config.CustomButtonOrder.Count == 0 && _config.CustomCommandGroups.Count > 0)
+        {
+            _config.CustomButtonOrder = _config.CustomCommandGroups.Select(g => g.Name).ToList();
+            _save();
+        }
+    }
+
     private void DrawOwnButtonsPage()
     {
+        EnsureButtonOrderMigration();
+
         ImGui.TextUnformatted("Own Buttons");
         ImGui.SameLine();
         if (BJBGui.SmallButton("?##varref_own")) _showVarRefPanel = !_showVarRefPanel;
@@ -30,11 +42,13 @@ public partial class BlackJackButtlerWindow
         if (!canAdd) ImGui.BeginDisabled();
         if (BJBGui.Button("Add Group"))
         {
+            var name = _newCustomGroupName.Trim();
             _config.CustomCommandGroups.Add(new CommandGroup
             {
-                Name = _newCustomGroupName.Trim(),
+                Name = name,
                 Commands = new()
             });
+            _config.CustomButtonOrder.Add(name);
             _newCustomGroupName = string.Empty;
             _save();
         }
@@ -51,40 +65,7 @@ public partial class BlackJackButtlerWindow
             var group = _config.CustomCommandGroups[i];
             ImGui.PushID($"custom_group_{i}");
 
-            bool isFirstGroup = i == 0;
-            bool isLastGroup = i == _config.CustomCommandGroups.Count - 1;
-
-            float reorderWidth = 52f;
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - reorderWidth);
             bool headerOpen = ImGui.CollapsingHeader($"{group.Name}###custom_grp_{i}", ImGuiTreeNodeFlags.DefaultOpen);
-
-            ImGui.SameLine(ImGui.GetWindowWidth() - reorderWidth - ImGui.GetStyle().WindowPadding.X);
-            if (isFirstGroup) ImGui.BeginDisabled();
-            if (BJBGui.SmallButton($"^##grp_up_{i}"))
-            {
-                (_config.CustomCommandGroups[i - 1], _config.CustomCommandGroups[i]) =
-                    (_config.CustomCommandGroups[i], _config.CustomCommandGroups[i - 1]);
-                if (_renamingGroupIndex == i) _renamingGroupIndex = i - 1;
-                else if (_renamingGroupIndex == i - 1) _renamingGroupIndex = i;
-                _save();
-                ImGui.PopID();
-                break;
-            }
-            if (isFirstGroup) ImGui.EndDisabled();
-
-            ImGui.SameLine();
-            if (isLastGroup) ImGui.BeginDisabled();
-            if (BJBGui.SmallButton($"v##grp_down_{i}"))
-            {
-                (_config.CustomCommandGroups[i], _config.CustomCommandGroups[i + 1]) =
-                    (_config.CustomCommandGroups[i + 1], _config.CustomCommandGroups[i]);
-                if (_renamingGroupIndex == i) _renamingGroupIndex = i + 1;
-                else if (_renamingGroupIndex == i + 1) _renamingGroupIndex = i;
-                _save();
-                ImGui.PopID();
-                break;
-            }
-            if (isLastGroup) ImGui.EndDisabled();
 
             if (headerOpen)
             {
@@ -98,7 +79,15 @@ public partial class BlackJackButtlerWindow
                         bool nameValid = !string.IsNullOrWhiteSpace(trimmed)
                             && !_config.CustomCommandGroups.Where((g, idx) => idx != i).Any(g => g.Name.Equals(trimmed, StringComparison.OrdinalIgnoreCase))
                             && !_config.CommandGroups.Any(g => g.Name.Equals(trimmed, StringComparison.OrdinalIgnoreCase));
-                        if (nameValid) { group.Name = trimmed; _save(); }
+                        if (nameValid)
+                        {
+                            var oldName = group.Name;
+                            group.Name = trimmed;
+                            for (int o = 0; o < _config.CustomButtonOrder.Count; o++)
+                                if (_config.CustomButtonOrder[o] == oldName)
+                                    _config.CustomButtonOrder[o] = trimmed;
+                            _save();
+                        }
                         _renamingGroupIndex = -1;
                     }
                     ImGui.SameLine();
@@ -162,8 +151,145 @@ public partial class BlackJackButtlerWindow
         if (toRemoveIndex >= 0)
         {
             if (_renamingGroupIndex == toRemoveIndex) _renamingGroupIndex = -1;
+            var deletedName = _config.CustomCommandGroups[toRemoveIndex].Name;
             _config.CustomCommandGroups.RemoveAt(toRemoveIndex);
+            _config.CustomButtonOrder.RemoveAll(e => e == deletedName);
             _save();
+        }
+
+        DrawButtonOrderSection();
+    }
+
+    private void DrawButtonOrderSection()
+    {
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+
+        ImGui.TextUnformatted("Button Order");
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("+ Break##add_break"))
+        {
+            _config.CustomButtonOrder.Add("---");
+            _save();
+        }
+
+        if (_config.CustomButtonOrder.Count == 0)
+        {
+            ImGui.TextDisabled("No buttons configured.");
+        }
+        else
+        {
+            int removeAt = -1;
+            int swapA = -1, swapB = -1;
+
+            for (int i = 0; i < _config.CustomButtonOrder.Count; i++)
+            {
+                var entry = _config.CustomButtonOrder[i];
+                bool isBreak = entry == "---";
+                ImGui.PushID($"btn_order_{i}");
+
+                bool isFirst = i == 0;
+                bool isLast = i == _config.CustomButtonOrder.Count - 1;
+
+                if (isFirst) ImGui.BeginDisabled();
+                if (BJBGui.SmallButton("^##order_up"))
+                {
+                    swapA = i - 1;
+                    swapB = i;
+                }
+                if (isFirst) ImGui.EndDisabled();
+
+                ImGui.SameLine();
+                if (isLast) ImGui.BeginDisabled();
+                if (BJBGui.SmallButton("v##order_down"))
+                {
+                    swapA = i;
+                    swapB = i + 1;
+                }
+                if (isLast) ImGui.EndDisabled();
+
+                ImGui.SameLine();
+                if (BJBGui.SmallButton("X##order_remove"))
+                {
+                    removeAt = i;
+                }
+
+                ImGui.SameLine();
+
+                if (isBreak)
+                {
+                    ImGui.TextDisabled("--- (Break)");
+                }
+                else
+                {
+                    var group = _config.CustomCommandGroups.FirstOrDefault(g => g.Name == entry);
+                    if (group != null)
+                    {
+                        int colorPushCount = 0;
+                        if (group.UseCustomButtonColor)
+                        {
+                            ImGui.PushStyleColor(ImGuiCol.Button, group.CustomButtonColor);
+                            colorPushCount++;
+                        }
+                        if (group.UseCustomTextColor)
+                        {
+                            ImGui.PushStyleColor(ImGuiCol.Text, group.CustomTextColor);
+                            colorPushCount++;
+                        }
+
+                        ImGui.BeginDisabled();
+                        if (colorPushCount > 0 && group.UseCustomTextColor)
+                            ImGui.SmallButton(entry);
+                        else
+                            BJBGui.SmallButton(entry);
+                        ImGui.EndDisabled();
+
+                        if (colorPushCount > 0) ImGui.PopStyleColor(colorPushCount);
+                    }
+                    else
+                    {
+                        ImGui.TextDisabled(entry);
+                        ImGui.SameLine();
+                        ImGui.TextDisabled("(missing)");
+                    }
+                }
+
+                ImGui.PopID();
+            }
+
+            if (swapA >= 0 && swapB >= 0)
+            {
+                (_config.CustomButtonOrder[swapA], _config.CustomButtonOrder[swapB]) =
+                    (_config.CustomButtonOrder[swapB], _config.CustomButtonOrder[swapA]);
+                _save();
+            }
+
+            if (removeAt >= 0)
+            {
+                _config.CustomButtonOrder.RemoveAt(removeAt);
+                _save();
+            }
+        }
+
+        var unassigned = _config.CustomCommandGroups
+            .Where(g => !_config.CustomButtonOrder.Contains(g.Name))
+            .ToList();
+
+        if (unassigned.Count > 0)
+        {
+            ImGui.Spacing();
+            ImGui.TextDisabled("Unassigned:");
+            foreach (var g in unassigned)
+            {
+                if (BJBGui.SmallButton($"+##{g.Name}_assign"))
+                {
+                    _config.CustomButtonOrder.Add(g.Name);
+                    _save();
+                }
+                ImGui.SameLine();
+                ImGui.TextUnformatted(g.Name);
+            }
         }
     }
 }

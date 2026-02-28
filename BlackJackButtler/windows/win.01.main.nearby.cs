@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using System.Linq;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using BlackJackButtler.Chat;
 
 namespace BlackJackButtler.Windows;
@@ -30,10 +31,10 @@ public partial class BlackJackButtlerWindow
         if (ImGui.Checkbox("Sticky", ref _config.NearbySticky)) _save();
 
         ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-        if (BJBGui.SliderFloat("##nearby_dist_cap", ref _config.NearbyDistanceCap, 5f, 100f, "%.0f yalms"))
+        if (BJBGui.SliderFloat("##nearby_dist_cap", ref _config.NearbyDistanceCap, 2.0f, 100.0f, "%.1f yalms"))
         {
-            _config.NearbyDistanceCap = MathF.Round(_config.NearbyDistanceCap);
-            _config.NearbyDistanceCap = Math.Clamp(_config.NearbyDistanceCap, 5f, 100f);
+            _config.NearbyDistanceCap = MathF.Round(_config.NearbyDistanceCap, 1);
+            _config.NearbyDistanceCap = Math.Clamp(_config.NearbyDistanceCap, 2.0f, 100.0f);
             _save();
         }
 
@@ -56,8 +57,12 @@ public partial class BlackJackButtlerWindow
 
         NearbyPlayersManager.PauseSorting = _config.NearbySticky;
 
+        bool partyFull = Plugin.PartyList.Length >= 8;
+
         if (ImGui.BeginChild("bjb_nearby_scroll", new Vector2(availWidth, childHeight), true))
         {
+            ImGui.PushFont(UiBuilder.MonoFont);
+
             if (ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows))
                 NearbyPlayersManager.PauseSorting = true;
 
@@ -65,7 +70,6 @@ public partial class BlackJackButtlerWindow
             {
                 var p = allPlayers[i];
                 int col = i % columns;
-                int row = i / columns;
 
                 if (col > 0) ImGui.SameLine(col * colWidth);
 
@@ -73,6 +77,15 @@ public partial class BlackJackButtlerWindow
                 bool outOfRange = !isFav && p.Distance > _config.NearbyDistanceCap;
 
                 ImGui.PushID($"nearby_{i}");
+
+                if (partyFull) ImGui.BeginDisabled();
+                if (BJBGui.SmallButton($"J##nearby_join_{i}"))
+                {
+                    ChatCommandRouter.Send($"/pcmd add {p.Name}", _config, "NearbyJoin");
+                }
+                if (partyFull) ImGui.EndDisabled();
+
+                ImGui.SameLine(0, 4);
 
                 var starColor = isFav ? NearbyColorStarFav : NearbyColorStarNormal;
                 ImGui.TextColored(starColor, isFav ? "\u2605" : "\u2606");
@@ -93,6 +106,9 @@ public partial class BlackJackButtlerWindow
                     var nameColor = outOfRange ? NearbyColorOutOfRange : (isFav ? NearbyColorFavName : NearbyColorName);
                     var worldColor = outOfRange ? NearbyColorOutOfRange : NearbyColorWorld;
 
+                    var dist = Math.Min(p.Distance, 99.9f);
+                    ImGui.TextColored(nameColor, $"({dist,4:F1}y)");
+                    ImGui.SameLine(0, 4);
                     ImGui.TextColored(nameColor, p.Name);
                     ImGui.SameLine(0, 0);
                     ImGui.TextColored(worldColor, $"@{p.World}");
@@ -111,6 +127,8 @@ public partial class BlackJackButtlerWindow
 
                 ImGui.PopID();
             }
+
+            ImGui.PopFont();
         }
         ImGui.EndChild();
     }
