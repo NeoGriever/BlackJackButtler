@@ -11,7 +11,8 @@ public class PluginCommand
     public bool Enabled = true;
     public string Text = string.Empty;
     public float Delay = 0.5f;
-    public int GroupId = 0;  // 0 = no group; same non-zero value = iterative/random group
+    public int GroupId = 0;
+    public bool NonDoubled = false;
 }
 
 [Serializable]

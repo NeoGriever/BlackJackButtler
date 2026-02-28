@@ -50,10 +50,24 @@ public class DebugLogWindow : Window
             {
                 var entry = logCopy[i];
                 if (!entry.IsChat) continue;
+
+                var color = GetChannelColor(entry.Text);
+                if (color.HasValue) ImGui.PushStyleColor(ImGuiCol.Text, color.Value);
                 if (ImGui.Selectable($"{entry.Text}##pop_{i}")) ImGui.SetClipboardText(entry.Text);
+                if (color.HasValue) ImGui.PopStyleColor();
             }
             ImGui.EndChild();
         }
+    }
+
+    private static Vector4? GetChannelColor(string text)
+    {
+        if (text.StartsWith("[Party]"))  return new Vector4(0.4f, 0.6f, 1.0f, 1.0f);
+        if (text.StartsWith("[Yell]"))   return new Vector4(1.0f, 1.0f, 0.3f, 1.0f);
+        if (text.StartsWith("[Shout]"))  return new Vector4(1.0f, 0.6f, 0.2f, 1.0f);
+        if (text.StartsWith("[Tell]"))   return new Vector4(1.0f, 0.5f, 0.8f, 1.0f);
+        if (text.StartsWith("[Say]"))    return new Vector4(0.95f, 0.95f, 0.95f, 1.0f);
+        return null;
     }
 
     private void CopyLogToClipboard()

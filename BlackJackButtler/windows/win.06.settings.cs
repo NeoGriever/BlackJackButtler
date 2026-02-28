@@ -160,6 +160,10 @@ public partial class BlackJackButtlerWindow
             }
 
             ImGui.Spacing();
+            if (ImGui.Checkbox("Anti-Double", ref _config.EnableAntiDouble)) _save();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Skips commands marked with AD flag when the previous command had identical text.\nEnable per command in the Commands page.");
+
+            ImGui.Spacing();
             if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Collects all results and sends a single compressed message.\nInactive: Sends individual result messages for every player hand.");
 
