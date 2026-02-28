@@ -15,127 +15,138 @@ public partial class BlackJackButtlerWindow
             _openImportConfirmPopup = false;
         }
 
-        ImGui.TextUnformatted("Gameplay Settings");
-        ImGui.Separator();
-
-        ImGui.TextUnformatted("User Level");
-        ImGui.SameLine(300f);
-        ImGui.SetNextItemWidth(200f);
         int level = (int)_config.CurrentLevel;
-        if (BJBGui.Combo("##user_level", ref level, "Beginner\0Advanced\0Dev\0")) {
-            _config.CurrentLevel = (UserLevel)level;
-            _save();
-        }
-        ImGui.Spacing();
-        ImGui.TextUnformatted("Command Speed");
-        ImGui.SameLine(300f);
-        ImGui.SetNextItemWidth(200f);
-        if (BJBGui.SliderFloat("##cmd_speed", ref _config.CommandSpeedMultiplier, 0.1f, 4.0f, "%.2fx"))
-        {
-            _config.CommandSpeedMultiplier = (float)(Math.Round(_config.CommandSpeedMultiplier / 0.05) * 0.05);
-            _config.CommandSpeedMultiplier = Math.Clamp(_config.CommandSpeedMultiplier, 0.1f, 4.0f);
-            _save();
-        }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Multiplier applied to all command delays at execution time.\n1.00x = normal speed, 0.50x = twice as fast, 2.00x = twice as slow.\nMinimum effective delay is always 0.3s.");
 
-        ImGui.Separator();
-        ImGui.Spacing();
-        ImGui.TextUnformatted("Button Style");
-        ImGui.SameLine(300f);
-        ImGui.SetNextItemWidth(95f);
-        if (ImGui.ColorEdit4("Bg##btn_color", ref _config.ButtonColor, ImGuiColorEditFlags.NoAlpha))
+        if (ImGui.BeginTabBar("##settings_tabs"))
         {
-            _config.ButtonColor.W = 1.0f;
-            _save();
-        }
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(95f);
-        if (ImGui.ColorEdit4("Text##btn_text_color", ref _config.ButtonTextColor, ImGuiColorEditFlags.NoAlpha))
-        {
-            _config.ButtonTextColor.W = 1.0f;
-            _save();
-        }
+            DrawSettingsTab_General(level);
 
-        ImGui.Spacing();
-        if (ImGui.Checkbox("Show Nearby Players", ref _config.ShowNearbyPlayers)) _save();
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Show a list of nearby players below the player table.");
-        if (_config.ShowNearbyPlayers)
-        {
-            ImGui.SameLine();
-            ImGui.SetNextItemWidth(100f);
-            if (BJBGui.DragInt("Columns##nearby_columns", ref _config.NearbyColumns, 0.1f, 1, 5, "%d"))
+            if (level >= (int)UserLevel.Advanced)
+                DrawSettingsTab_Gameplay(level);
+
             {
-                _config.NearbyColumns = Math.Clamp(_config.NearbyColumns, 1, 5);
+                var flags = ImGuiTabItemFlags.None;
+                if (_pendingSettingsTab == "Betting")
+                {
+                    flags = ImGuiTabItemFlags.SetSelected;
+                    _pendingSettingsTab = null;
+                }
+                if (ImGui.BeginTabItem("Betting", flags))
+                {
+                    DrawSettingsTab_Betting(level);
+                    ImGui.EndTabItem();
+                }
+            }
+
+            DrawSettingsTab_Visual(level);
+
+            if (level >= (int)UserLevel.Advanced)
+                DrawSettingsTab_System(level);
+
+            ImGui.EndTabBar();
+        }
+
+        if (ImGui.BeginPopupModal("import_confirm_popup", ref _showImportModal, ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.Text("How do you want to import?");
+            if (BJBGui.Button("Full Replace (Wipe current)")) {
+                DoFullReplace();
+                _showImportModal = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.SameLine();
+            if (BJBGui.Button("Merge (Keep custom items)")) {
+                DoMerge();
+                _showImportModal = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.EndPopup();
+        }
+    }
+
+    private void DrawSettingsTab_General(int level)
+    {
+        if (ImGui.BeginTabItem("General"))
+        {
+            ImGui.Spacing();
+            ImGui.TextUnformatted("User Level");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (BJBGui.Combo("##user_level", ref level, "Beginner\0Advanced\0Dev\0")) {
+                _config.CurrentLevel = (UserLevel)level;
                 _save();
             }
-        }
 
-        if(level >= (int)UserLevel.Advanced)
-        {
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Command Speed");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (BJBGui.SliderFloat("##cmd_speed", ref _config.CommandSpeedMultiplier, 0.1f, 4.0f, "%.2fx"))
+            {
+                _config.CommandSpeedMultiplier = (float)(Math.Round(_config.CommandSpeedMultiplier / 0.05) * 0.05);
+                _config.CommandSpeedMultiplier = Math.Clamp(_config.CommandSpeedMultiplier, 0.1f, 4.0f);
+                _save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Multiplier applied to all command delays at execution time.\n1.00x = normal speed, 0.50x = twice as fast, 2.00x = twice as slow.\nMinimum effective delay is always 0.3s.");
+
             ImGui.Separator();
-            ImGui.TextUnformatted("Gameplay Rules");
+            ImGui.Spacing();
+            if (ImGui.Checkbox("Show Nearby Players", ref _config.ShowNearbyPlayers)) _save();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Show a list of nearby players below the player table.");
+            if (_config.ShowNearbyPlayers)
+            {
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(100f);
+                if (BJBGui.DragInt("Columns##nearby_columns", ref _config.NearbyColumns, 0.1f, 1, 5, "%d"))
+                {
+                    _config.NearbyColumns = Math.Clamp(_config.NearbyColumns, 1, 5);
+                    _save();
+                }
+            }
+
+            ImGui.EndTabItem();
         }
-        if(level >= (int)UserLevel.Advanced)
+    }
+
+    private void DrawSettingsTab_Gameplay(int level)
+    {
+        if (ImGui.BeginTabItem("Gameplay"))
         {
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Rules");
+            ImGui.Separator();
+
             ImGui.Spacing();
             if (ImGui.Checkbox("First Deal, then Play", ref _config.FirstDealThenPlay)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: First deal every player their hands.\nInactive: Deal hand and direct play per player.");
-        } else if (!_config.FirstDealThenPlay) {
-            _config.FirstDealThenPlay = true;
-            _save();
-        }
 
-        if(level >= (int)UserLevel.Advanced)
-        {
             ImGui.Spacing();
             if (ImGui.Checkbox("Identical Split Only", ref _config.IdenticalSplitOnly)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Only same cards (e.g. J+J) can split.\nInactive: Same score (e.g. J+K) can split.");
-        } else if (!_config.IdenticalSplitOnly) {
-            _config.IdenticalSplitOnly = true;
-            _save();
-        }
 
-        if(level >= (int)UserLevel.Advanced)
-        {
             ImGui.Spacing();
             if (ImGui.Checkbox("Allow Double Down after Split", ref _config.AllowDoubleDownAfterSplit)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Allows the player to Double Down on hands that resulted from a split.\nInactive: Splitted hands don't allow to Double Down.");
-        } else if (_config.AllowDoubleDownAfterSplit) {
-            _config.AllowDoubleDownAfterSplit = false;
-            _save();
-        }
 
-        if(level >= (int)UserLevel.Advanced)
-        {
             ImGui.Spacing();
             if (ImGui.Checkbox("Refund DD on push", ref _config.RefundFullDoubleDownOnPush)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: If a player has DD and got pushed, the DD bet gets pushed too.\nInactive: If a player has DD and got pushed, the DD bet is lost.");
-        } else if (_config.RefundFullDoubleDownOnPush) {
-            _config.RefundFullDoubleDownOnPush = false;
-            _save();
-        }
 
-        if(level >= (int)UserLevel.Advanced)
-        {
             ImGui.Spacing();
             if (ImGui.Checkbox("Player BJ wins on tie", ref _config.PlayerBJWinsOnTie)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: If the player has a Blackjack (natural or dirty) and the dealer also has 21, the player wins.\nInactive: Both having 21 results in a push.");
-        } else if (_config.PlayerBJWinsOnTie) {
-            _config.PlayerBJWinsOnTie = false;
-            _save();
-        }
 
-        if(level >= (int)UserLevel.Advanced)
-        {
+            ImGui.Spacing();
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Round Behavior");
+            ImGui.Separator();
+
             ImGui.Spacing();
             if (ImGui.Checkbox("Autostart round only on multiple players", ref _config.AutostartRoundOnlyOnMultiplePlayers)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: NextRound trigger only auto-starts when 2+ active players voted.\nWith only 1 player, it highlights the button instead.\nInactive: NextRound auto-starts regardless of player count.");
-        }
 
-        if(level >= (int)UserLevel.Advanced)
-        {
             bool dropboxDetected = DropboxIntegration.IsDropboxAvailable();
             if (dropboxDetected)
             {
@@ -144,20 +155,16 @@ public partial class BlackJackButtlerWindow
                 if (ImGui.IsItemHovered())
                     ImGui.SetTooltip("Use the Dropbox plugin for payouts instead of manual trade.\nDropbox plugin detected and loaded.");
             }
-        }
 
-        if(level >= (int)UserLevel.Advanced)
-        {
             ImGui.Spacing();
             if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Collects all results and sends a single compressed message.\nInactive: Sends individual result messages for every player hand.");
-        } else if (!_config.SmallResult) {
-            _config.SmallResult = true;
-            _save();
-        }
 
-        if(level >= (int)UserLevel.Advanced)
-        {
+            ImGui.Spacing();
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Limits");
+            ImGui.Separator();
+
             ImGui.Spacing();
             ImGui.TextUnformatted("Max Hands per Player (Splits)");
             ImGui.SameLine(300f);
@@ -167,97 +174,17 @@ public partial class BlackJackButtlerWindow
                 _config.MaxHandsPerPlayer = Math.Clamp(_config.MaxHandsPerPlayer, 2, 10);
                 _save();
             }
-        } else if (_config.MaxHandsPerPlayer != 2) {
-            _config.MaxHandsPerPlayer = 2;
-            _save();
+
+            ImGui.EndTabItem();
         }
+    }
 
-        if(level >= (int)UserLevel.Advanced)
-        {
-            ImGui.Separator();
-            ImGui.TextUnformatted("UI");
-        }
-
-        if(level >= (int)UserLevel.Advanced)
-        {
-            ImGui.Spacing();
-            ImGui.TextUnformatted("Highlight Color");
-            ImGui.SameLine(300f);
-            ImGui.SetNextItemWidth(200f);
-            if (ImGui.ColorEdit4("##highlight_color", ref _config.HighlightColor, ImGuiColorEditFlags.NoAlpha))
-            {
-                _config.HighlightColor.W = 1.0f;
-                _save();
-            }
-        }
-
-        if(level >= (int)UserLevel.Advanced)
-        {
-            ImGui.Spacing();
-            ImGui.TextUnformatted("Highlight Text Color");
-            ImGui.SameLine(300f);
-            ImGui.SetNextItemWidth(200f);
-            if (ImGui.ColorEdit4("##highlight_text_color", ref _config.HighlightTextColor, ImGuiColorEditFlags.NoAlpha))
-            {
-                _config.HighlightTextColor.W = 1.0f;
-                _save();
-            }
-        }
-
-        if (level >= (int)UserLevel.Advanced)
-        {
-            ImGui.Separator();
-            ImGui.TextUnformatted("View Direction");
-
-            ImGui.Spacing();
-            float degrees = _config.InitialViewDirection * (180f / MathF.PI);
-            if (degrees < 0) degrees += 360f;
-            ImGui.TextUnformatted("Facing Direction");
-            ImGui.SameLine(300f);
-            ImGui.SetNextItemWidth(200f);
-            if (BJBGui.SliderFloat("##view_dir", ref degrees, 0f, 360f, "%.1f\u00b0"))
-            {
-                _config.InitialViewDirection = degrees * (MathF.PI / 180f);
-                _save();
-                ViewDirectionManager.ApplyViewDirection(_config);
-            }
-            if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Character facing direction.\nAuto-captured when Group Detector activates.\nChanges apply immediately.");
-
-            ImGui.Spacing();
-            if (ImGui.Checkbox("Auto-Rotate on phase change", ref _config.LookEveryTime))
-                _save();
-            if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Active: Face the configured direction when entering Waiting, Deal, Dealer, or Payout phase.\nInactive: Only at round start or via /initialviewdirection command.");
-        }
-
-        ImGui.Separator();
-
-        ImGui.TextUnformatted("Multipliers");
-        if(level >= (int)UserLevel.Advanced)
-        {
-            ImGui.Spacing();
-            DrawMultiplierInput("Normal Win Multiplier", ref _config.MultiplierNormalWin);
-        } else if (_config.MultiplierNormalWin != 1.0f) {
-            _config.MultiplierNormalWin = 1.0f;
-            _save();
-        }
-
+    private void DrawSettingsTab_Betting(int level)
+    {
         ImGui.Spacing();
-        DrawMultiplierInput("Natural BJ Multiplier (2 Cards)", ref _config.MultiplierBlackjackWin);
-
-        if(level >= (int)UserLevel.Advanced)
-        {
-            ImGui.Spacing();
-            DrawMultiplierInput("Dirty BJ Multiplier (3+ Cards)", ref _config.MultiplierDirtyBlackjackWin);
-        } else if (_config.MultiplierDirtyBlackjackWin != 1.0f) {
-            _config.MultiplierDirtyBlackjackWin = 1.0f;
-            _save();
-        }
-
+        ImGui.TextUnformatted("Bet Limits");
         ImGui.Separator();
 
-        ImGui.TextUnformatted("Bet Limits");
         ImGui.Spacing();
         ImGui.TextUnformatted("Minimum");
         ImGui.SameLine(300f);
@@ -289,7 +216,9 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.Spacing();
+        ImGui.Spacing();
         ImGui.TextUnformatted("VIP Bet Tiers");
+        ImGui.Separator();
 
         for (int i = 0; i < _config.VipBetTiers.Count; i++)
         {
@@ -347,10 +276,117 @@ public partial class BlackJackButtlerWindow
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("On: 50k, 1m, 5m\nOff: 50,000 Gil, 1,000,000 Gil");
 
-        if(level >= (int)UserLevel.Advanced)
+        ImGui.Spacing();
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Multipliers");
+        ImGui.Separator();
+
+        if (level >= (int)UserLevel.Advanced)
         {
+            ImGui.Spacing();
+            DrawMultiplierInput("Normal Win Multiplier", ref _config.MultiplierNormalWin);
+        }
+
+        ImGui.Spacing();
+        DrawMultiplierInput("Natural BJ Multiplier (2 Cards)", ref _config.MultiplierBlackjackWin);
+
+        if (level >= (int)UserLevel.Advanced)
+        {
+            ImGui.Spacing();
+            DrawMultiplierInput("Dirty BJ Multiplier (3+ Cards)", ref _config.MultiplierDirtyBlackjackWin);
+        }
+    }
+
+    private void DrawSettingsTab_Visual(int level)
+    {
+        if (ImGui.BeginTabItem("Visual"))
+        {
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Button Style");
             ImGui.Separator();
+
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Button Colors");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(95f);
+            if (ImGui.ColorEdit4("Bg##btn_color", ref _config.ButtonColor, ImGuiColorEditFlags.NoAlpha))
+            {
+                _config.ButtonColor.W = 1.0f;
+                _save();
+            }
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(95f);
+            if (ImGui.ColorEdit4("Text##btn_text_color", ref _config.ButtonTextColor, ImGuiColorEditFlags.NoAlpha))
+            {
+                _config.ButtonTextColor.W = 1.0f;
+                _save();
+            }
+
+            if (level >= (int)UserLevel.Advanced)
+            {
+                ImGui.Spacing();
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Highlight");
+                ImGui.Separator();
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Highlight Color");
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (ImGui.ColorEdit4("##highlight_color", ref _config.HighlightColor, ImGuiColorEditFlags.NoAlpha))
+                {
+                    _config.HighlightColor.W = 1.0f;
+                    _save();
+                }
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Highlight Text Color");
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (ImGui.ColorEdit4("##highlight_text_color", ref _config.HighlightTextColor, ImGuiColorEditFlags.NoAlpha))
+                {
+                    _config.HighlightTextColor.W = 1.0f;
+                    _save();
+                }
+
+                ImGui.Spacing();
+                ImGui.Spacing();
+                ImGui.TextUnformatted("View Direction");
+                ImGui.Separator();
+
+                ImGui.Spacing();
+                float degrees = _config.InitialViewDirection * (180f / MathF.PI);
+                if (degrees < 0) degrees += 360f;
+                ImGui.TextUnformatted("Facing Direction");
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (BJBGui.SliderFloat("##view_dir", ref degrees, 0f, 360f, "%.1f\u00b0"))
+                {
+                    _config.InitialViewDirection = degrees * (MathF.PI / 180f);
+                    _save();
+                    ViewDirectionManager.ApplyViewDirection(_config);
+                }
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("Character facing direction.\nAuto-captured when Group Detector activates.\nChanges apply immediately.");
+
+                ImGui.Spacing();
+                if (ImGui.Checkbox("Auto-Rotate on phase change", ref _config.LookEveryTime))
+                    _save();
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("Active: Face the configured direction when entering Waiting, Deal, Dealer, or Payout phase.\nInactive: Only at round start or via /initialviewdirection command.");
+            }
+
+            ImGui.EndTabItem();
+        }
+    }
+
+    private void DrawSettingsTab_System(int level)
+    {
+        if (ImGui.BeginTabItem("System"))
+        {
+            ImGui.Spacing();
             ImGui.TextUnformatted("Defaults");
+            ImGui.Separator();
             ImGui.Spacing();
 
             var io = ImGui.GetIO();
@@ -377,81 +413,68 @@ public partial class BlackJackButtlerWindow
                 ImGui.TextColored(new Vector4(1, 0, 0, 1),
                     "WARNING: This will completely reset the defaults file. All accumulated updates will be lost.");
             }
-        }
 
-        if(level >= (int)UserLevel.Dev)
-        {
-            ImGui.Separator();
-            ImGui.TextUnformatted("Wait Timer");
-            bool unlockWait = _config.UnlockWaitTimer;
-            if (ImGui.Checkbox("Unlock wait timer##dev_unlock_wait", ref unlockWait))
+            if (level >= (int)UserLevel.Dev)
             {
-                _config.UnlockWaitTimer = unlockWait;
-                if (!unlockWait)
+                ImGui.Spacing();
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Wait Timer");
+                ImGui.Separator();
+
+                bool unlockWait = _config.UnlockWaitTimer;
+                if (ImGui.Checkbox("Unlock wait timer##dev_unlock_wait", ref unlockWait))
                 {
-                    foreach (var g in _config.CommandGroups.Concat(_config.CustomCommandGroups))
-                        foreach (var c in g.Commands)
-                            if (c.Delay > 12f) c.Delay = 12f;
+                    _config.UnlockWaitTimer = unlockWait;
+                    if (!unlockWait)
+                    {
+                        foreach (var g in _config.CommandGroups.Concat(_config.CustomCommandGroups))
+                            foreach (var c in g.Commands)
+                                if (c.Delay > 12f) c.Delay = 12f;
+                    }
+                    _save();
                 }
-                _save();
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("Erhöht die maximale Wait-Zeit auf 30 s.\nBeim Deaktivieren werden alle Einträge über 12 s auf 12 s gesetzt.");
+
+                ImGui.Spacing();
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Config File");
+                ImGui.Separator();
+                ImGui.Spacing();
+
+                if (BJBGui.Button("Export##cfg")) {
+                    var json = JsonConvert.SerializeObject(_config, Formatting.Indented);
+                    _fileDialogManager.SaveFileDialog(
+                        "Export Config", "JSON Files{.json}", "bjb_config", ".json",
+                        (ok, path) => {
+                            if (ok && !string.IsNullOrWhiteSpace(path))
+                                System.IO.File.WriteAllText(path, json);
+                        });
+                }
+
+                ImGui.SameLine();
+
+                if (BJBGui.Button("Import##cfg")) {
+                    _fileDialogManager.OpenFileDialog(
+                        "Import Config", "JSON Files{.json}",
+                        (ok, path) => {
+                            if (!ok || string.IsNullOrWhiteSpace(path)) return;
+                            try {
+                                var json = System.IO.File.ReadAllText(path);
+                                var imported = JsonConvert.DeserializeObject<Configuration>(json);
+                                if (imported != null) {
+                                    _tempImportConfig = imported;
+                                    _openImportConfirmPopup = true;
+                                }
+                            } catch { }
+                        });
+                }
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Export and Import is in beta phase");
             }
-            if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Erhöht die maximale Wait-Zeit auf 30 s.\nBeim Deaktivieren werden alle Einträge über 12 s auf 12 s gesetzt.");
-        }
 
-        if(level >= (int)UserLevel.Dev)
-        {
-            ImGui.Separator();
-
-            ImGui.TextUnformatted("Config File: ");
-            ImGui.SameLine();
-            if (BJBGui.Button("Export##cfg")) {
-                var json = JsonConvert.SerializeObject(_config, Formatting.Indented);
-                _fileDialogManager.SaveFileDialog(
-                    "Export Config", "JSON Files{.json}", "bjb_config", ".json",
-                    (ok, path) => {
-                        if (ok && !string.IsNullOrWhiteSpace(path))
-                            System.IO.File.WriteAllText(path, json);
-                    });
-            }
-
-            ImGui.SameLine();
-
-            if (BJBGui.Button("Import##cfg")) {
-                _fileDialogManager.OpenFileDialog(
-                    "Import Config", "JSON Files{.json}",
-                    (ok, path) => {
-                        if (!ok || string.IsNullOrWhiteSpace(path)) return;
-                        try {
-                            var json = System.IO.File.ReadAllText(path);
-                            var imported = JsonConvert.DeserializeObject<Configuration>(json);
-                            if (imported != null) {
-                                _tempImportConfig = imported;
-                                _openImportConfirmPopup = true;
-                            }
-                        } catch { }
-                    });
-            }
-
-            ImGui.Spacing();
-            ImGui.TextUnformatted("Export and Import is in beta phase");
-        }
-
-        if (ImGui.BeginPopupModal("import_confirm_popup", ref _showImportModal, ImGuiWindowFlags.AlwaysAutoResize))
-        {
-            ImGui.Text("How do you want to import?");
-            if (BJBGui.Button("Full Replace (Wipe current)")) {
-                DoFullReplace();
-                _showImportModal = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.SameLine();
-            if (BJBGui.Button("Merge (Keep custom items)")) {
-                DoMerge();
-                _showImportModal = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.EndPopup();
+            ImGui.EndTabItem();
         }
     }
 
