@@ -118,6 +118,40 @@ public partial class BlackJackButtlerWindow
                         ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.NoLabel)) _save();
                 }
 
+                if (ImGui.Checkbox("Padding Override##pad_ovr", ref group.UseCustomPadding)) _save();
+                if (group.UseCustomPadding)
+                {
+                    ImGui.Indent(20f);
+                    DrawPaddingFields($"##btn_{i}", ref group.CustomPaddingH, ref group.CustomPaddingV);
+                    ImGui.Unindent(20f);
+                }
+
+                if (ImGui.Checkbox("Font Override##font_ovr", ref group.UseCustomFont)) _save();
+                if (group.UseCustomFont)
+                {
+                    ImGui.SameLine();
+                    ImGui.SetNextItemWidth(100f);
+                    int fIdx = group.CustomUseMono ? 1 : 0;
+                    if (BJBGui.Combo("##btn_font", ref fIdx, "Default\0Mono\0"))
+                    {
+                        group.CustomUseMono = fIdx == 1;
+                        _save();
+                    }
+                }
+
+                if (ImGui.Checkbox("Font Size Override##fscale_ovr", ref group.UseCustomFontScale)) _save();
+                if (group.UseCustomFontScale)
+                {
+                    ImGui.SameLine();
+                    ImGui.SetNextItemWidth(150f);
+                    if (BJBGui.SliderFloat("##btn_fscale", ref group.CustomFontScale, 0.5f, 2.0f, "%.2fx"))
+                    {
+                        group.CustomFontScale = (float)(Math.Round(group.CustomFontScale / 0.05) * 0.05);
+                        group.CustomFontScale = Math.Clamp(group.CustomFontScale, 0.5f, 2.0f);
+                        _save();
+                    }
+                }
+
                 var io = ImGui.GetIO();
                 bool ctrlHeld = io.KeyCtrl;
 

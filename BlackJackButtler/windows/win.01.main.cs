@@ -566,6 +566,16 @@ public partial class BlackJackButtlerWindow
 
             if (prevWasButton) ImGui.SameLine();
 
+            bool useMono = group.UseCustomFont ? group.CustomUseMono : _config.CustomButtonUseMono;
+            if (useMono) ImGui.PushFont(UiBuilder.MonoFont);
+
+            float scale = group.UseCustomFontScale ? group.CustomFontScale : _config.CustomButtonFontScale;
+            if (scale != 1.0f) ImGui.SetWindowFontScale(scale);
+
+            float padH = group.UseCustomPadding ? group.CustomPaddingH : _config.CustomButtonPaddingH;
+            float padV = group.UseCustomPadding ? group.CustomPaddingV : _config.CustomButtonPaddingV;
+            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(padH, padV));
+
             int colorPushCount = 0;
             if (group.UseCustomButtonColor)
             {
@@ -580,11 +590,15 @@ public partial class BlackJackButtlerWindow
 
             bool clicked;
             if (colorPushCount > 0 && group.UseCustomTextColor)
-                clicked = ImGui.SmallButton($"{group.Name}##custom_{i}");
+                clicked = ImGui.Button($"{group.Name}##custom_{i}");
             else
-                clicked = BJBGui.SmallButton($"{group.Name}##custom_{i}");
+                clicked = BJBGui.Button($"{group.Name}##custom_{i}");
 
             if (colorPushCount > 0) ImGui.PopStyleColor(colorPushCount);
+
+            ImGui.PopStyleVar();
+            if (scale != 1.0f) ImGui.SetWindowFontScale(1.0f);
+            if (useMono) ImGui.PopFont();
 
             if (clicked)
             {

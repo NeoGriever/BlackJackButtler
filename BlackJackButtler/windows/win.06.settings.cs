@@ -41,6 +41,9 @@ public partial class BlackJackButtlerWindow
             DrawSettingsTab_Visual(level);
 
             if (level >= (int)UserLevel.Advanced)
+                DrawSettingsTab_OwnButtons(level);
+
+            if (level >= (int)UserLevel.Advanced)
                 DrawSettingsTab_System(level);
 
             ImGui.EndTabBar();
@@ -377,6 +380,88 @@ public partial class BlackJackButtlerWindow
             }
 
             ImGui.EndTabItem();
+        }
+    }
+
+    private void DrawSettingsTab_OwnButtons(int level)
+    {
+        if (ImGui.BeginTabItem("Own Buttons"))
+        {
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Padding");
+            ImGui.Separator();
+            ImGui.Spacing();
+
+            DrawPaddingFields("##global", ref _config.CustomButtonPaddingH, ref _config.CustomButtonPaddingV);
+
+            ImGui.Spacing();
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Font");
+            ImGui.Separator();
+            ImGui.Spacing();
+
+            ImGui.TextUnformatted("Font");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            int fontIdx = _config.CustomButtonUseMono ? 1 : 0;
+            if (BJBGui.Combo("##global_font", ref fontIdx, "Default\0Mono\0"))
+            {
+                _config.CustomButtonUseMono = fontIdx == 1;
+                _save();
+            }
+
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Size");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (BJBGui.SliderFloat("##global_font_scale", ref _config.CustomButtonFontScale, 0.5f, 2.0f, "%.2fx"))
+            {
+                _config.CustomButtonFontScale = (float)(Math.Round(_config.CustomButtonFontScale / 0.05) * 0.05);
+                _config.CustomButtonFontScale = Math.Clamp(_config.CustomButtonFontScale, 0.5f, 2.0f);
+                _save();
+            }
+
+            ImGui.EndTabItem();
+        }
+    }
+
+    private void DrawPaddingFields(string idSuffix, ref float paddingH, ref float paddingV)
+    {
+        bool synced = Math.Abs(paddingH - paddingV) < 0.001f;
+
+        ImGui.TextUnformatted("All");
+        ImGui.SameLine(300f);
+        ImGui.SetNextItemWidth(200f);
+        if (!synced) ImGui.BeginDisabled();
+        float allVal = synced ? paddingH : 0f;
+        string allDisplay = synced ? "%.1f" : "—";
+        if (ImGui.DragFloat($"##pad_all{idSuffix}", ref allVal, 0.5f, 0f, 50f, allDisplay))
+        {
+            allVal = Math.Clamp(allVal, 0f, 50f);
+            paddingH = allVal;
+            paddingV = allVal;
+            _save();
+        }
+        if (!synced) ImGui.EndDisabled();
+
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Horizontal");
+        ImGui.SameLine(300f);
+        ImGui.SetNextItemWidth(200f);
+        if (ImGui.DragFloat($"##pad_h{idSuffix}", ref paddingH, 0.5f, 0f, 50f, "%.1f"))
+        {
+            paddingH = Math.Clamp(paddingH, 0f, 50f);
+            _save();
+        }
+
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Vertical");
+        ImGui.SameLine(300f);
+        ImGui.SetNextItemWidth(200f);
+        if (ImGui.DragFloat($"##pad_v{idSuffix}", ref paddingV, 0.5f, 0f, 50f, "%.1f"))
+        {
+            paddingV = Math.Clamp(paddingV, 0f, 50f);
+            _save();
         }
     }
 
