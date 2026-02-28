@@ -59,6 +59,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _openImportConfirmPopup = false;
     private bool _isSidebarVisible = true;
     private string? _pendingSettingsFocus;
+    private string? _pendingSettingsTab;
 
     private bool _showRestoreSessionButton = false;
     private bool _showVarRefPanel = false;

@@ -912,6 +912,7 @@ public partial class BlackJackButtlerWindow
             {
                 _page = Page.Settings;
                 _pendingSettingsFocus = p.CurrentBet < _config.MinBet ? "min_bet" : "max_bet";
+                _pendingSettingsTab = "Betting";
             }
             ImGui.PopStyleColor();
             if (ImGui.IsItemHovered())
