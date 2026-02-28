@@ -45,7 +45,7 @@ public partial class BlackJackButtlerWindow
             return;
         }
 
-        int columns = 3;
+        int columns = Math.Clamp(_config.NearbyColumns, 1, 5);
         float availWidth = ImGui.GetContentRegionAvail().X;
         float colWidth = availWidth / columns;
         float rowHeight = ImGui.GetTextLineHeightWithSpacing() + 2f;
