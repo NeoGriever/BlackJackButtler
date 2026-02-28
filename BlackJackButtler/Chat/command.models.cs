@@ -51,4 +51,12 @@ public class CommandGroup
     public bool UseCustomTextColor = false;
     public Vector4 CustomButtonColor = new(0.26f, 0.26f, 0.26f, 1.0f);
     public Vector4 CustomTextColor = new(1.0f, 1.0f, 1.0f, 1.0f);
+
+    public bool UseCustomPadding = false;
+    public float CustomPaddingH = 4.0f;
+    public float CustomPaddingV = 2.0f;
+    public bool UseCustomFontScale = false;
+    public float CustomFontScale = 1.0f;
+    public bool UseCustomFont = false;
+    public bool CustomUseMono = false;
 }

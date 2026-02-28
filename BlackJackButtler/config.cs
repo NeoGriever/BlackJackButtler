@@ -78,6 +78,11 @@ public sealed class Configuration : IPluginConfiguration
     public bool NearbySticky = false;
     public int NearbyColumns = 2;
 
+    public float CustomButtonPaddingH = 4.0f;
+    public float CustomButtonPaddingV = 2.0f;
+    public float CustomButtonFontScale = 1.0f;
+    public bool CustomButtonUseMono = false;
+
     public UserLevel CurrentLevel = UserLevel.Beginner;
 
     public static string[] StandardBatchNames => DefaultsManager.GetDefaultMessages().Select(m => m.Name).ToArray();
