@@ -32,6 +32,7 @@ public sealed class Configuration : IPluginConfiguration
 
     public List<CommandGroup> CommandGroups = new();
     public List<CommandGroup> CustomCommandGroups = new();
+    public List<string> CustomButtonOrder = new();
     public List<MessageBatch> MessageBatches = new();
     public List<UserRegexEntry> UserRegexes = new();
     public List<WebhookEntry> Webhooks = new();
@@ -72,7 +73,7 @@ public sealed class Configuration : IPluginConfiguration
     public string NotepadText = "";
 
     public List<string> NearbyFavorites = new();
-    public float NearbyDistanceCap = 30f;
+    public float NearbyDistanceCap = 2.5f;
     public bool ShowNearbyPlayers = true;
     public bool NearbySticky = false;
 
