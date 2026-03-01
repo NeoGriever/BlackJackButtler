@@ -30,8 +30,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _showRegexWarningPopup;
     private bool _openRegexResetPopup = false;
     private bool _openForceDefaultsPopup = false;
-    private DateTime _lastSync = DateTime.MinValue;
-
     private PlayerState _dealer = new() { Name = "Dealer", IsActivePlayer = true };
     private PlayerState? _editingAliasPlayer;
     private string _aliasInputBuffer = string.Empty;
@@ -126,15 +124,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     public List<PlayerState> GetPlayers() => _players;
     public PlayerState GetDealer() => _dealer;
     public (Vector2 Pos, Vector2 Size) GetWindowRect() => (_lastWindowPos, _lastWindowSize);
-
-    public void OnUpdate()
-    {
-        if (IsRecognitionActive && (DateTime.Now - _lastSync).TotalMilliseconds > 1000)
-        {
-            _lastSync = DateTime.Now;
-            SyncParty();
-        }
-    }
 
     public override void PreDraw()
     {

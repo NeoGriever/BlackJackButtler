@@ -57,6 +57,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly DebugLogWindow debugLogWindow;
     private readonly NotepadWindow notepadWindow;
     private DateTime _lastSync = DateTime.MinValue;
+    private DateTime _lastIdleTick = DateTime.MinValue;
     private volatile bool _autoActionInFlight = false;
     private DateTime _lastAutoLog = DateTime.MinValue;
     private GamePhase _lastPhase = GamePhase.Waiting;
@@ -110,16 +111,21 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        if(mainWindow == null) return;
+        if (mainWindow == null) return;
 
-        // Immer aktiv: Spieler-Name cachen (für Chat-Identifikation)
+        if (!mainWindow.IsRecognitionActive)
+        {
+            if (!mainWindow.IsOpen) return;
+            if ((DateTime.Now - _lastIdleTick).TotalSeconds < 2) return;
+            _lastIdleTick = DateTime.Now;
+
+            _cachedLocalName = ObjectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
+            GameEngine.SetRuntimeContext(mainWindow.GetPlayers(), mainWindow.GetDealer());
+            return;
+        }
+
         _cachedLocalName = ObjectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
-
-        // Immer aktiv: Runtime-Context aktuell halten (billig, nur Referenz-Zuweisung)
         GameEngine.SetRuntimeContext(mainWindow.GetPlayers(), mainWindow.GetDealer());
-
-        // ── STANDBY: Alles darunter nur wenn Group Detector aktiv ──
-        if (!mainWindow.IsRecognitionActive) return;
 
         var currentPhase = GameEngine.CurrentPhase;
         if (currentPhase != _lastPhase)
