@@ -105,6 +105,7 @@ public sealed class Configuration : IPluginConfiguration
         UserRegexes.RemoveAll(r => names.Contains(r.Name));
         UserRegexes.AddRange(defaults);
         DefaultRegexSeeded = true;
+        RegexEngine.InvalidateCache();
     }
 
     public void ForceResetCommandGroups() {

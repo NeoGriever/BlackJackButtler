@@ -112,7 +112,7 @@ public partial class BlackJackButtlerWindow
 
                 ImGui.SameLine();
 
-                if (ImGui.Checkbox("##caseSensitive", ref e.CaseSensitive)) _save();
+                if (ImGui.Checkbox("##caseSensitive", ref e.CaseSensitive)) { RegexEngine.InvalidateCache(); _save(); }
 
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     ImGui.SetTooltip("Case sensitive");
@@ -150,6 +150,7 @@ public partial class BlackJackButtlerWindow
                     if (ImGui.InputText("##pat", ref pStr, 512))
                     {
                         e.Patterns[pIdx] = pStr;
+                        RegexEngine.InvalidateCache();
                         _save();
                     }
 
@@ -167,6 +168,7 @@ public partial class BlackJackButtlerWindow
                     if (BJBGui.Button("X"))
                     {
                         e.Patterns.RemoveAt(pIdx);
+                        RegexEngine.InvalidateCache();
                         _save();
                         ImGui.PopID();
                         break;
@@ -239,6 +241,7 @@ public partial class BlackJackButtlerWindow
                         if (BJBGui.Button("Delete Entry", new Vector2(-1, 0)))
                         {
                             _config.UserRegexes.RemoveAt(i);
+                            RegexEngine.InvalidateCache();
                             _save();
                             ImGui.PopID();
                             break;

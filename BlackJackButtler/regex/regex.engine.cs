@@ -10,6 +10,9 @@ namespace BlackJackButtler.Regex;
 public static class RegexEngine
 {
     private static readonly HashSet<string> _nextRoundVotes = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<(string pattern, bool caseSensitive), RRX.Regex> _regexCache = new();
+
+    public static void InvalidateCache() => _regexCache.Clear();
 
     public static void ClearNextRoundVotes() => _nextRoundVotes.Clear();
 
@@ -41,9 +44,16 @@ public static class RegexEngine
             {
                 if (string.IsNullOrWhiteSpace(pattern)) continue;
 
-                var options = entry.CaseSensitive ? RRX.RegexOptions.Compiled : (RRX.RegexOptions.Compiled | RRX.RegexOptions.IgnoreCase);
-                RRX.Regex rx;
-                try { rx = new RRX.Regex(pattern, options); } catch { continue; }
+                var key = (pattern, entry.CaseSensitive);
+                if (!_regexCache.TryGetValue(key, out var rx))
+                {
+                    var options = entry.CaseSensitive
+                        ? RRX.RegexOptions.Compiled
+                        : (RRX.RegexOptions.Compiled | RRX.RegexOptions.IgnoreCase);
+                    try { rx = new RRX.Regex(pattern, options); }
+                    catch { continue; }
+                    _regexCache[key] = rx;
+                }
 
                 if (rx.IsMatch(cleanMessage))
                 {

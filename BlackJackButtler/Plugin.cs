@@ -59,6 +59,8 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime _lastSync = DateTime.MinValue;
     private DateTime _lastIdleTick = DateTime.MinValue;
     private volatile bool _autoActionInFlight = false;
+    private bool _frameworkHooked = false;
+    private bool _chatHooked = false;
     private DateTime _lastAutoLog = DateTime.MinValue;
     private GamePhase _lastPhase = GamePhase.Waiting;
 
@@ -92,19 +94,17 @@ public sealed class Plugin : IDalamudPlugin
         DebugCommandSink = mainWindow.AddDebugLog;
         windowSystem.AddWindow(mainWindow);
 
-        Framework.Update += OnFrameworkUpdate;
-
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) {HelpMessage = "Open BlackJack Buttler."});
 
         PluginInterface.UiBuilder.Draw += windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi += mainWindow.OpenMain;
         PluginInterface.UiBuilder.OpenConfigUi += mainWindow.OpenSettings;
 
-        ChatGui.ChatMessage += OnChatMessage;
-
         AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "Trade", TradeManager.OnTradeOpened);
         AddonLifecycle.RegisterListener(AddonEvent.PostRequestedUpdate, "Trade", TradeManager.OnTradeUpdated);
         AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "Trade", TradeManager.OnTradeClosed);
+
+        UpdateEventHooks();
 
         Log.Information("BlackJack Buttler loaded.");
     }
@@ -240,6 +240,34 @@ public sealed class Plugin : IDalamudPlugin
         TradeManager.Tick();
     }
 
+    public void UpdateEventHooks()
+    {
+        bool needFramework = mainWindow.IsOpen || mainWindow.IsRecognitionActive;
+        bool needChat = mainWindow.IsRecognitionActive;
+
+        if (needFramework && !_frameworkHooked)
+        {
+            Framework.Update += OnFrameworkUpdate;
+            _frameworkHooked = true;
+        }
+        else if (!needFramework && _frameworkHooked)
+        {
+            Framework.Update -= OnFrameworkUpdate;
+            _frameworkHooked = false;
+        }
+
+        if (needChat && !_chatHooked)
+        {
+            ChatGui.ChatMessage += OnChatMessage;
+            _chatHooked = true;
+        }
+        else if (!needChat && _chatHooked)
+        {
+            ChatGui.ChatMessage -= OnChatMessage;
+            _chatHooked = false;
+        }
+    }
+
     public void Dispose()
     {
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
@@ -250,12 +278,12 @@ public sealed class Plugin : IDalamudPlugin
         AddonLifecycle.UnregisterListener(AddonEvent.PostRequestedUpdate, "Trade", TradeManager.OnTradeUpdated);
         AddonLifecycle.UnregisterListener(AddonEvent.PreFinalize, "Trade", TradeManager.OnTradeClosed);
 
-        ChatGui.ChatMessage -= OnChatMessage;
+        if (_chatHooked) ChatGui.ChatMessage -= OnChatMessage;
+        if (_frameworkHooked) Framework.Update -= OnFrameworkUpdate;
 
         CommandManager.RemoveHandler(CommandName);
 
         windowSystem.RemoveAllWindows();
-        Framework.Update -= OnFrameworkUpdate;
         mainWindow.Dispose();
         DebugCommandSink = null;
     }

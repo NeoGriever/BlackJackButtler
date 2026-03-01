@@ -123,6 +123,7 @@ public partial class BlackJackButtlerWindow
         GameEngine.SetDebugMode(true);
         CreateTestData();
         IsRecognitionActive = true;
+        Plugin.Instance.UpdateEventHooks();
     }
 
     private void DisableDebugMode()
@@ -135,6 +136,7 @@ public partial class BlackJackButtlerWindow
         GameLog.Clear();
         IsRecognitionActive = false;
         Plugin.IsDebugMode = false;
+        Plugin.Instance.UpdateEventHooks();
         _save();
     }
 
