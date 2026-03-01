@@ -119,8 +119,13 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     public void SetHighlightNewRound() => _highlightNewRound = true;
     public void Dispose() { }
-    public void OpenMain() { _page = Page.Main; IsOpen = true; }
-    public void OpenSettings() { _page = Page.Settings; IsOpen = true; }
+    public void OpenMain() { _page = Page.Main; IsOpen = true; Plugin.Instance.UpdateEventHooks(); }
+    public void OpenSettings() { _page = Page.Settings; IsOpen = true; Plugin.Instance.UpdateEventHooks(); }
+
+    public override void OnClose()
+    {
+        Plugin.Instance.UpdateEventHooks();
+    }
     public List<PlayerState> GetPlayers() => _players;
     public PlayerState GetDealer() => _dealer;
     public (Vector2 Pos, Vector2 Size) GetWindowRect() => (_lastWindowPos, _lastWindowSize);
@@ -299,6 +304,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             GameLog.SetIndex(historyIndex);
 
             IsRecognitionActive = true;
+            Plugin.Instance.UpdateEventHooks();
 
             _showRestoreSessionButton = false;
             _page = Page.Main;

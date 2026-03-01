@@ -421,6 +421,8 @@ public partial class BlackJackButtlerWindow
                 _players.RemoveAll(p => !p.IsActivePlayer && p.Bank == 0);
                 AddDebugLog("[SessionManager] Session cleared (Group Detector deactivated)", false);
             }
+
+            Plugin.Instance.UpdateEventHooks();
         }
 
         ImGui.SameLine();
@@ -527,6 +529,7 @@ public partial class BlackJackButtlerWindow
                 IsRecognitionActive = false;
                 SessionManager.ClearSession();
                 EnableDebugMode();
+                Plugin.Instance.UpdateEventHooks();
             }
         }
     }
