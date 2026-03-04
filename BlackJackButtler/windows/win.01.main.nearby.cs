@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Linq;
 using Dalamud.Bindings.ImGui;
@@ -15,6 +16,9 @@ public partial class BlackJackButtlerWindow
     private static readonly Vector4 NearbyColorOutOfRange = new(0.35f, 0.35f, 0.35f, 1f);
     private static readonly Vector4 NearbyColorStarFav = new(1f, 0.85f, 0f, 1f);
     private static readonly Vector4 NearbyColorStarNormal = new(0.4f, 0.4f, 0.4f, 1f);
+    private static readonly Vector4 NearbyColorQueuedName = new(0.5f, 0.85f, 1f, 1f);
+
+    private bool _distSliderHovered;
 
     private void DrawNearbyPlayersSection()
     {
@@ -26,6 +30,15 @@ public partial class BlackJackButtlerWindow
 
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1f, 1f), "NEARBY PLAYERS");
         ImGui.SameLine();
+
+        if (JoinQueueManager.Count > 0)
+        {
+            ImGui.TextColored(new Vector4(1f, 0.8f, 0f, 1f), $"Queue: {JoinQueueManager.Count}");
+            ImGui.SameLine();
+            if (BJBGui.SmallButton("Clear##joinqueue")) JoinQueueManager.Clear();
+            ImGui.SameLine();
+        }
+
         ImGui.TextColored(NearbyColorWorld, "(click name to /tell)");
         ImGui.SameLine(ImGui.GetContentRegionAvail().X - 50f);
         if (ImGui.Checkbox("Sticky", ref _config.NearbySticky)) _save();
@@ -37,11 +50,39 @@ public partial class BlackJackButtlerWindow
             _config.NearbyDistanceCap = Math.Clamp(_config.NearbyDistanceCap, 2.0f, 100.0f);
             _save();
         }
+        _distSliderHovered = ImGui.IsItemHovered();
 
         var allPlayers = NearbyPlayersManager.GetNearbyPlayers(_config);
-        if (allPlayers.Count == 0)
+
+        var queue = JoinQueueManager.Queue;
+        var queued = new List<NearbyPlayerInfo>();
+        var rest = new List<NearbyPlayerInfo>();
+        var seenKeys = new HashSet<string>();
+
+        foreach (var q in queue)
+        {
+            var match = allPlayers.FirstOrDefault(p => p.FullKey == q.FullKey);
+            if (match != null)
+            {
+                queued.Add(match);
+                seenKeys.Add(match.FullKey);
+            }
+            else
+            {
+                queued.Add(new NearbyPlayerInfo { Name = q.Name, World = q.World, Distance = float.MaxValue });
+                seenKeys.Add(q.FullKey);
+            }
+        }
+
+        foreach (var p in allPlayers)
+            if (!seenKeys.Contains(p.FullKey)) rest.Add(p);
+
+        var sorted = queued.Concat(rest).ToList();
+
+        if (sorted.Count == 0)
         {
             ImGui.TextColored(NearbyColorWorld, "No nearby players found.");
+            DrawDistanceCircle();
             return;
         }
 
@@ -50,7 +91,7 @@ public partial class BlackJackButtlerWindow
         float colWidth = availWidth / columns;
         float rowHeight = ImGui.GetTextLineHeightWithSpacing() + 2f;
 
-        int totalItems = allPlayers.Count;
+        int totalItems = sorted.Count;
         int totalRows = (int)Math.Ceiling(totalItems / (double)columns);
         int visibleRows = Math.Clamp(totalRows, 3, 15);
         float childHeight = visibleRows * rowHeight + 8f;
@@ -66,24 +107,48 @@ public partial class BlackJackButtlerWindow
             if (ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows))
                 NearbyPlayersManager.PauseSorting = true;
 
-            for (int i = 0; i < allPlayers.Count; i++)
+            for (int i = 0; i < sorted.Count; i++)
             {
-                var p = allPlayers[i];
+                var p = sorted[i];
                 int col = i % columns;
 
                 if (col > 0) ImGui.SameLine(col * colWidth);
 
                 bool isFav = _config.NearbyFavorites.Contains(p.FullKey);
-                bool outOfRange = !isFav && p.Distance > _config.NearbyDistanceCap;
+                bool isQueued = JoinQueueManager.IsQueued(p.Name, p.World);
+                bool outOfRange = !isFav && !isQueued && p.Distance > _config.NearbyDistanceCap;
 
                 ImGui.PushID($"nearby_{i}");
 
-                if (partyFull) ImGui.BeginDisabled();
-                if (BJBGui.SmallButton($"J##nearby_join_{i}"))
+                if (isQueued)
                 {
-                    ChatCommandRouter.Send($"/pcmd add {p.Name}", _config, "NearbyJoin");
+                    var entry = JoinQueueManager.Queue.FirstOrDefault(e => e.FullKey == p.FullKey);
+                    if (entry?.OutOfRangeSince != null)
+                    {
+                        double elapsed = (DateTime.Now - entry.OutOfRangeSince.Value).TotalSeconds;
+                        int remaining = Math.Max(0, 90 - (int)elapsed);
+                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.15f, 0.15f, 1f));
+                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.7f, 0.25f, 0.25f, 1f));
+                        if (BJBGui.SmallButton($"{remaining}s##nearby_join_{i}"))
+                            JoinQueueManager.Dequeue(p.Name, p.World);
+                        ImGui.PopStyleColor(2);
+                    }
+                    else
+                    {
+                        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.2f, 0.2f, 1f));
+                        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.9f, 0.3f, 0.3f, 1f));
+                        if (BJBGui.SmallButton($"X##nearby_join_{i}"))
+                            JoinQueueManager.Dequeue(p.Name, p.World);
+                        ImGui.PopStyleColor(2);
+                    }
                 }
-                if (partyFull) ImGui.EndDisabled();
+                else
+                {
+                    if (partyFull) ImGui.BeginDisabled();
+                    if (BJBGui.SmallButton($"J##nearby_join_{i}"))
+                        JoinQueueManager.Enqueue(p.Name, p.World);
+                    if (partyFull) ImGui.EndDisabled();
+                }
 
                 ImGui.SameLine(0, 4);
 
@@ -103,11 +168,22 @@ public partial class BlackJackButtlerWindow
 
                 ImGui.BeginGroup();
                 {
-                    var nameColor = outOfRange ? NearbyColorOutOfRange : (isFav ? NearbyColorFavName : NearbyColorName);
+                    var nameColor = outOfRange ? NearbyColorOutOfRange
+                        : isQueued ? NearbyColorQueuedName
+                        : isFav ? NearbyColorFavName
+                        : NearbyColorName;
                     var worldColor = outOfRange ? NearbyColorOutOfRange : NearbyColorWorld;
 
-                    var dist = Math.Min(p.Distance, 99.9f);
-                    ImGui.TextColored(nameColor, $"({dist,4:F1}y)");
+                    if (p.Distance < float.MaxValue)
+                    {
+                        var dist = Math.Min(p.Distance, 99.9f);
+                        ImGui.TextColored(nameColor, $"({dist,4:F1}y)");
+                    }
+                    else
+                    {
+                        ImGui.TextColored(NearbyColorOutOfRange, "(--.-y)");
+                    }
+
                     ImGui.SameLine(0, 4);
                     ImGui.TextColored(nameColor, p.Name);
                     ImGui.SameLine(0, 0);
@@ -122,7 +198,8 @@ public partial class BlackJackButtlerWindow
 
                 if (ImGui.IsItemHovered())
                 {
-                    ImGui.SetTooltip($"Click to /tell {p.FullKey}\nDistance: {p.Distance:F1} yalms");
+                    var distText = p.Distance < float.MaxValue ? $"{p.Distance:F1} yalms" : "out of range";
+                    ImGui.SetTooltip($"Click to /tell {p.FullKey}\nDistance: {distText}");
                 }
 
                 ImGui.PopID();
@@ -131,5 +208,41 @@ public partial class BlackJackButtlerWindow
             ImGui.PopFont();
         }
         ImGui.EndChild();
+
+        DrawDistanceCircle();
+    }
+
+    private void DrawDistanceCircle()
+    {
+        if (!_distSliderHovered) return;
+
+        var local = Plugin.ObjectTable.LocalPlayer;
+        if (local == null) return;
+
+        var center = local.Position;
+        float radius = _config.NearbyDistanceCap;
+        const int segments = 64;
+
+        var screenPoints = new List<Vector2>();
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = 2f * MathF.PI * i / segments;
+            var worldPoint = new Vector3(
+                center.X + radius * MathF.Cos(angle),
+                center.Y,
+                center.Z + radius * MathF.Sin(angle));
+
+            if (Plugin.GameGui.WorldToScreen(worldPoint, out var screenPos))
+                screenPoints.Add(screenPos);
+        }
+
+        if (screenPoints.Count < 2) return;
+
+        var drawList = ImGui.GetBackgroundDrawList();
+        var color = ImGui.GetColorU32(new Vector4(1f, 0.85f, 0f, 0.5f));
+
+        for (int i = 0; i < screenPoints.Count - 1; i++)
+            drawList.AddLine(screenPoints[i], screenPoints[i + 1], color, 2f);
+        drawList.AddLine(screenPoints[^1], screenPoints[0], color, 2f);
     }
 }

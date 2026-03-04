@@ -78,6 +78,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool ShowNearbyPlayers = true;
     public bool NearbySticky = false;
     public int NearbyColumns = 2;
+    public bool NoAutoDequeue = false;
 
     public float CustomButtonPaddingH = 4.0f;
     public float CustomButtonPaddingV = 2.0f;
