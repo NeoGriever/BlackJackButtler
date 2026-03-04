@@ -107,6 +107,10 @@ public partial class BlackJackButtlerWindow
                     _config.NearbyColumns = Math.Clamp(_config.NearbyColumns, 1, 5);
                     _save();
                 }
+
+                if (ImGui.Checkbox("No auto dequeue", ref _config.NoAutoDequeue)) _save();
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("When enabled, queued players will not be\nautomatically removed after 90s out of range.");
             }
 
             ImGui.EndTabItem();

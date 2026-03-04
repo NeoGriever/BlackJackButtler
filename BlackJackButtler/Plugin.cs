@@ -235,9 +235,10 @@ public sealed class Plugin : IDalamudPlugin
             }
         }
 
-        // Dropbox + Trade
+        // Dropbox + Trade + JoinQueue
         DropboxIntegration.Update();
         TradeManager.Tick();
+        JoinQueueManager.Tick(Configuration);
     }
 
     public void UpdateEventHooks()
