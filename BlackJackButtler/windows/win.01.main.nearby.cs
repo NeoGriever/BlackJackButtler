@@ -215,7 +215,6 @@ public partial class BlackJackButtlerWindow
     private void DrawDistanceCircle()
     {
         if (!_distSliderHovered) return;
-
         var local = Plugin.ObjectTable.LocalPlayer;
         if (local == null) return;
 
@@ -223,26 +222,79 @@ public partial class BlackJackButtlerWindow
         float radius = _config.NearbyDistanceCap;
         const int segments = 64;
 
-        var screenPoints = new List<Vector2>();
+        var worldPoints = new Vector3[segments];
+        var screenPoints = new Vector2[segments];
+        var visible = new bool[segments];
+
         for (int i = 0; i < segments; i++)
         {
             float angle = 2f * MathF.PI * i / segments;
-            var worldPoint = new Vector3(
+            worldPoints[i] = new Vector3(
                 center.X + radius * MathF.Cos(angle),
                 center.Y,
                 center.Z + radius * MathF.Sin(angle));
-
-            if (Plugin.GameGui.WorldToScreen(worldPoint, out var screenPos))
-                screenPoints.Add(screenPos);
+            visible[i] = Plugin.GameGui.WorldToScreen(worldPoints[i], out screenPoints[i]);
         }
-
-        if (screenPoints.Count < 2) return;
 
         var drawList = ImGui.GetBackgroundDrawList();
         var color = ImGui.GetColorU32(new Vector4(1f, 0.85f, 0f, 0.5f));
 
-        for (int i = 0; i < screenPoints.Count - 1; i++)
-            drawList.AddLine(screenPoints[i], screenPoints[i + 1], color, 2f);
-        drawList.AddLine(screenPoints[^1], screenPoints[0], color, 2f);
+        var stroke = new List<Vector2>();
+
+        for (int i = 0; i < segments; i++)
+        {
+            int j = (i + 1) % segments;
+
+            if (visible[i] && visible[j])
+            {
+                if (stroke.Count == 0) stroke.Add(screenPoints[i]);
+                stroke.Add(screenPoints[j]);
+            }
+            else if (!visible[i] && !visible[j])
+            {
+                FlushStroke(drawList, stroke, color);
+            }
+            else if (visible[i] && !visible[j])
+            {
+                if (stroke.Count == 0) stroke.Add(screenPoints[i]);
+                var edge = FindEdgePoint(worldPoints[i], worldPoints[j]);
+                if (edge.HasValue) stroke.Add(edge.Value);
+                FlushStroke(drawList, stroke, color);
+            }
+            else
+            {
+                FlushStroke(drawList, stroke, color);
+                var edge = FindEdgePoint(worldPoints[j], worldPoints[i]);
+                if (edge.HasValue) stroke.Add(edge.Value);
+                stroke.Add(screenPoints[j]);
+            }
+        }
+
+        FlushStroke(drawList, stroke, color);
+    }
+
+    private static Vector2? FindEdgePoint(Vector3 visibleWorld, Vector3 invisibleWorld)
+    {
+        var a = visibleWorld;
+        var b = invisibleWorld;
+        for (int k = 0; k < 6; k++)
+        {
+            var mid = (a + b) * 0.5f;
+            if (Plugin.GameGui.WorldToScreen(mid, out _))
+                a = mid;
+            else
+                b = mid;
+        }
+        return Plugin.GameGui.WorldToScreen(a, out var result) ? result : null;
+    }
+
+    private static void FlushStroke(ImDrawListPtr drawList, List<Vector2> stroke, uint color)
+    {
+        if (stroke.Count >= 2)
+        {
+            for (int i = 0; i < stroke.Count - 1; i++)
+                drawList.AddLine(stroke[i], stroke[i + 1], color, 2f);
+        }
+        stroke.Clear();
     }
 }
