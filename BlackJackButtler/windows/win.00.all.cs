@@ -42,13 +42,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private int _vipConfirmOldTier = 0;
     private int _vipConfirmNewTier = 0;
 
-    private bool _triggerVenuePopup = false;
-    private bool _isVenuePopupOpen = false;
-    private string _venueNameBuffer = "";
-    private VenueAddress? _pendingVenueAddress = null;
-    private PlayerState? _pendingVipPlayer = null;
-    private int _pendingVipTier = 0;
-
     private readonly Dictionary<string, long> _bankSnapshot = new();
     private readonly Dictionary<string, long> _betSnapshot = new();
 
