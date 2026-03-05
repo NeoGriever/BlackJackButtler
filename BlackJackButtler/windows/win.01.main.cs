@@ -830,9 +830,6 @@ public partial class BlackJackButtlerWindow
             {
                 if (_bankSnapshot.TryGetValue(p.UIID, out long oldBank))
                 {
-                    long delta = p.Bank - oldBank;
-                    if (delta > 0) StatsManager.RecordIncome(delta);
-                    else if (delta < 0) StatsManager.RecordExpense(-delta);
                     ActivityLogManager.LogBankChange(p.DisplayName, oldBank, p.Bank);
                     _bankSnapshot.Remove(p.UIID);
                 }
