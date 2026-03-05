@@ -142,14 +142,6 @@ public partial class BlackJackButtlerWindow
         }
         DrawVipConfirmModal();
 
-        if (_triggerVenuePopup)
-        {
-            ImGui.OpenPopup("bjb_venue_name_popup");
-            _isVenuePopupOpen = true;
-            _triggerVenuePopup = false;
-        }
-        DrawVenueNameModal();
-
         if (_panicConfirmStage == 1)
             ImGui.OpenPopup("panic_confirm_1");
 
@@ -310,77 +302,12 @@ public partial class BlackJackButtlerWindow
 
     private void ApplyVipChange(PlayerState player, int newTier)
     {
-        var venue = VenueManager.GetCurrentVenue();
+        var addressKey = VenueManager.GetCurrentKey();
+        if (addressKey == null) return;
+
+        var venue = VenueManager.GetOrCreateVenue(addressKey);
         string worldName = VenueManager.ResolveWorldName(player.WorldId);
-
-        if (venue != null)
-        {
-            VenueManager.SetPlayerTier(venue, player.Name, worldName, newTier);
-        }
-        else
-        {
-            var addr = VenueManager.GetCurrentAddress();
-            _pendingVenueAddress = addr ?? new VenueAddress();
-            _pendingVipPlayer = player;
-            _pendingVipTier = newTier;
-            _venueNameBuffer = VenueManager.GetNextVenueName();
-            _triggerVenuePopup = true;
-        }
-    }
-
-    private void DrawVenueNameModal()
-    {
-        if (ImGui.BeginPopupModal("bjb_venue_name_popup", ref _isVenuePopupOpen, ImGuiWindowFlags.AlwaysAutoResize))
-        {
-            if (_pendingVipPlayer == null)
-            {
-                _isVenuePopupOpen = false;
-                ImGui.CloseCurrentPopup();
-                ImGui.EndPopup();
-                return;
-            }
-
-            ImGui.Text("No venue found for current location.");
-            ImGui.Text("Enter a name for this venue:");
-            ImGui.Spacing();
-
-            ImGui.SetNextItemWidth(250f);
-            ImGui.InputText("##venue_name_input", ref _venueNameBuffer, 64);
-
-            if (_pendingVenueAddress != null && !string.IsNullOrEmpty(_pendingVenueAddress.Housing))
-            {
-                ImGui.TextDisabled($"{_pendingVenueAddress.Housing}, Ward {_pendingVenueAddress.Ward}, Plot {_pendingVenueAddress.Plot} ({_pendingVenueAddress.World})");
-            }
-            else
-            {
-                ImGui.TextDisabled("Not in housing area");
-            }
-
-            ImGui.Spacing();
-            if (BJBGui.Button("Save", new Vector2(120, 0)))
-            {
-                var name = _venueNameBuffer.Trim();
-                if (string.IsNullOrWhiteSpace(name)) name = VenueManager.GetNextVenueName();
-
-                var venue = VenueManager.FindOrCreateVenue(_pendingVenueAddress ?? new VenueAddress(), name);
-                string worldName = VenueManager.ResolveWorldName(_pendingVipPlayer.WorldId);
-                VenueManager.SetPlayerTier(venue, _pendingVipPlayer.Name, worldName, _pendingVipTier);
-
-                _pendingVipPlayer = null;
-                _pendingVenueAddress = null;
-                _isVenuePopupOpen = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.SameLine();
-            if (BJBGui.Button("Cancel", new Vector2(120, 0)))
-            {
-                _pendingVipPlayer = null;
-                _pendingVenueAddress = null;
-                _isVenuePopupOpen = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.EndPopup();
-        }
+        VenueManager.SetPlayerTier(venue, player.Name, worldName, newTier);
     }
 
     private void SetupTableColumns()
