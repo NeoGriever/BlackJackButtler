@@ -62,9 +62,9 @@ public sealed class Configuration : IPluginConfiguration
     public Vector4 ButtonColor     = new Vector4(0.26f, 0.26f, 0.26f, 1.0f); // dark grey
     public Vector4 ButtonTextColor = new Vector4(1.0f,  1.0f,  1.0f,  1.0f); // white
 
-    public long OverallIncome = 0;
-    public long OverallExpense = 0;
-    public int OverallRounds = 0;
+    public float PayoutPercent = 30f;
+    public long GilPerHour = 250000;
+    public int ClipHoursMode = 0;
 
     public bool dismissDevWarning = false;
 

@@ -640,6 +640,9 @@ public partial class BlackJackButtlerWindow
         TryApply<float> (j, "InitialViewDirection",                   v => _config.InitialViewDirection = v);
         TryApply<bool>  (j, "LookEveryTime",                         v => _config.LookEveryTime = v);
         TryApply<bool>  (j, "UnlockWaitTimer",                       v => _config.UnlockWaitTimer = v);
+        TryApply<float> (j, "PayoutPercent",                           v => _config.PayoutPercent = v);
+        TryApply<long>  (j, "GilPerHour",                             v => _config.GilPerHour = v);
+        TryApply<int>   (j, "ClipHoursMode",                          v => _config.ClipHoursMode = v);
     }
 
     private void DoFullReplace() {

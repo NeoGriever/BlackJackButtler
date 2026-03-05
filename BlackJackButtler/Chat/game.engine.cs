@@ -292,7 +292,8 @@ public static partial class GameEngine
         }
 
         ActivityLogManager.LogRoundEnd(dealer, players);
-        StatsManager.RecordRound();
+        if (StatsManager.IsRunning)
+            StatsManager.RecordRound(dealer, players, cfg);
 
         try
         {

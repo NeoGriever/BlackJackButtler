@@ -79,7 +79,7 @@ public sealed class Plugin : IDalamudPlugin
         if (DefaultsMigration.RunMigration(Configuration))
             Configuration.Save();
 
-        StatsManager.Init(Configuration, () => Configuration.Save());
+        StatsManager.Init(Configuration);
         ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
         VenueManager.Init(Path.GetDirectoryName(PluginInterface.GetPluginConfigDirectory())!);
 
