@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace BlackJackButtler.Windows;
 
@@ -17,8 +18,9 @@ public partial class BlackJackButtlerWindow
 
         if (ImGui.Button("+ Create Preset"))
         {
-            var snap = JsonConvert.SerializeObject(_config);
-            _config.Presets.Add(new PresetEntry { SnapshotJson = snap });
+            var obj = JObject.FromObject(_config);
+            obj.Remove("Presets");
+            _config.Presets.Add(new PresetEntry { SnapshotJson = obj.ToString(Formatting.None) });
             _save();
         }
 
@@ -97,7 +99,9 @@ public partial class BlackJackButtlerWindow
 
                 if (ImGui.Button($"Update Snapshot##psnap_{i}"))
                 {
-                    preset.SnapshotJson = JsonConvert.SerializeObject(_config);
+                    var snapObj = JObject.FromObject(_config);
+                    snapObj.Remove("Presets");
+                    preset.SnapshotJson = snapObj.ToString(Formatting.None);
                     _save();
                 }
                 if (ImGui.IsItemHovered())

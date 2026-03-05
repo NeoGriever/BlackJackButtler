@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using BlackJackButtler.Regex;
 
 namespace BlackJackButtler.Windows;
 
@@ -536,7 +539,9 @@ public partial class BlackJackButtlerWindow
                 ImGui.Spacing();
 
                 if (BJBGui.Button("Export##cfg")) {
-                    var json = JsonConvert.SerializeObject(_config, Formatting.Indented);
+                    var exportObj = JObject.FromObject(_config);
+                    exportObj.Remove("Presets");
+                    var json = exportObj.ToString(Formatting.Indented);
                     _fileDialogManager.SaveFileDialog(
                         "Export Config", "JSON Files{.json}", "bjb_config", ".json",
                         (ok, path) => {
@@ -554,11 +559,8 @@ public partial class BlackJackButtlerWindow
                             if (!ok || string.IsNullOrWhiteSpace(path)) return;
                             try {
                                 var json = System.IO.File.ReadAllText(path);
-                                var imported = JsonConvert.DeserializeObject<Configuration>(json);
-                                if (imported != null) {
-                                    _tempImportConfig = imported;
-                                    _openImportConfirmPopup = true;
-                                }
+                                _tempImportJson = JObject.Parse(json);
+                                _openImportConfirmPopup = true;
                             } catch { }
                         });
                 }
@@ -583,47 +585,106 @@ public partial class BlackJackButtlerWindow
         }
     }
 
+    private void TryApply<T>(JObject j, string key, Action<T> setter)
+    {
+        if (j.TryGetValue(key, out var token))
+            setter(token.ToObject<T>()!);
+    }
+
+    private void ApplyScalars(JObject j)
+    {
+        TryApply<bool>  (j, "FirstDealThenPlay",                      v => _config.FirstDealThenPlay = v);
+        TryApply<bool>  (j, "IdenticalSplitOnly",                     v => _config.IdenticalSplitOnly = v);
+        TryApply<bool>  (j, "AllowDoubleDownAfterSplit",               v => _config.AllowDoubleDownAfterSplit = v);
+        TryApply<int>   (j, "MaxHandsPerPlayer",                      v => _config.MaxHandsPerPlayer = v);
+        TryApply<float> (j, "MultiplierNormalWin",                    v => _config.MultiplierNormalWin = v);
+        TryApply<float> (j, "MultiplierBlackjackWin",                 v => _config.MultiplierBlackjackWin = v);
+        TryApply<float> (j, "MultiplierDirtyBlackjackWin",            v => _config.MultiplierDirtyBlackjackWin = v);
+        TryApply<bool>  (j, "RefundFullDoubleDownOnPush",             v => _config.RefundFullDoubleDownOnPush = v);
+        TryApply<bool>  (j, "PlayerBJWinsOnTie",                      v => _config.PlayerBJWinsOnTie = v);
+        TryApply<bool>  (j, "EnableBankInput",                        v => _config.EnableBankInput = v);
+        TryApply<bool>  (j, "EnableAntiDouble",                       v => _config.EnableAntiDouble = v);
+        TryApply<long>  (j, "MinBet",                                 v => _config.MinBet = v);
+        TryApply<long>  (j, "MaxBet",                                 v => _config.MaxBet = v);
+        TryApply<bool>  (j, "ShortBetFormat",                         v => _config.ShortBetFormat = v);
+        TryApply<bool>  (j, "AutoInitialDeal",                        v => _config.AutoInitialDeal = v);
+        TryApply<bool>  (j, "AutoDealerDraw",                         v => _config.AutoDealerDraw = v);
+        TryApply<bool>  (j, "AutoRun",                                v => _config.AutoRun = v);
+        TryApply<int>   (j, "DealerDrawsUntil",                       v => _config.DealerDrawsUntil = v);
+        TryApply<bool>  (j, "SmallResult",                            v => _config.SmallResult = v);
+        TryApply<bool>  (j, "AutostartRoundOnlyOnMultiplePlayers",     v => _config.AutostartRoundOnlyOnMultiplePlayers = v);
+        TryApply<float> (j, "CommandSpeedMultiplier",                  v => _config.CommandSpeedMultiplier = v);
+        TryApply<Vector4>(j, "HighlightColor",                        v => _config.HighlightColor = v);
+        TryApply<Vector4>(j, "HighlightTextColor",                    v => _config.HighlightTextColor = v);
+        TryApply<Vector4>(j, "ButtonColor",                           v => _config.ButtonColor = v);
+        TryApply<Vector4>(j, "ButtonTextColor",                       v => _config.ButtonTextColor = v);
+        TryApply<bool>  (j, "HideStandardBatches",                    v => _config.HideStandardBatches = v);
+        TryApply<bool>  (j, "AllowEditingStandardRegex",               v => _config.AllowEditingStandardRegex = v);
+        TryApply<UserLevel>(j, "CurrentLevel",                        v => _config.CurrentLevel = v);
+        TryApply<float> (j, "NearbyDistanceCap",                      v => _config.NearbyDistanceCap = v);
+        TryApply<bool>  (j, "ShowNearbyPlayers",                      v => _config.ShowNearbyPlayers = v);
+        TryApply<bool>  (j, "NearbySticky",                           v => _config.NearbySticky = v);
+        TryApply<int>   (j, "NearbyColumns",                          v => _config.NearbyColumns = v);
+        TryApply<bool>  (j, "NoAutoDequeue",                          v => _config.NoAutoDequeue = v);
+        TryApply<float> (j, "CustomButtonPaddingH",                   v => _config.CustomButtonPaddingH = v);
+        TryApply<float> (j, "CustomButtonPaddingV",                   v => _config.CustomButtonPaddingV = v);
+        TryApply<float> (j, "CustomButtonFontScale",                  v => _config.CustomButtonFontScale = v);
+        TryApply<bool>  (j, "CustomButtonUseMono",                    v => _config.CustomButtonUseMono = v);
+        TryApply<bool>  (j, "OpenDropboxInsteadOfTrade",              v => _config.OpenDropboxInsteadOfTrade = v);
+        TryApply<float> (j, "InitialViewDirection",                   v => _config.InitialViewDirection = v);
+        TryApply<bool>  (j, "LookEveryTime",                         v => _config.LookEveryTime = v);
+        TryApply<bool>  (j, "UnlockWaitTimer",                       v => _config.UnlockWaitTimer = v);
+    }
+
     private void DoFullReplace() {
-        if (_tempImportConfig == null) return;
+        if (_tempImportJson == null) return;
 
-        _config.MessageBatches = _tempImportConfig.MessageBatches;
-        _config.UserRegexes = _tempImportConfig.UserRegexes;
-        _config.CommandGroups = _tempImportConfig.CommandGroups;
-        _config.CustomCommandGroups = _tempImportConfig.CustomCommandGroups;
+        ApplyScalars(_tempImportJson);
 
-        _config.MultiplierNormalWin = _tempImportConfig.MultiplierNormalWin;
-        _config.MultiplierBlackjackWin = _tempImportConfig.MultiplierBlackjackWin;
-        _config.MultiplierDirtyBlackjackWin = _tempImportConfig.MultiplierDirtyBlackjackWin;
-        _config.MaxHandsPerPlayer = _tempImportConfig.MaxHandsPerPlayer;
-        _config.MinBet = _tempImportConfig.MinBet;
-        _config.MaxBet = _tempImportConfig.MaxBet;
-        _config.ShortBetFormat = _tempImportConfig.ShortBetFormat;
+        if (_tempImportJson.ContainsKey("CommandGroups"))
+            _config.CommandGroups = _tempImportJson["CommandGroups"]!.ToObject<List<CommandGroup>>()!;
+        if (_tempImportJson.ContainsKey("CustomCommandGroups"))
+            _config.CustomCommandGroups = _tempImportJson["CustomCommandGroups"]!.ToObject<List<CommandGroup>>()!;
+        if (_tempImportJson.ContainsKey("MessageBatches"))
+            _config.MessageBatches = _tempImportJson["MessageBatches"]!.ToObject<List<MessageBatch>>()!;
+        if (_tempImportJson.ContainsKey("UserRegexes"))
+            _config.UserRegexes = _tempImportJson["UserRegexes"]!.ToObject<List<UserRegexEntry>>()!;
+        if (_tempImportJson.ContainsKey("Webhooks"))
+            _config.Webhooks = _tempImportJson["Webhooks"]!.ToObject<List<WebhookEntry>>()!;
+        if (_tempImportJson.ContainsKey("VipBetTiers"))
+            _config.VipBetTiers = _tempImportJson["VipBetTiers"]!.ToObject<List<VipBetTier>>()!;
+        if (_tempImportJson.ContainsKey("CustomButtonOrder"))
+            _config.CustomButtonOrder = _tempImportJson["CustomButtonOrder"]!.ToObject<List<string>>()!;
 
         _save();
     }
 
+    private void MergeNamedList<T>(JObject j, string key, List<T> target, Func<T, string> nameSelector)
+    {
+        if (!j.ContainsKey(key)) return;
+        var items = j[key]!.ToObject<List<T>>()!;
+        foreach (var item in items)
+        {
+            var name = nameSelector(item);
+            target.RemoveAll(x => nameSelector(x) == name);
+            target.Add(item);
+        }
+    }
+
     private void DoMerge() {
-        if (_tempImportConfig == null) return;
+        if (_tempImportJson == null) return;
 
-        foreach (var b in _tempImportConfig.MessageBatches) {
-            _config.MessageBatches.RemoveAll(x => x.Name == b.Name);
-            _config.MessageBatches.Add(b);
-        }
+        ApplyScalars(_tempImportJson);
 
-        foreach (var r in _tempImportConfig.UserRegexes) {
-            _config.UserRegexes.RemoveAll(x => x.Name == r.Name);
-            _config.UserRegexes.Add(r);
-        }
+        MergeNamedList(_tempImportJson, "CommandGroups",       _config.CommandGroups,       x => x.Name);
+        MergeNamedList(_tempImportJson, "CustomCommandGroups", _config.CustomCommandGroups, x => x.Name);
+        MergeNamedList(_tempImportJson, "MessageBatches",      _config.MessageBatches,      x => x.Name);
+        MergeNamedList(_tempImportJson, "UserRegexes",         _config.UserRegexes,         x => x.Name);
+        MergeNamedList(_tempImportJson, "Webhooks",            _config.Webhooks,            x => x.Name);
+        MergeNamedList(_tempImportJson, "VipBetTiers",         _config.VipBetTiers,         x => x.Name);
 
-        foreach (var c in _tempImportConfig.CommandGroups) {
-            _config.CommandGroups.RemoveAll(x => x.Name == c.Name);
-            _config.CommandGroups.Add(c);
-        }
-
-        foreach (var c in _tempImportConfig.CustomCommandGroups) {
-            _config.CustomCommandGroups.RemoveAll(x => x.Name == c.Name);
-            _config.CustomCommandGroups.Add(c);
-        }
+        if (_tempImportJson.ContainsKey("CustomButtonOrder"))
+            _config.CustomButtonOrder = _tempImportJson["CustomButtonOrder"]!.ToObject<List<string>>()!;
 
         _save();
     }
