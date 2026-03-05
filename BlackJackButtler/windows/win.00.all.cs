@@ -7,6 +7,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using BlackJackButtler.Chat;
+using Newtonsoft.Json.Linq;
 
 namespace BlackJackButtler.Windows;
 
@@ -45,7 +46,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private readonly Dictionary<string, long> _bankSnapshot = new();
     private readonly Dictionary<string, long> _betSnapshot = new();
 
-    private Configuration? _tempImportConfig;
+    private JObject? _tempImportJson;
     private bool _showImportModal = false;
     private bool _openImportConfirmPopup = false;
     private bool _isSidebarVisible = true;
