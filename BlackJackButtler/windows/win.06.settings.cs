@@ -561,7 +561,12 @@ public partial class BlackJackButtlerWindow
                             try {
                                 var json = System.IO.File.ReadAllText(path);
                                 _tempImportJson = JObject.Parse(json);
-                                _openImportConfirmPopup = true;
+                                if (!_tempImportJson.ContainsKey("UnlockWaitTimer")
+                                    || !_tempImportJson.ContainsKey("EnableBankInput")
+                                    || !_tempImportJson.ContainsKey("NotepadText"))
+                                    DoMerge();
+                                else
+                                    _openImportConfirmPopup = true;
                             } catch { }
                         });
                 }
