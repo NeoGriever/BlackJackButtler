@@ -14,6 +14,7 @@ public partial class BlackJackButtlerWindow
     private void DrawSettingsPage()
     {
         if (_openImportConfirmPopup) {
+            _showImportModal = true;
             ImGui.OpenPopup("import_confirm_popup");
             _openImportConfirmPopup = false;
         }
