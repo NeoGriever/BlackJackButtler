@@ -131,6 +131,8 @@ public partial class BlackJackButtlerWindow
 
     private void DrawCalculation(TimeSpan timePassed)
     {
+        const string Ruler = "===============================";
+
         long nowBank = StatsManager.GetNowBank();
         long startBank = StatsManager.StartBank;
         long diff = nowBank - startBank;
@@ -144,16 +146,16 @@ public partial class BlackJackButtlerWindow
         long totalOutcome = payoutAmount - hourlyDeduction;
 
         ImGui.TextUnformatted("Calculation:");
-        ImGui.Separator();
+        ImGui.TextUnformatted(Ruler);
 
         ImGui.TextUnformatted($"  Now:           {nowBank,18:N0}");
         ImGui.TextUnformatted($"  Before:      - {startBank,18:N0}");
-        ImGui.Separator();
+        ImGui.TextUnformatted(Ruler);
 
         var diffColor = diff >= 0 ? new Vector4(0f, 1f, 0f, 1f) : new Vector4(1f, 0f, 0f, 1f);
         ImGui.TextColored(diffColor, $"  Diff:          {diff,18:N0}");
         ImGui.TextUnformatted($"  Tips:        - {tips,18:N0}");
-        ImGui.Separator();
+        ImGui.TextUnformatted(Ruler);
 
         var profitColor = profit >= 0 ? new Vector4(0f, 1f, 0f, 1f) : new Vector4(1f, 0f, 0f, 1f);
         ImGui.TextColored(profitColor, $"  Profit:        {profit,18:N0}");
@@ -164,7 +166,7 @@ public partial class BlackJackButtlerWindow
                        : $"{gilPerHour:N0}";
         string hoursLabel = $"{(int)timePassed.TotalHours:D2}:{timePassed.Minutes:D2} x {gilLabel}";
         ImGui.TextUnformatted($"  {hoursLabel,-16} - {hourlyDeduction,18:N0}");
-        ImGui.Separator();
+        ImGui.TextUnformatted(Ruler);
 
         var outcomeColor = totalOutcome >= 0 ? new Vector4(0f, 1f, 0f, 1f) : new Vector4(1f, 0f, 0f, 1f);
         ImGui.TextColored(outcomeColor, $"  Total outcome  {totalOutcome,18:N0}");
@@ -175,13 +177,17 @@ public partial class BlackJackButtlerWindow
         {
             var sb = new StringBuilder();
             sb.AppendLine("Calculation:");
+            sb.AppendLine(Ruler);
             sb.AppendLine($"  Now:           {nowBank,18:N0}");
             sb.AppendLine($"  Before:      - {startBank,18:N0}");
+            sb.AppendLine(Ruler);
             sb.AppendLine($"  Diff:          {diff,18:N0}");
             sb.AppendLine($"  Tips:        - {tips,18:N0}");
+            sb.AppendLine(Ruler);
             sb.AppendLine($"  Profit:        {profit,18:N0}");
             sb.AppendLine($"  {payoutPercent:0}%:           {payoutAmount,18:N0}");
             sb.AppendLine($"  {hoursLabel,-16} - {hourlyDeduction,18:N0}");
+            sb.AppendLine(Ruler);
             sb.AppendLine($"  Total outcome  {totalOutcome,18:N0}");
             ImGui.SetClipboardText(sb.ToString());
         }
