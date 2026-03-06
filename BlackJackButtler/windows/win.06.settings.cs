@@ -337,6 +337,11 @@ public partial class BlackJackButtlerWindow
                 _save();
             }
 
+            ImGui.Spacing();
+            if (ImGui.Checkbox("Hide Card Suits", ref _config.HideCardSuits)) _save();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Hide suit icons from card display.\nCards show only their value (A, 2-10, J, Q, K).");
+
             if (level >= (int)UserLevel.Advanced)
             {
                 ImGui.Spacing();
@@ -613,6 +618,7 @@ public partial class BlackJackButtlerWindow
         TryApply<long>  (j, "MinBet",                                 v => _config.MinBet = v);
         TryApply<long>  (j, "MaxBet",                                 v => _config.MaxBet = v);
         TryApply<bool>  (j, "ShortBetFormat",                         v => _config.ShortBetFormat = v);
+        TryApply<bool>  (j, "HideCardSuits",                         v => _config.HideCardSuits = v);
         TryApply<bool>  (j, "AutoInitialDeal",                        v => _config.AutoInitialDeal = v);
         TryApply<bool>  (j, "AutoDealerDraw",                         v => _config.AutoDealerDraw = v);
         TryApply<bool>  (j, "AutoRun",                                v => _config.AutoRun = v);

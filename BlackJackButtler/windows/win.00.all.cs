@@ -126,6 +126,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     public override void PreDraw()
     {
+        DeckCard.ShowSuits = !_config.HideCardSuits;
         var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
         var label = _config.ActivePresetName ?? "Default";
         var dirty = _presetDirty ? "*" : "";
