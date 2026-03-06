@@ -7,6 +7,8 @@ public enum CardSuit { Diamonds, Clubs, Spades, Hearts }
 
 public struct DeckCard
 {
+    public static bool ShowSuits = true;
+
     public int Value;
     public CardSuit Suit;
 
@@ -26,7 +28,7 @@ public struct DeckCard
         _ => Value.ToString()
     };
 
-    public override string ToString() => $"{Symbol}{ValueLabel}";
+    public override string ToString() => ShowSuits ? $"{Symbol}{ValueLabel}" : ValueLabel;
 
     public static bool operator ==(DeckCard a, DeckCard b) => a.Value == b.Value && a.Suit == b.Suit;
     public static bool operator !=(DeckCard a, DeckCard b) => !(a == b);

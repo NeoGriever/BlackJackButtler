@@ -45,6 +45,7 @@ public sealed class Configuration : IPluginConfiguration
 
     public List<VipBetTier> VipBetTiers = new();
     public bool ShortBetFormat = true;
+    public bool HideCardSuits = false;
 
     public bool DefaultBatchesSeeded = false;
     public bool DefaultRegexSeeded = false;
