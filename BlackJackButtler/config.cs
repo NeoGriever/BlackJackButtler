@@ -80,6 +80,10 @@ public sealed class Configuration : IPluginConfiguration
     public bool NearbySticky = false;
     public int NearbyColumns = 2;
     public bool NoAutoDequeue = false;
+    public bool NearbyAlwaysShowCircle = false;
+
+    public bool AutoContinue = false;
+    public float AutoContinueDelay = 30f;
 
     public bool NearbyAlertEnabled = false;
     public List<string> NearbyAlertSoundFiles = new();

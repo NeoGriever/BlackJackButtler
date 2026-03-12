@@ -152,6 +152,9 @@ public partial class BlackJackButtlerWindow
             _config.NearbyAlertVolume                  = snap.NearbyAlertVolume;
             _config.NearbyAlertCooldown                = snap.NearbyAlertCooldown;
             _config.VipBetTiers                        = snap.VipBetTiers;
+            _config.NearbyAlwaysShowCircle              = snap.NearbyAlwaysShowCircle;
+            _config.AutoContinue                       = snap.AutoContinue;
+            _config.AutoContinueDelay                  = snap.AutoContinueDelay;
         }
 
         if (preset.ApplyCommands)

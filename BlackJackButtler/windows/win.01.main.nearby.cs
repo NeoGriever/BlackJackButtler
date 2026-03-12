@@ -214,7 +214,7 @@ public partial class BlackJackButtlerWindow
 
     private void DrawDistanceCircle()
     {
-        if (!_distSliderHovered) return;
+        if (!_distSliderHovered && !(_config.NearbyAlwaysShowCircle && IsRecognitionActive)) return;
         var local = Plugin.ObjectTable.LocalPlayer;
         if (local == null) return;
 
