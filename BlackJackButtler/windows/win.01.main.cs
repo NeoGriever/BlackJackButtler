@@ -134,14 +134,6 @@ public partial class BlackJackButtlerWindow
 
         DrawAliasModal();
 
-        if (_triggerVipConfirmPopup)
-        {
-            ImGui.OpenPopup("bjb_vip_confirm_popup");
-            _isVipConfirmOpen = true;
-            _triggerVipConfirmPopup = false;
-        }
-        DrawVipConfirmModal();
-
         if (_panicConfirmStage == 1)
             ImGui.OpenPopup("panic_confirm_1");
 
@@ -258,56 +250,6 @@ public partial class BlackJackButtlerWindow
             }
             ImGui.EndPopup();
         }
-    }
-
-    private void DrawVipConfirmModal()
-    {
-        if (ImGui.BeginPopupModal("bjb_vip_confirm_popup", ref _isVipConfirmOpen, ImGuiWindowFlags.AlwaysAutoResize))
-        {
-            if (_vipConfirmPlayer == null)
-            {
-                _isVipConfirmOpen = false;
-                ImGui.CloseCurrentPopup();
-                ImGui.EndPopup();
-                return;
-            }
-
-            string oldState = _vipConfirmOldTier == 0 || _vipConfirmOldTier > _config.VipBetTiers.Count
-                ? "No VIP"
-                : _config.VipBetTiers[_vipConfirmOldTier - 1].Name;
-            string newState = _vipConfirmNewTier == 0 || _vipConfirmNewTier > _config.VipBetTiers.Count
-                ? "No VIP"
-                : _config.VipBetTiers[_vipConfirmNewTier - 1].Name;
-
-            ImGui.Text($"Change VIP of {_vipConfirmPlayer.DisplayName} from {oldState} to {newState}?");
-            ImGui.Spacing();
-
-            if (BJBGui.Button("Yes", new Vector2(120, 0)))
-            {
-                ApplyVipChange(_vipConfirmPlayer, _vipConfirmNewTier);
-                _vipConfirmPlayer = null;
-                _isVipConfirmOpen = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.SameLine();
-            if (BJBGui.Button("No", new Vector2(120, 0)))
-            {
-                _vipConfirmPlayer = null;
-                _isVipConfirmOpen = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.EndPopup();
-        }
-    }
-
-    private void ApplyVipChange(PlayerState player, int newTier)
-    {
-        var addressKey = VenueManager.GetCurrentKey();
-        if (addressKey == null) return;
-
-        var venue = VenueManager.GetOrCreateVenue(addressKey);
-        string worldName = VenueManager.ResolveWorldName(player.WorldId);
-        VenueManager.SetPlayerTier(venue, player.Name, worldName, newTier);
     }
 
     private void SetupTableColumns()
@@ -594,9 +536,8 @@ public partial class BlackJackButtlerWindow
         ImGui.TableNextColumn();
         if (p.IsActivePlayer && _config.VipBetTiers.Count > 0)
         {
-            var venue = VenueManager.GetCurrentVenue();
-            string worldName = VenueManager.ResolveWorldName(p.WorldId);
-            int currentTier = venue != null ? VenueManager.GetPlayerTier(venue, p.Name, worldName) : 0;
+            string worldName = VipManager.ResolveWorldName(p.WorldId);
+            int currentTier = VipManager.GetPlayerTier(p.Name, worldName);
 
             bool isVip = currentTier > 0;
             var btnColor = isVip
@@ -611,45 +552,17 @@ public partial class BlackJackButtlerWindow
 
             if (BJBGui.Button($"V##vip_{p.UIID}"))
             {
-                int newTier = isVip ? 0 : 1;
-                _vipConfirmPlayer = p;
-                _vipConfirmOldTier = currentTier;
-                _vipConfirmNewTier = newTier;
-                _triggerVipConfirmPopup = true;
+                VipManager.CycleTier(p.Name, worldName, _config.VipBetTiers.Count);
             }
 
             ImGui.PopStyleColor(2);
 
-            if (ImGui.BeginPopupContextItem($"vip_ctx_{p.UIID}"))
-            {
-                if (ImGui.Selectable("No VIP"))
-                {
-                    _vipConfirmPlayer = p;
-                    _vipConfirmOldTier = currentTier;
-                    _vipConfirmNewTier = 0;
-                    _triggerVipConfirmPopup = true;
-                }
-                for (int ti = 0; ti < _config.VipBetTiers.Count; ti++)
-                {
-                    var tier = _config.VipBetTiers[ti];
-                    bool selected = currentTier == ti + 1;
-                    if (ImGui.Selectable($"{tier.Name} (Max: {tier.MaxBet:N0})", selected))
-                    {
-                        _vipConfirmPlayer = p;
-                        _vipConfirmOldTier = currentTier;
-                        _vipConfirmNewTier = ti + 1;
-                        _triggerVipConfirmPopup = true;
-                    }
-                }
-                ImGui.EndPopup();
-            }
-
             if (ImGui.IsItemHovered())
             {
                 if (isVip && currentTier <= _config.VipBetTiers.Count)
-                    ImGui.SetTooltip($"{_config.VipBetTiers[currentTier - 1].Name} (Max: {_config.VipBetTiers[currentTier - 1].MaxBet:N0})\nRight-click for tier selection");
+                    ImGui.SetTooltip($"{_config.VipBetTiers[currentTier - 1].Name} (Max: {_config.VipBetTiers[currentTier - 1].MaxBet:N0})\nClick to cycle tier");
                 else
-                    ImGui.SetTooltip("Click to set VIP\nRight-click for tier selection");
+                    ImGui.SetTooltip("Click to cycle tier");
             }
         }
 

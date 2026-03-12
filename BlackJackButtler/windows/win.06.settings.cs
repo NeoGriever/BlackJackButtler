@@ -47,6 +47,8 @@ public partial class BlackJackButtlerWindow
             if (level >= (int)UserLevel.Advanced)
                 DrawSettingsTab_OwnButtons(level);
 
+            DrawSettingsTab_Sound(level);
+
             if (level >= (int)UserLevel.Advanced)
                 DrawSettingsTab_System(level);
 
@@ -482,6 +484,86 @@ public partial class BlackJackButtlerWindow
         }
     }
 
+    private void DrawSettingsTab_Sound(int level)
+    {
+        if (ImGui.BeginTabItem("Sound"))
+        {
+            ImGui.Spacing();
+            if (ImGui.Checkbox("Enable Nearby Alert", ref _config.NearbyAlertEnabled)) _save();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Play a sound when a new player enters your nearby radius.");
+
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Volume");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (BJBGui.SliderFloat("##alert_volume", ref _config.NearbyAlertVolume, 0f, 100f, "%.0f%%"))
+            {
+                _config.NearbyAlertVolume = Math.Clamp(_config.NearbyAlertVolume, 0f, 100f);
+                _save();
+            }
+
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Cooldown");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (BJBGui.SliderFloat("##alert_cooldown", ref _config.NearbyAlertCooldown, 0.05f, 5.0f, "%.2fs"))
+            {
+                _config.NearbyAlertCooldown = (float)(Math.Round(_config.NearbyAlertCooldown / 0.05) * 0.05);
+                _config.NearbyAlertCooldown = Math.Clamp(_config.NearbyAlertCooldown, 0.05f, 5.0f);
+                _save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Minimum time between alert sounds.");
+
+            ImGui.Spacing();
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Sound Files");
+            ImGui.Separator();
+            ImGui.Spacing();
+
+            int removeIdx = -1;
+            for (int i = 0; i < _config.NearbyAlertSoundFiles.Count; i++)
+            {
+                var path = _config.NearbyAlertSoundFiles[i];
+                var fileName = System.IO.Path.GetFileName(path);
+                ImGui.TextUnformatted(fileName);
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip(path);
+                ImGui.SameLine();
+                if (BJBGui.SmallButton($"X##del_sound_{i}"))
+                    removeIdx = i;
+            }
+            if (removeIdx >= 0)
+            {
+                _config.NearbyAlertSoundFiles.RemoveAt(removeIdx);
+                _save();
+            }
+
+            if (BJBGui.SmallButton("+ Add Sound"))
+            {
+                _fileDialogManager.OpenFileDialog(
+                    "Add Sound File", "Audio{.wav,.mp3,.ogg}",
+                    (ok, path) =>
+                    {
+                        if (ok && !string.IsNullOrWhiteSpace(path) && !_config.NearbyAlertSoundFiles.Contains(path))
+                        {
+                            _config.NearbyAlertSoundFiles.Add(path);
+                            _save();
+                        }
+                    });
+            }
+
+            ImGui.SameLine();
+            if (BJBGui.SmallButton("Test"))
+            {
+                NearbyAlertManager.PlayTestSound(_config);
+            }
+
+            ImGui.EndTabItem();
+        }
+    }
+
     private void DrawSettingsTab_System(int level)
     {
         if (ImGui.BeginTabItem("System"))
@@ -649,6 +731,9 @@ public partial class BlackJackButtlerWindow
         TryApply<float> (j, "PayoutPercent",                           v => _config.PayoutPercent = v);
         TryApply<long>  (j, "GilPerHour",                             v => _config.GilPerHour = v);
         TryApply<int>   (j, "ClipHoursMode",                          v => _config.ClipHoursMode = v);
+        TryApply<bool>  (j, "NearbyAlertEnabled",                    v => _config.NearbyAlertEnabled = v);
+        TryApply<float> (j, "NearbyAlertVolume",                     v => _config.NearbyAlertVolume = v);
+        TryApply<float> (j, "NearbyAlertCooldown",                   v => _config.NearbyAlertCooldown = v);
     }
 
     private void DoFullReplace() {
@@ -670,6 +755,8 @@ public partial class BlackJackButtlerWindow
             _config.VipBetTiers = _tempImportJson["VipBetTiers"]!.ToObject<List<VipBetTier>>()!;
         if (_tempImportJson.ContainsKey("CustomButtonOrder"))
             _config.CustomButtonOrder = _tempImportJson["CustomButtonOrder"]!.ToObject<List<string>>()!;
+        if (_tempImportJson.ContainsKey("NearbyAlertSoundFiles"))
+            _config.NearbyAlertSoundFiles = _tempImportJson["NearbyAlertSoundFiles"]!.ToObject<List<string>>()!;
 
         _save();
     }
@@ -700,6 +787,8 @@ public partial class BlackJackButtlerWindow
 
         if (_tempImportJson.ContainsKey("CustomButtonOrder"))
             _config.CustomButtonOrder = _tempImportJson["CustomButtonOrder"]!.ToObject<List<string>>()!;
+        if (_tempImportJson.ContainsKey("NearbyAlertSoundFiles"))
+            _config.NearbyAlertSoundFiles = _tempImportJson["NearbyAlertSoundFiles"]!.ToObject<List<string>>()!;
 
         _save();
     }

@@ -181,32 +181,24 @@ public class PlayerState
 
     public long GetEffectiveMaxBet(Configuration cfg)
     {
-        var venue = VenueManager.GetCurrentVenue();
-        if (venue != null)
+        string worldName = VipManager.ResolveWorldName(WorldId);
+        int tier = VipManager.GetPlayerTier(Name, worldName);
+        if (tier > 0 && cfg.VipBetTiers.Count > 0)
         {
-            string worldName = VenueManager.ResolveWorldName(WorldId);
-            int tier = VenueManager.GetPlayerTier(venue, Name, worldName);
-            if (tier > 0 && cfg.VipBetTiers.Count > 0)
-            {
-                int effectiveIndex = System.Math.Min(tier, cfg.VipBetTiers.Count) - 1;
-                return cfg.VipBetTiers[effectiveIndex].MaxBet;
-            }
+            int effectiveIndex = System.Math.Min(tier, cfg.VipBetTiers.Count) - 1;
+            return cfg.VipBetTiers[effectiveIndex].MaxBet;
         }
         return cfg.MaxBet;
     }
 
     public string GetVipTierName(Configuration cfg)
     {
-        var venue = VenueManager.GetCurrentVenue();
-        if (venue != null)
+        string worldName = VipManager.ResolveWorldName(WorldId);
+        int tier = VipManager.GetPlayerTier(Name, worldName);
+        if (tier > 0 && cfg.VipBetTiers.Count > 0)
         {
-            string worldName = VenueManager.ResolveWorldName(WorldId);
-            int tier = VenueManager.GetPlayerTier(venue, Name, worldName);
-            if (tier > 0 && cfg.VipBetTiers.Count > 0)
-            {
-                int effectiveIndex = System.Math.Min(tier, cfg.VipBetTiers.Count) - 1;
-                return cfg.VipBetTiers[effectiveIndex].Name;
-            }
+            int effectiveIndex = System.Math.Min(tier, cfg.VipBetTiers.Count) - 1;
+            return cfg.VipBetTiers[effectiveIndex].Name;
         }
         return string.Empty;
     }

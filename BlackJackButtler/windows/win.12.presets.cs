@@ -147,6 +147,11 @@ public partial class BlackJackButtlerWindow
             _config.HighlightTextColor                 = snap.HighlightTextColor;
             _config.ButtonColor                        = snap.ButtonColor;
             _config.ButtonTextColor                    = snap.ButtonTextColor;
+            _config.NearbyAlertEnabled                 = snap.NearbyAlertEnabled;
+            _config.NearbyAlertSoundFiles              = snap.NearbyAlertSoundFiles;
+            _config.NearbyAlertVolume                  = snap.NearbyAlertVolume;
+            _config.NearbyAlertCooldown                = snap.NearbyAlertCooldown;
+            _config.VipBetTiers                        = snap.VipBetTiers;
         }
 
         if (preset.ApplyCommands)

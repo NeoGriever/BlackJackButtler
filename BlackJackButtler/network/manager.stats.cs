@@ -64,7 +64,7 @@ public static class StatsManager
 
         foreach (var p in players.Where(x => x.IsActivePlayer && !x.IsOnHold))
         {
-            string worldName = VenueManager.ResolveWorldName(p.WorldId);
+            string worldName = VipManager.ResolveWorldName(p.WorldId);
             string nameWorld = string.IsNullOrEmpty(worldName) ? p.Name : $"{p.Name}@{worldName}";
 
             for (int h = 0; h < p.Hands.Count; h++)
