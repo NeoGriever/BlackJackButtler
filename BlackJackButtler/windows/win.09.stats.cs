@@ -11,6 +11,7 @@ namespace BlackJackButtler.Windows;
 public partial class BlackJackButtlerWindow
 {
     private int _clipHoursMode = -1;
+    private long _editStartBankValue;
 
     private void DrawStatsPage()
     {
@@ -41,6 +42,28 @@ public partial class BlackJackButtlerWindow
         if (StatsManager.StartTime != null)
         {
             ImGui.TextUnformatted($"Start Bank:      {StatsManager.StartBank:N0}");
+            ImGui.SameLine();
+            ImGui.PushFont(UiBuilder.IconFont);
+            if (BJBGui.SmallButton(FontAwesomeIcon.PencilAlt.ToIconString() + "##edit_start_bank"))
+            {
+                _editStartBankValue = StatsManager.StartBank;
+                ImGui.OpenPopup("edit_start_bank_popup");
+            }
+            ImGui.PopFont();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Edit Start Bank");
+
+            if (ImGui.BeginPopup("edit_start_bank_popup"))
+            {
+                ImGui.TextUnformatted("Start Bank:");
+                ImGui.SetNextItemWidth(200f);
+                BJBGui.InputLong("##edit_start_bank_input", ref _editStartBankValue, 1000, 10000);
+                if (BJBGui.SmallButton("OK##edit_start_bank_ok") || ImGui.IsKeyPressed(ImGuiKey.Enter))
+                {
+                    StatsManager.StartBank = _editStartBankValue;
+                    ImGui.CloseCurrentPopup();
+                }
+                ImGui.EndPopup();
+            }
         }
 
         ImGui.Separator();

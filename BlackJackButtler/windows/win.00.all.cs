@@ -39,6 +39,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     private readonly Dictionary<string, long> _bankSnapshot = new();
     private readonly Dictionary<string, long> _betSnapshot = new();
+    private readonly Dictionary<string, (long amount, DateTime clickedAt)> _bankToTipUndo = new();
 
     private JObject? _tempImportJson;
     private bool _showImportModal = false;

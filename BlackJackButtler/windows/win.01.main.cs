@@ -327,6 +327,23 @@ public partial class BlackJackButtlerWindow
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip($"Automatically draws cards for the dealer until {_config.DealerDrawsUntil}, then stands.");
 
+        ImGui.SameLine();
+
+        var auto_continue_text = _config.AutoContinue ? "● Auto Continue" : "○ Auto Continue";
+        bool autoContinueActive = _config.AutoContinue;
+        if (autoContinueActive) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
+
+        if (BJBGui.Button(auto_continue_text))
+        {
+            _config.AutoContinue = !_config.AutoContinue;
+            _save();
+        }
+
+        if (autoContinueActive) ImGui.PopStyleColor();
+
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip($"Automatically starts the next round after {_config.AutoContinueDelay:0}s of no chat activity.");
+
         bool hasAutoTriggers = _config.UserRegexes.Any(r =>
             r.Enabled && r.Mode == RegexEntryMode.Trigger &&
             (r.Action == RegexAction.WantHit || r.Action == RegexAction.WantStand ||
@@ -550,7 +567,10 @@ public partial class BlackJackButtlerWindow
             ImGui.PushStyleColor(ImGuiCol.Button, btnColor);
             ImGui.PushStyleColor(ImGuiCol.Text, txtColor);
 
-            if (BJBGui.Button($"V##vip_{p.UIID}"))
+            string vipLabel = isVip && currentTier <= _config.VipBetTiers.Count
+                ? $"{currentTier}##vip_{p.UIID}"
+                : $"V##vip_{p.UIID}";
+            if (BJBGui.Button(vipLabel))
             {
                 VipManager.CycleTier(p.Name, worldName, _config.VipBetTiers.Count);
             }
@@ -732,11 +752,12 @@ public partial class BlackJackButtlerWindow
             var phase = GameEngine.CurrentPhase;
             bool canTellPlayer = (phase == GamePhase.Waiting || phase == GamePhase.Payout) && !CommandExecutor.IsRunning;
             float tButtonWidth = 25f;
+            float heartButtonWidth = 25f;
+            float spacing = ImGui.GetStyle().ItemSpacing.X;
 
-            // Bank Input (mit Sperre und Delta-Tracking)
             long bankBefore = p.Bank;
             if (!_config.EnableBankInput) ImGui.BeginDisabled();
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - tButtonWidth - ImGui.GetStyle().ItemSpacing.X);
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - tButtonWidth - heartButtonWidth - spacing * 2);
             if (BJBGui.InputLong($"##bank_{p.UIID}", ref p.Bank, 1000, 10000)) _save();
             if (ImGui.IsItemActivated()) _bankSnapshot[p.UIID] = bankBefore;
             if (ImGui.IsItemDeactivatedAfterEdit())
@@ -749,7 +770,6 @@ public partial class BlackJackButtlerWindow
             }
             if (!_config.EnableBankInput) ImGui.EndDisabled();
 
-            // Tell Button
             ImGui.SameLine();
             if (!canTellPlayer) ImGui.BeginDisabled();
             bool hlTell = p.HighlightTell && canTellPlayer;
@@ -772,6 +792,52 @@ public partial class BlackJackButtlerWindow
             if (!canTellPlayer) ImGui.EndDisabled();
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                 ImGui.SetTooltip("Post bank/bet info for this player to party chat");
+
+            ImGui.SameLine();
+            bool hasUndo = _bankToTipUndo.TryGetValue(p.UIID, out var undoEntry)
+                           && (DateTime.Now - undoEntry.clickedAt).TotalSeconds < 10;
+            if (hasUndo)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1f));
+                if (BJBGui.SmallButton($"U##heart_{p.UIID}"))
+                {
+                    p.Bank = undoEntry.amount;
+                    StatsManager.AddTip(-undoEntry.amount);
+                    _bankToTipUndo.Remove(p.UIID);
+                }
+                ImGui.PopStyleColor();
+                if (ImGui.IsItemHovered())
+                {
+                    int remaining = Math.Max(0, 10 - (int)(DateTime.Now - undoEntry.clickedAt).TotalSeconds);
+                    ImGui.SetTooltip($"Undo Bank→Tip ({remaining}s)");
+                }
+            }
+            else
+            {
+                _bankToTipUndo.Remove(p.UIID);
+                bool canHeart = StatsManager.IsRunning && p.Bank > 0;
+                bool ctrlDown = ImGui.GetIO().KeyCtrl;
+                if (!canHeart || !ctrlDown) ImGui.BeginDisabled();
+                ImGui.PushFont(UiBuilder.IconFont);
+                if (BJBGui.SmallButton(FontAwesomeIcon.Heart.ToIconString() + $"##heart_{p.UIID}"))
+                {
+                    long amount = p.Bank;
+                    StatsManager.AddTip(amount);
+                    p.Bank = 0;
+                    _bankToTipUndo[p.UIID] = (amount, DateTime.Now);
+                }
+                ImGui.PopFont();
+                if (!canHeart || !ctrlDown) ImGui.EndDisabled();
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                {
+                    if (!StatsManager.IsRunning)
+                        ImGui.SetTooltip("Start a stats session first");
+                    else if (!ctrlDown)
+                        ImGui.SetTooltip("Hold CTRL to transfer bank to tips");
+                    else
+                        ImGui.SetTooltip("Transfer entire bank to tips");
+                }
+            }
         }
 
         ImGui.TableNextColumn();

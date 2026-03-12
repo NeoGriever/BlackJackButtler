@@ -63,6 +63,8 @@ public sealed class Plugin : IDalamudPlugin
     private bool _chatHooked = false;
     private DateTime _lastAutoLog = DateTime.MinValue;
     private GamePhase _lastPhase = GamePhase.Waiting;
+    private DateTime _lastChatActivity = DateTime.MinValue;
+    private bool _autoContinueWaiting = false;
 
     public void OpenDebugPopout() => debugLogWindow.IsOpen = true;
     public BlackJackButtlerWindow GetMainWindow() => mainWindow;
@@ -245,6 +247,42 @@ public sealed class Plugin : IDalamudPlugin
             var nearby = NearbyPlayersManager.GetNearbyPlayers(Configuration);
             NearbyAlertManager.Update(nearby, Configuration);
         }
+
+        if (Configuration.AutoContinue && mainWindow.IsRecognitionActive)
+        {
+            var phase = GameEngine.CurrentPhase;
+            if ((phase == GamePhase.Waiting || phase == GamePhase.Payout)
+                && !CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending && !_autoActionInFlight)
+            {
+                if (!_autoContinueWaiting)
+                {
+                    _lastChatActivity = DateTime.Now;
+                    _autoContinueWaiting = true;
+                }
+                else if ((DateTime.Now - _lastChatActivity).TotalSeconds >= Configuration.AutoContinueDelay)
+                {
+                    _autoContinueWaiting = false;
+                    var players = mainWindow.GetPlayers();
+                    var activePlayers = players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
+                    if (activePlayers.Count >= 2 || !Configuration.AutostartRoundOnlyOnMultiplePlayers)
+                    {
+                        _autoActionInFlight = true;
+                        Task.Run(async () => {
+                            try { await Task.Run(() => GameEngine.StartInitialDeal(players, Configuration)); }
+                            finally { _autoActionInFlight = false; }
+                        });
+                    }
+                }
+            }
+            else
+            {
+                _autoContinueWaiting = false;
+            }
+        }
+        else
+        {
+            _autoContinueWaiting = false;
+        }
     }
 
     public void UpdateEventHooks()
@@ -315,6 +353,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public void InjectChatMessage(int type, uint worldId, string playerName, string senderText, string messageText, SeString? rawSender = null, SeString? rawMessage = null)
     {
+        _lastChatActivity = DateTime.Now;
+
         string logName = !string.IsNullOrEmpty(playerName) ? playerName : senderText;
         string logLine = string.IsNullOrEmpty(logName) ? messageText : $"{logName}: {messageText}";
 

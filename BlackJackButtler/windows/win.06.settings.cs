@@ -117,6 +117,10 @@ public partial class BlackJackButtlerWindow
                 if (ImGui.Checkbox("No auto dequeue", ref _config.NoAutoDequeue)) _save();
                 if (ImGui.IsItemHovered())
                     ImGui.SetTooltip("When enabled, queued players will not be\nautomatically removed after 90s out of range.");
+
+                if (ImGui.Checkbox("Always show distance circle", ref _config.NearbyAlwaysShowCircle)) _save();
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("Show the distance circle permanently when Group Detector is active.\nOtherwise only visible when hovering the distance slider.");
             }
 
             ImGui.EndTabItem();
@@ -191,6 +195,19 @@ public partial class BlackJackButtlerWindow
                 _config.MaxHandsPerPlayer = Math.Clamp(_config.MaxHandsPerPlayer, 2, 10);
                 _save();
             }
+
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Auto Continue Delay");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (BJBGui.SliderFloat("##auto_continue_delay", ref _config.AutoContinueDelay, 5f, 120f, "%.0fs"))
+            {
+                _config.AutoContinueDelay = MathF.Round(_config.AutoContinueDelay);
+                _config.AutoContinueDelay = Math.Clamp(_config.AutoContinueDelay, 5f, 120f);
+                _save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Time in seconds without chat activity before auto-starting the next round.\nOnly active when Auto Continue is enabled.");
 
             ImGui.EndTabItem();
         }
@@ -734,6 +751,9 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "NearbyAlertEnabled",                    v => _config.NearbyAlertEnabled = v);
         TryApply<float> (j, "NearbyAlertVolume",                     v => _config.NearbyAlertVolume = v);
         TryApply<float> (j, "NearbyAlertCooldown",                   v => _config.NearbyAlertCooldown = v);
+        TryApply<bool>  (j, "NearbyAlwaysShowCircle",                v => _config.NearbyAlwaysShowCircle = v);
+        TryApply<bool>  (j, "AutoContinue",                          v => _config.AutoContinue = v);
+        TryApply<float> (j, "AutoContinueDelay",                     v => _config.AutoContinueDelay = v);
     }
 
     private void DoFullReplace() {
