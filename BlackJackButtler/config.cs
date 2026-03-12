@@ -81,6 +81,11 @@ public sealed class Configuration : IPluginConfiguration
     public int NearbyColumns = 2;
     public bool NoAutoDequeue = false;
 
+    public bool NearbyAlertEnabled = false;
+    public List<string> NearbyAlertSoundFiles = new();
+    public float NearbyAlertVolume = 50f;
+    public float NearbyAlertCooldown = 0.30f;
+
     public float CustomButtonPaddingH = 4.0f;
     public float CustomButtonPaddingV = 2.0f;
     public float CustomButtonFontScale = 1.0f;

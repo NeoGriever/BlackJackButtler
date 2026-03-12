@@ -163,9 +163,9 @@ public partial class BlackJackButtlerWindow
             .Concat(isLoss ? Array.Empty<string>() : new[] { fPayout })
             .Max(s => s.Length);
 
-        int numAreaWidth = Math.Max(maxNumberWidth + 1, 13);
+        int numAreaWidth = Math.Max(maxNumberWidth + 1, 15);
         int totalWidth = signCol + numAreaWidth;
-        string ruler = new string('=', totalWidth);
+        string ruler = new string('=', totalWidth + 2);
 
         string Unsigned(string label, string number) =>
             label + number.PadLeft(totalWidth - label.Length);
@@ -228,8 +228,10 @@ public partial class BlackJackButtlerWindow
         if (BJBGui.Button("Copy"))
         {
             var sb = new StringBuilder();
+            sb.AppendLine("```");
             foreach (var (text, _) in lines)
                 sb.AppendLine(text);
+            sb.AppendLine("```");
             ImGui.SetClipboardText(sb.ToString());
         }
     }

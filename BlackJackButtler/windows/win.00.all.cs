@@ -37,12 +37,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _isAliasModalOpen = false;
     private bool _triggerAliasPopup = false;
 
-    private bool _triggerVipConfirmPopup = false;
-    private bool _isVipConfirmOpen = false;
-    private PlayerState? _vipConfirmPlayer = null;
-    private int _vipConfirmOldTier = 0;
-    private int _vipConfirmNewTier = 0;
-
     private readonly Dictionary<string, long> _bankSnapshot = new();
     private readonly Dictionary<string, long> _betSnapshot = new();
 

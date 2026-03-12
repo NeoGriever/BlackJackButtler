@@ -81,7 +81,7 @@ public sealed class Plugin : IDalamudPlugin
 
         StatsManager.Init(Configuration);
         ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
-        VenueManager.Init(Path.GetDirectoryName(PluginInterface.GetPluginConfigDirectory())!);
+        VipManager.Init(Path.GetDirectoryName(PluginInterface.GetPluginConfigDirectory())!);
 
         notepadWindow = new NotepadWindow(Configuration, () => Configuration.Save(), () => mainWindow?.GetWindowRect() ?? (Vector2.Zero, Vector2.Zero));
         windowSystem.AddWindow(notepadWindow);
@@ -235,10 +235,16 @@ public sealed class Plugin : IDalamudPlugin
             }
         }
 
-        // Dropbox + Trade + JoinQueue
+        // Dropbox + Trade + JoinQueue + NearbyAlert
         DropboxIntegration.Update();
         TradeManager.Tick();
         JoinQueueManager.Tick(Configuration);
+
+        if (Configuration.NearbyAlertEnabled && Configuration.ShowNearbyPlayers)
+        {
+            var nearby = NearbyPlayersManager.GetNearbyPlayers(Configuration);
+            NearbyAlertManager.Update(nearby, Configuration);
+        }
     }
 
     public void UpdateEventHooks()
@@ -281,6 +287,8 @@ public sealed class Plugin : IDalamudPlugin
 
         if (_chatHooked) ChatGui.ChatMessage -= OnChatMessage;
         if (_frameworkHooked) Framework.Update -= OnFrameworkUpdate;
+
+        NearbyAlertManager.Dispose();
 
         CommandManager.RemoveHandler(CommandName);
 
