@@ -53,6 +53,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private int _panicConfirmStage = 0;
     private bool _highlightNewRound = false;
     private int _selectedWebhookIndex = -1;
+    private bool _partyDissolved = false;
 
     private bool _notepadLoaded = false;
     private readonly NotepadWindow _notepadWindow;
