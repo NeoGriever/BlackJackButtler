@@ -209,6 +209,40 @@ public partial class BlackJackButtlerWindow
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Time in seconds without chat activity before auto-starting the next round.\nOnly active when Auto Continue is enabled.");
 
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Auto Continue Bar Color");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (ImGui.ColorEdit4("##auto_continue_bar_color", ref _config.AutoContinueBarColor,
+                ImGuiColorEditFlags.NoAlpha))
+            {
+                _config.AutoContinueBarColor.W = 1.0f;
+                _save();
+            }
+
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Auto Continue Bar Height");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            float minBarHeight = _config.AutoContinueBarShowText ? 20f : 1f;
+            if (BJBGui.SliderFloat("##auto_continue_bar_height", ref _config.AutoContinueBarHeight,
+                minBarHeight, 40f, "%.0fpx"))
+            {
+                _config.AutoContinueBarHeight = MathF.Round(_config.AutoContinueBarHeight);
+                _config.AutoContinueBarHeight = Math.Clamp(_config.AutoContinueBarHeight, minBarHeight, 40f);
+                _save();
+            }
+
+            ImGui.Spacing();
+            if (ImGui.Checkbox("Show Remaining Seconds", ref _config.AutoContinueBarShowText))
+            {
+                if (_config.AutoContinueBarShowText && _config.AutoContinueBarHeight < 20f)
+                    _config.AutoContinueBarHeight = 20f;
+                _save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Show remaining countdown seconds centered in the progress bar.\nMinimum bar height becomes 20px when enabled.");
+
             ImGui.EndTabItem();
         }
     }
@@ -754,6 +788,9 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "NearbyAlwaysShowCircle",                v => _config.NearbyAlwaysShowCircle = v);
         TryApply<bool>  (j, "AutoContinue",                          v => _config.AutoContinue = v);
         TryApply<float> (j, "AutoContinueDelay",                     v => _config.AutoContinueDelay = v);
+        TryApply<Vector4>(j, "AutoContinueBarColor",                  v => _config.AutoContinueBarColor = v);
+        TryApply<float> (j, "AutoContinueBarHeight",                  v => _config.AutoContinueBarHeight = v);
+        TryApply<bool>  (j, "AutoContinueBarShowText",                v => _config.AutoContinueBarShowText = v);
     }
 
     private void DoFullReplace() {

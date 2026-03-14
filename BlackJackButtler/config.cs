@@ -85,6 +85,10 @@ public sealed class Configuration : IPluginConfiguration
     public bool AutoContinue = false;
     public float AutoContinueDelay = 30f;
 
+    public Vector4 AutoContinueBarColor = new Vector4(0.2f, 0.8f, 0.2f, 1.0f);
+    public float AutoContinueBarHeight = 4f;
+    public bool AutoContinueBarShowText = false;
+
     public bool NearbyAlertEnabled = false;
     public List<string> NearbyAlertSoundFiles = new();
     public float NearbyAlertVolume = 50f;

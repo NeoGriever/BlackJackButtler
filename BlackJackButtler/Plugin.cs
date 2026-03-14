@@ -66,6 +66,10 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime _lastChatActivity = DateTime.MinValue;
     private bool _autoContinueWaiting = false;
 
+    public static bool AutoContinueActive => Instance?._autoContinueWaiting ?? false;
+    public static double AutoContinueElapsedSeconds => Instance != null && Instance._autoContinueWaiting
+        ? (DateTime.Now - Instance._lastChatActivity).TotalSeconds : 0.0;
+
     public void OpenDebugPopout() => debugLogWindow.IsOpen = true;
     public BlackJackButtlerWindow GetMainWindow() => mainWindow;
     private string _cachedLocalName = string.Empty;

@@ -35,6 +35,39 @@ public partial class BlackJackButtlerWindow
             ImGui.EndTable();
         }
 
+        if (_config.AutoContinue && Plugin.AutoContinueActive)
+        {
+            float barHeight = _config.AutoContinueBarHeight;
+            if (_config.AutoContinueBarShowText && barHeight < 20f) barHeight = 20f;
+
+            float elapsed = (float)Plugin.AutoContinueElapsedSeconds;
+            float progress = Math.Clamp(elapsed / _config.AutoContinueDelay, 0f, 1f);
+
+            var cursorPos = ImGui.GetCursorScreenPos();
+            float availWidth = ImGui.GetContentRegionAvail().X;
+            var drawList = ImGui.GetWindowDrawList();
+
+            drawList.AddRectFilled(cursorPos,
+                new Vector2(cursorPos.X + availWidth, cursorPos.Y + barHeight),
+                ImGui.GetColorU32(new Vector4(0.15f, 0.15f, 0.15f, 1f)));
+            drawList.AddRectFilled(cursorPos,
+                new Vector2(cursorPos.X + availWidth * progress, cursorPos.Y + barHeight),
+                ImGui.GetColorU32(_config.AutoContinueBarColor));
+
+            if (_config.AutoContinueBarShowText)
+            {
+                float remaining = Math.Max(0f, _config.AutoContinueDelay - elapsed);
+                string text = $"{remaining:F0}s";
+                var textSize = ImGui.CalcTextSize(text);
+                drawList.AddText(
+                    new Vector2(cursorPos.X + (availWidth - textSize.X) * 0.5f,
+                                cursorPos.Y + (barHeight - textSize.Y) * 0.5f),
+                    ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), text);
+            }
+
+            ImGui.Dummy(new Vector2(availWidth, barHeight));
+        }
+
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
@@ -114,6 +147,7 @@ public partial class BlackJackButtlerWindow
             SetupTableColumns();
             ImGui.TableHeadersRow();
 
+            _partyDissolved = _players.Count > 0 && !_players.Any(x => x.IsInParty);
             var playerSnapshot = _players.ToList();
             foreach (var player in playerSnapshot)
             {
@@ -642,6 +676,7 @@ public partial class BlackJackButtlerWindow
                     p.IsActivePlayer = false;
                     p.IsCurrentTurn = false;
                 }
+                p.CurrentBet = 0;
             }
             if (hlLeave) ImGui.PopStyleColor(2);
         }
@@ -753,11 +788,12 @@ public partial class BlackJackButtlerWindow
             bool canTellPlayer = (phase == GamePhase.Waiting || phase == GamePhase.Payout) && !CommandExecutor.IsRunning;
             float tButtonWidth = 25f;
             float heartButtonWidth = 25f;
+            float mButtonWidth = 25f;
             float spacing = ImGui.GetStyle().ItemSpacing.X;
 
             long bankBefore = p.Bank;
             if (!_config.EnableBankInput) ImGui.BeginDisabled();
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - tButtonWidth - heartButtonWidth - spacing * 2);
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - tButtonWidth - heartButtonWidth - mButtonWidth - spacing * 3);
             if (BJBGui.InputLong($"##bank_{p.UIID}", ref p.Bank, 1000, 10000)) _save();
             if (ImGui.IsItemActivated()) _bankSnapshot[p.UIID] = bankBefore;
             if (ImGui.IsItemDeactivatedAfterEdit())
@@ -838,6 +874,15 @@ public partial class BlackJackButtlerWindow
                         ImGui.SetTooltip("Transfer entire bank to tips");
                 }
             }
+
+            ImGui.SameLine();
+            if (BJBGui.SmallButton($"M##maxbet_{p.UIID}"))
+            {
+                p.CurrentBet = p.GetEffectiveMaxBet(_config);
+                _save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip($"Set bet to max ({p.GetEffectiveMaxBet(_config):N0})");
         }
 
         ImGui.TableNextColumn();
@@ -1049,8 +1094,55 @@ public partial class BlackJackButtlerWindow
             ImGui.SetTooltip("Emergency Stop: Abort action, restore state, disable Auto Run");
     }
 
+    private void ClearPlayer(PlayerState p, bool bankToTip)
+    {
+        if (bankToTip && p.Bank > 0)
+            StatsManager.AddTip(p.Bank);
+        p.Bank = 0;
+        p.CurrentBet = 0;
+    }
+
     private void DrawPlayerControls(PlayerState p)
     {
+        bool showClear = (!p.IsActivePlayer && !p.IsInParty) || _partyDissolved;
+        if (showClear && (p.Bank > 0 || p.CurrentBet > 0))
+        {
+            var io = ImGui.GetIO();
+            bool shift = io.KeyShift;
+            bool ctrl = io.KeyCtrl;
+
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0.0f, 0.0f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f));
+            if (BJBGui.SmallButton($"CLEAR##clear_{p.UIID}"))
+            {
+                if (shift)
+                {
+                    foreach (var pl in _players.ToList())
+                    {
+                        bool plClearable = ((!pl.IsActivePlayer && !pl.IsInParty) || _partyDissolved)
+                                           && (pl.Bank > 0 || pl.CurrentBet > 0);
+                        if (plClearable)
+                            ClearPlayer(pl, ctrl);
+                    }
+                }
+                else
+                {
+                    ClearPlayer(p, ctrl);
+                }
+            }
+            ImGui.PopStyleColor(2);
+
+            if (ImGui.IsItemHovered())
+            {
+                string tip = ctrl
+                    ? "CTRL: Bank \u2192 Tips, Bet = 0"
+                    : "Bank = 0, Bet = 0";
+                if (shift) tip = "SHIFT: " + tip + " (all clearable)";
+                ImGui.SetTooltip(tip);
+            }
+            return;
+        }
+
         bool isExecutingForThis = CommandExecutor.IsRunning
             && CommandExecutor.CurrentGroupHasDice
             && CommandExecutor.CurrentTargetPlayer.Equals(p.Name, StringComparison.OrdinalIgnoreCase);
@@ -1295,6 +1387,17 @@ public partial class BlackJackButtlerWindow
             if (existing != null) { existing.IsInParty = true; }
             else { _players.Add(new PlayerState { Name = name, WorldId = member.World.RowId, IsInParty = true }); }
         }
+
+        foreach (var p in _players)
+        {
+            if (!p.IsInParty)
+            {
+                string worldName = VipManager.ResolveWorldName(p.WorldId);
+                if (!string.IsNullOrEmpty(worldName) && VipManager.GetPlayerTier(p.Name, worldName) > 0)
+                    VipManager.SetPlayerTier(p.Name, worldName, 0);
+            }
+        }
+
         _players.RemoveAll(x => !x.IsInParty && !x.IsActivePlayer && x.Bank == 0);
     }
 
