@@ -13,7 +13,7 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow : Window, IDisposable
 {
-    private enum Page { Main, Regexes, Messages, Commands , OwnButtons , Settings , Vars , RoundLog , Debug , MacroImport , Thanks , Stats , Webhooks , Presets }
+    private enum Page { Main, Regexes, Messages, Commands , OwnButtons , Settings , Vars , RoundLog , Debug , MacroImport , Thanks , Stats , Webhooks , Presets , DrawLogic }
     private Page _page = Page.Main;
 
     private readonly Configuration _config;
@@ -199,6 +199,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             if(level >= UserLevel.Dev)          NavButton(Page.Vars, "Variables");
             if(level >= UserLevel.Dev)          NavButton(Page.Debug, "DEBUG");
             if(level >= UserLevel.Dev)          NavButton(Page.MacroImport, "Macro Import");
+            if(level >= UserLevel.Dev)          NavButton(Page.DrawLogic, "Draw Logic");
 
             var remainingHeight = ImGui.GetContentRegionAvail().Y;
             if (remainingHeight > 50) ImGui.SetCursorPosY(ImGui.GetCursorPosY() + remainingHeight - 50);
@@ -262,6 +263,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Stats:        DrawStatsPage(); break;
             case Page.Webhooks:     DrawWebhooksPage(); break;
             case Page.Presets:      DrawPresetsPage(); break;
+            case Page.DrawLogic:    DrawDrawLogicPage(); break;
         }
         ImGui.EndChild();
         ImGui.PopStyleColor(3);
@@ -272,6 +274,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         DrawDDMoneyPopup();
         DrawHandEditPopup();
         DrawVarRefPanel();
+        DrawDrawLogicDocPanel();
+        ExecuteDrawLogic();
     }
 
     private void RestoreSessionFromFile()

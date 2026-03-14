@@ -99,6 +99,10 @@ public sealed class Configuration : IPluginConfiguration
     public float CustomButtonFontScale = 1.0f;
     public bool CustomButtonUseMono = false;
 
+    public List<DrawLogicEntry> DrawLogicEntries = new();
+    public string DrawLogicStartEntry = "";
+    public bool DrawLogicSeeded = false;
+
     public UserLevel CurrentLevel = UserLevel.Beginner;
 
     public static string[] StandardBatchNames => DefaultsManager.GetDefaultMessages().Select(m => m.Name).ToArray();
@@ -196,6 +200,14 @@ public sealed class PresetEntry
 
     // Vollständiger Config-Snapshot als JSON-String
     public string SnapshotJson = "{}";
+}
+
+[Serializable]
+public sealed class DrawLogicEntry
+{
+    public string Name { get; set; } = "New Entry";
+    public string Script { get; set; } = "";
+    public bool IsIterate { get; set; } = true;
 }
 
 [Serializable]
