@@ -166,10 +166,10 @@ public partial class BlackJackButtlerWindow
         float payoutPercent = _config.PayoutPercent;
         double clippedHours = StatsManager.GetClippedHours(_clipHoursMode);
         long gilPerHour = _config.GilPerHour;
-        long hourlyDeduction = (long)(clippedHours * gilPerHour);
+        long hourlyDeduction = (long)Math.Round(clippedHours * gilPerHour);
 
         bool isLoss = profit < 0;
-        long payoutAmount = isLoss ? 0 : (long)(profit * (payoutPercent / 100.0));
+        long payoutAmount = isLoss ? 0 : (long)Math.Round(profit * (payoutPercent / 100.0));
         long totalOutcome = isLoss ? profit - hourlyDeduction : payoutAmount - hourlyDeduction;
 
         string fNow = nowBank.ToString("N0");
