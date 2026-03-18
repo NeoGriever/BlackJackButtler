@@ -61,6 +61,15 @@ public partial class BlackJackButtlerWindow
         ImGui.TextDisabled("  Blocks can be nested (IterateHand > IterateCard).");
 
         ImGui.Spacing();
+        ImGui.TextColored(new Vector4(1f, 0.85f, 0.4f, 1f), "Conditional Blocks");
+        ImGui.Separator();
+        ImGui.TextDisabled("  if <token> = <expected> {");
+        ImGui.TextDisabled("    // runs only when condition is met");
+        ImGui.TextDisabled("  }");
+        ImGui.TextDisabled("  Tokens are resolved before comparison.");
+        ImGui.TextDisabled("  Example: if <isdealer> = 1 { ... }");
+
+        ImGui.Spacing();
         ImGui.TextColored(new Vector4(1f, 0.85f, 0.4f, 1f), "Variable Functions");
         ImGui.Separator();
         DocEntry("SetVar(\"name\", value)", "Set variable (current scope)");
