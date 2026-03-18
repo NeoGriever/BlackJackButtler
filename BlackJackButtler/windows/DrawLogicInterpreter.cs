@@ -32,6 +32,25 @@ public sealed class DrawLogicContext
     public bool IsBlackjack;
     public bool IsDone;
     public bool IsDoubleDown;
+
+    public PlayerState? SourcePlayer;
+    public Configuration? Config;
+    public string WorldName = "";
+    public bool IsPlaying;
+    public long MaxBet;
+
+    public int IterHandIndex = -1;
+    public int IterHandCount = -1;
+    public int IterHandPoints;
+    public int IterHandPointsB;
+    public bool IterHandBusted;
+    public bool IterHandActive;
+
+    public int IterCardIndex = -1;
+    public int IterCardCount = -1;
+    public int IterCardNumber;
+    public int IterCardColor;
+    public DateTime IterCardDrawnAt;
 }
 
 public static class DrawLogicInterpreter
@@ -44,12 +63,16 @@ public static class DrawLogicInterpreter
     private static PlayerState? _execDealer;
     private static Configuration? _execConfig;
 
+    private static readonly Dictionary<string, float> _vars = new();
+    private static DrawLogicContext? _evalCtx;
+
     public static void ExecuteStartEntry(List<DrawLogicEntry> entries, string startName,
         List<PlayerState> players, PlayerState dealer, Configuration config)
     {
         if (string.IsNullOrEmpty(startName)) return;
         var startEntry = entries.FirstOrDefault(e => e.Name == startName);
         if (startEntry == null) return;
+        if (!startEntry.IsActive) return;
 
         _drawing = new WorldDrawing();
         _currentShape = null;
@@ -65,7 +88,7 @@ public static class DrawLogicInterpreter
             }
             else
             {
-                var ctx = BuildContextNoPlayer();
+                var ctx = BuildContextNoPlayer(config);
                 Execute(startEntry.Script, ctx, entries, 0);
             }
         }
@@ -104,6 +127,11 @@ public static class DrawLogicInterpreter
             IsInGroup = player.IsInParty,
             GroupExists = Plugin.PartyList.Length > 0,
             IsDone = player.IsDone,
+            SourcePlayer = player,
+            Config = config,
+            WorldName = VipManager.ResolveWorldName(player.WorldId),
+            IsPlaying = player.IsActivePlayer && !player.IsOnHold && !player.IsOnBench,
+            MaxBet = player.GetEffectiveMaxBet(config),
         };
 
         if (player.Hands.Count > 0 && player.CurrentHandIndex < player.Hands.Count)
@@ -152,11 +180,12 @@ public static class DrawLogicInterpreter
         return ctx;
     }
 
-    private static DrawLogicContext BuildContextNoPlayer()
+    private static DrawLogicContext BuildContextNoPlayer(Configuration config)
     {
         var ctx = new DrawLogicContext
         {
             GroupExists = Plugin.PartyList.Length > 0,
+            Config = config,
         };
 
         var local = Plugin.ObjectTable.LocalPlayer;
@@ -180,16 +209,145 @@ public static class DrawLogicInterpreter
         _drawing ??= new WorldDrawing();
 
         var lines = script.Split('\n');
-        foreach (var rawLine in lines)
+        int i = 0;
+        while (i < lines.Length)
         {
-            var line = rawLine.Trim();
-            if (string.IsNullOrEmpty(line) || line.StartsWith("//")) continue;
+            var line = lines[i].Trim();
+            if (string.IsNullOrEmpty(line) || line.StartsWith("//"))
+            {
+                i++;
+                continue;
+            }
 
+            if (line.StartsWith("IterateHand") && line.TrimEnd().EndsWith("{"))
+            {
+                var (body, endIdx) = ExtractBlock(lines, i);
+                if (body != null)
+                    ExecuteIterateHand(body, ctx, allEntries, depth);
+                i = endIdx + 1;
+                continue;
+            }
+
+            if (line.StartsWith("IterateCard") && line.TrimEnd().EndsWith("{"))
+            {
+                var (body, endIdx) = ExtractBlock(lines, i);
+                if (body != null)
+                    ExecuteIterateCard(body, ctx, allEntries, depth);
+                i = endIdx + 1;
+                continue;
+            }
+
+            _evalCtx = ctx;
             line = ReplaceTokens(line, ctx);
 
             if (TryParseFunctionCall(line, out var funcName, out var args))
                 ExecuteFunction(funcName, args, ctx, allEntries, depth);
+
+            i++;
         }
+    }
+
+    private static (string? body, int endIndex) ExtractBlock(string[] lines, int startLine)
+    {
+        int depth = 0;
+        int bodyStart = startLine + 1;
+
+        for (int i = startLine; i < lines.Length; i++)
+        {
+            var trimmed = lines[i].Trim();
+            foreach (char c in trimmed)
+            {
+                if (c == '{') depth++;
+                else if (c == '}') depth--;
+            }
+            if (depth <= 0 && i > startLine)
+            {
+                var bodyLines = new List<string>();
+                for (int j = bodyStart; j < i; j++)
+                    bodyLines.Add(lines[j]);
+                var closingTrimmed = lines[i].Trim();
+                if (closingTrimmed != "}")
+                {
+                    int bracePos = closingTrimmed.LastIndexOf('}');
+                    if (bracePos > 0)
+                        bodyLines.Add(closingTrimmed.Substring(0, bracePos));
+                }
+                return (string.Join('\n', bodyLines), i);
+            }
+        }
+        return (null, lines.Length - 1);
+    }
+
+    private static void ExecuteIterateHand(string body, DrawLogicContext ctx,
+        List<DrawLogicEntry> allEntries, int depth)
+    {
+        var player = ctx.SourcePlayer;
+        if (player == null) return;
+
+        for (int h = 0; h < player.Hands.Count; h++)
+        {
+            var handCtx = CloneContext(ctx);
+            handCtx.IterHandIndex = h;
+            handCtx.IterHandCount = player.Hands.Count;
+
+            var (min, max) = player.CalculatePoints(h);
+            int best = (max.HasValue && max.Value <= 21) ? max.Value : min;
+            handCtx.IterHandPoints = best;
+            handCtx.IterHandPointsB = (max.HasValue && max.Value != min) ? min : 0;
+            handCtx.IterHandBusted = min > 21;
+            handCtx.IterHandActive = player.IsCurrentTurn && player.CurrentHandIndex == h;
+
+            Execute(body, handCtx, allEntries, depth);
+        }
+    }
+
+    private static void ExecuteIterateCard(string body, DrawLogicContext ctx,
+        List<DrawLogicEntry> allEntries, int depth)
+    {
+        var player = ctx.SourcePlayer;
+        if (player == null) return;
+
+        int handIdx = ctx.IterHandIndex >= 0 ? ctx.IterHandIndex : player.CurrentHandIndex;
+        if (handIdx < 0 || handIdx >= player.Hands.Count) return;
+        var cards = player.Hands[handIdx].Cards;
+
+        for (int c = 0; c < cards.Count; c++)
+        {
+            var card = cards[c];
+            var cardCtx = CloneContext(ctx);
+            cardCtx.IterCardIndex = c;
+            cardCtx.IterCardCount = cards.Count;
+            cardCtx.IterCardNumber = card.Value;
+            cardCtx.IterCardColor = MapSuitToUser(card.Suit);
+            cardCtx.IterCardDrawnAt = card.DrawnAt;
+
+            Execute(body, cardCtx, allEntries, depth);
+        }
+    }
+
+    private static int MapSuitToUser(CardSuit suit)
+    {
+        return suit switch
+        {
+            CardSuit.Spades => 0,
+            CardSuit.Clubs => 1,
+            CardSuit.Hearts => 2,
+            CardSuit.Diamonds => 3,
+            _ => 0,
+        };
+    }
+
+    private static Vector4 GetSuitColor(int userSuit, Configuration? config)
+    {
+        if (config == null) return new Vector4(1, 1, 1, 1);
+        return userSuit switch
+        {
+            0 => config.DrawLogicColorSpades,
+            1 => config.DrawLogicColorClubs,
+            2 => config.DrawLogicColorHearts,
+            3 => config.DrawLogicColorDiamonds,
+            _ => new Vector4(1, 1, 1, 1),
+        };
     }
 
     public static string ReplaceTokens(string line, DrawLogicContext ctx)
@@ -197,6 +355,50 @@ public static class DrawLogicInterpreter
         line = line.Replace("<pos>.x", ctx.Position.X.ToString("F4", CultureInfo.InvariantCulture));
         line = line.Replace("<pos>.y", ctx.Position.Y.ToString("F4", CultureInfo.InvariantCulture));
         line = line.Replace("<pos>.z", ctx.Position.Z.ToString("F4", CultureInfo.InvariantCulture));
+
+        line = line.Replace("<IsCurrentTurn>", ctx.IsFocused ? "1" : "0");
+        line = line.Replace("<IsPlaying>", ctx.IsPlaying ? "1" : "0");
+
+        line = line.Replace("<BankF>", ctx.Bank.ToString("N0", CultureInfo.GetCultureInfo("en-US")));
+        line = line.Replace("<BetF>", ctx.Bet.ToString("N0", CultureInfo.GetCultureInfo("en-US")));
+        line = line.Replace("<MaxBetF>", ctx.MaxBet.ToString("N0", CultureInfo.GetCultureInfo("en-US")));
+        line = line.Replace("<MaxBet>", ctx.MaxBet.ToString(CultureInfo.InvariantCulture));
+
+        line = line.Replace("<NameW>", ctx.PlayerName + "@" + ctx.WorldName);
+
+        if (ctx.Config != null)
+        {
+            line = line.Replace("<Scale>", ctx.Config.DrawLogicScale.ToString("F4", CultureInfo.InvariantCulture));
+            line = line.Replace("<OffsetX>", ctx.Config.DrawLogicOffsetX.ToString("F4", CultureInfo.InvariantCulture));
+            line = line.Replace("<OffsetY>", ctx.Config.DrawLogicOffsetY.ToString("F4", CultureInfo.InvariantCulture));
+            line = line.Replace("<OffsetZ>", ctx.Config.DrawLogicOffsetZ.ToString("F4", CultureInfo.InvariantCulture));
+            line = line.Replace("<OffsetR>", ctx.Config.DrawLogicOffsetR.ToString("F4", CultureInfo.InvariantCulture));
+        }
+
+        line = line.Replace("<HandsTotal>", ctx.IterHandCount >= 0 ? ctx.IterHandCount.ToString(CultureInfo.InvariantCulture) : "0");
+        line = line.Replace("<HandPointsB>", ctx.IterHandPointsB.ToString(CultureInfo.InvariantCulture));
+        line = line.Replace("<HandPoints>", ctx.IterHandPoints.ToString(CultureInfo.InvariantCulture));
+        line = line.Replace("<HandIndex>", ctx.IterHandIndex >= 0 ? ctx.IterHandIndex.ToString(CultureInfo.InvariantCulture) : ctx.HandIndex.ToString(CultureInfo.InvariantCulture));
+        line = line.Replace("<HandActive>", ctx.IterHandActive ? "1" : "0");
+        line = line.Replace("<HandBusted>", ctx.IterHandBusted ? "1" : "0");
+
+        if (ctx.IterCardIndex >= 0)
+        {
+            var suitColor = GetSuitColor(ctx.IterCardColor, ctx.Config);
+            line = line.Replace("<CardsTotal>", ctx.IterCardCount.ToString(CultureInfo.InvariantCulture));
+            line = line.Replace("<CardColorR>", suitColor.X.ToString("F4", CultureInfo.InvariantCulture));
+            line = line.Replace("<CardColorG>", suitColor.Y.ToString("F4", CultureInfo.InvariantCulture));
+            line = line.Replace("<CardColorB>", suitColor.Z.ToString("F4", CultureInfo.InvariantCulture));
+            line = line.Replace("<CardColor>", ctx.IterCardColor.ToString(CultureInfo.InvariantCulture));
+            line = line.Replace("<CardNumber>", ctx.IterCardNumber.ToString(CultureInfo.InvariantCulture));
+            line = line.Replace("<CardIndex>", ctx.IterCardIndex.ToString(CultureInfo.InvariantCulture));
+
+            double ageSec = ctx.IterCardDrawnAt == DateTime.MinValue
+                ? 3.0
+                : (DateTime.UtcNow - ctx.IterCardDrawnAt).TotalSeconds;
+            float cardAge = (float)Math.Clamp(ageSec / 3.0, 0.0, 1.0);
+            line = line.Replace("<CardAge>", cardAge.ToString("F4", CultureInfo.InvariantCulture));
+        }
 
         line = line.Replace("<name>", ctx.PlayerName);
         line = line.Replace("<cards>", ctx.Cards);
@@ -302,6 +504,7 @@ public static class DrawLogicInterpreter
                 break;
             case "Draw":
                 _currentShape?.Draw();
+                _vars.Clear();
                 break;
             case "Move" when args.Length >= 3:
                 _currentShape?.Move(EvalFloat(args[0]), EvalFloat(args[1]), EvalFloat(args[2]));
@@ -318,7 +521,104 @@ public static class DrawLogicInterpreter
             case "CallDrawLogic":
                 HandleCallDrawLogic(args, ctx, allEntries, depth);
                 break;
+            case "SetVar" when args.Length >= 2:
+                SetVarScoped(EvalString(args[0]), EvalFloat(args[1]), ctx);
+                break;
+            case "UnVar" when args.Length >= 1:
+                UnVarScoped(EvalString(args[0]), ctx);
+                break;
+            case "setVarH" when args.Length >= 3:
+                SetVarHand(EvalString(args[0]), (int)EvalFloat(args[1]), EvalFloat(args[2]), ctx);
+                break;
+            case "unVarH" when args.Length >= 2:
+                UnVarHand(EvalString(args[0]), (int)EvalFloat(args[1]), ctx);
+                break;
+            case "setVarC" when args.Length >= 4:
+                SetVarCard(EvalString(args[0]), (int)EvalFloat(args[1]), (int)EvalFloat(args[2]), EvalFloat(args[3]), ctx);
+                break;
+            case "unVarC" when args.Length >= 3:
+                UnVarCard(EvalString(args[0]), (int)EvalFloat(args[1]), (int)EvalFloat(args[2]), ctx);
+                break;
         }
+    }
+
+    private static string BuildVarKey(string name, DrawLogicContext ctx)
+    {
+        string key = $"{name}-{ctx.PlayerName}-{ctx.WorldName}";
+        if (ctx.IterCardIndex >= 0)
+        {
+            int hi = ctx.IterHandIndex >= 0 ? ctx.IterHandIndex : (ctx.SourcePlayer?.CurrentHandIndex ?? 0);
+            key += $"-{hi}-{ctx.IterCardIndex}";
+        }
+        else if (ctx.IterHandIndex >= 0)
+        {
+            key += $"-{ctx.IterHandIndex}";
+        }
+        return key;
+    }
+
+    private static void SetVarScoped(string name, float value, DrawLogicContext ctx)
+    {
+        _vars[BuildVarKey(name, ctx)] = value;
+    }
+
+    private static void UnVarScoped(string name, DrawLogicContext ctx)
+    {
+        _vars.Remove(BuildVarKey(name, ctx));
+    }
+
+    private static void SetVarHand(string name, int handIdx, float value, DrawLogicContext ctx)
+    {
+        string key = $"{name}-{ctx.PlayerName}-{ctx.WorldName}-{handIdx}";
+        _vars[key] = value;
+    }
+
+    private static void UnVarHand(string name, int handIdx, DrawLogicContext ctx)
+    {
+        string key = $"{name}-{ctx.PlayerName}-{ctx.WorldName}-{handIdx}";
+        _vars.Remove(key);
+    }
+
+    private static void SetVarCard(string name, int handIdx, int cardIdx, float value, DrawLogicContext ctx)
+    {
+        string key = $"{name}-{ctx.PlayerName}-{ctx.WorldName}-{handIdx}-{cardIdx}";
+        _vars[key] = value;
+    }
+
+    private static void UnVarCard(string name, int handIdx, int cardIdx, DrawLogicContext ctx)
+    {
+        string key = $"{name}-{ctx.PlayerName}-{ctx.WorldName}-{handIdx}-{cardIdx}";
+        _vars.Remove(key);
+    }
+
+    private static float GetVarFallback(string name, DrawLogicContext ctx)
+    {
+        if (ctx.IterCardIndex >= 0)
+        {
+            int hi = ctx.IterHandIndex >= 0 ? ctx.IterHandIndex : (ctx.SourcePlayer?.CurrentHandIndex ?? 0);
+            string cardKey = $"{name}-{ctx.PlayerName}-{ctx.WorldName}-{hi}-{ctx.IterCardIndex}";
+            if (_vars.TryGetValue(cardKey, out var cv)) return cv;
+        }
+        if (ctx.IterHandIndex >= 0)
+        {
+            string handKey = $"{name}-{ctx.PlayerName}-{ctx.WorldName}-{ctx.IterHandIndex}";
+            if (_vars.TryGetValue(handKey, out var hv)) return hv;
+        }
+        string playerKey = $"{name}-{ctx.PlayerName}-{ctx.WorldName}";
+        if (_vars.TryGetValue(playerKey, out var pv)) return pv;
+        return 0;
+    }
+
+    private static float GetVarHandExplicit(string name, int handIdx, DrawLogicContext ctx)
+    {
+        string key = $"{name}-{ctx.PlayerName}-{ctx.WorldName}-{handIdx}";
+        return _vars.TryGetValue(key, out var v) ? v : 0;
+    }
+
+    private static float GetVarCardExplicit(string name, int handIdx, int cardIdx, DrawLogicContext ctx)
+    {
+        string key = $"{name}-{ctx.PlayerName}-{ctx.WorldName}-{handIdx}-{cardIdx}";
+        return _vars.TryGetValue(key, out var v) ? v : 0;
     }
 
     private static void HandleCallDrawLogic(string[] args, DrawLogicContext ctx,
@@ -328,6 +628,7 @@ public static class DrawLogicInterpreter
         var targetName = EvalString(args[0]);
         var target = allEntries.FirstOrDefault(e => e.Name == targetName);
         if (target == null) return;
+        if (!target.IsActive) return;
 
         if (target.IsIterate && _execPlayers != null && _execDealer != null && _execConfig != null)
         {
@@ -371,6 +672,22 @@ public static class DrawLogicInterpreter
             IsBlackjack = src.IsBlackjack,
             IsDone = src.IsDone,
             IsDoubleDown = src.IsDoubleDown,
+            SourcePlayer = src.SourcePlayer,
+            Config = src.Config,
+            WorldName = src.WorldName,
+            IsPlaying = src.IsPlaying,
+            MaxBet = src.MaxBet,
+            IterHandIndex = src.IterHandIndex,
+            IterHandCount = src.IterHandCount,
+            IterHandPoints = src.IterHandPoints,
+            IterHandPointsB = src.IterHandPointsB,
+            IterHandBusted = src.IterHandBusted,
+            IterHandActive = src.IterHandActive,
+            IterCardIndex = src.IterCardIndex,
+            IterCardCount = src.IterCardCount,
+            IterCardNumber = src.IterCardNumber,
+            IterCardColor = src.IterCardColor,
+            IterCardDrawnAt = src.IterCardDrawnAt,
         };
     }
 
@@ -413,10 +730,12 @@ public static class DrawLogicInterpreter
             SkipSpace(expr, ref pos);
             if (pos >= expr.Length) break;
             char op = expr[pos];
-            if (op != '*' && op != '/') break;
+            if (op != '*' && op != '/' && op != '%') break;
             pos++;
             var right = ParseUnary(expr, ref pos);
-            left = op == '*' ? left * right : (right != 0 ? left / right : 0);
+            if (op == '*') left *= right;
+            else if (op == '/') left = right != 0 ? left / right : 0;
+            else left = right != 0 ? left % right : 0;
         }
         return left;
     }
@@ -444,6 +763,65 @@ public static class DrawLogicInterpreter
             return val;
         }
 
+        if (pos < expr.Length && char.IsLetter(expr[pos]))
+        {
+            int idStart = pos;
+            while (pos < expr.Length && (char.IsLetterOrDigit(expr[pos]) || expr[pos] == '_'))
+                pos++;
+            string ident = expr.Substring(idStart, pos - idStart);
+
+            SkipSpace(expr, ref pos);
+            if (pos < expr.Length && expr[pos] == '(')
+            {
+                pos++;
+                var funcArgs = new List<float>();
+                var stringArgs = new List<string>();
+                bool isVarFunc = ident == "GetVar" || ident == "getVarH" || ident == "getVarC";
+
+                if (isVarFunc)
+                {
+                    SkipSpace(expr, ref pos);
+                    if (pos < expr.Length && expr[pos] == '"')
+                    {
+                        pos++;
+                        int qStart = pos;
+                        while (pos < expr.Length && expr[pos] != '"') pos++;
+                        stringArgs.Add(expr.Substring(qStart, pos - qStart));
+                        if (pos < expr.Length && expr[pos] == '"') pos++;
+                        SkipSpace(expr, ref pos);
+                        while (pos < expr.Length && expr[pos] == ',')
+                        {
+                            pos++;
+                            funcArgs.Add(ParseAddSub(expr, ref pos));
+                            SkipSpace(expr, ref pos);
+                        }
+                    }
+                }
+                else
+                {
+                    SkipSpace(expr, ref pos);
+                    if (pos < expr.Length && expr[pos] != ')')
+                    {
+                        funcArgs.Add(ParseAddSub(expr, ref pos));
+                        SkipSpace(expr, ref pos);
+                        while (pos < expr.Length && expr[pos] == ',')
+                        {
+                            pos++;
+                            funcArgs.Add(ParseAddSub(expr, ref pos));
+                            SkipSpace(expr, ref pos);
+                        }
+                    }
+                }
+
+                SkipSpace(expr, ref pos);
+                if (pos < expr.Length && expr[pos] == ')') pos++;
+
+                return EvalMathFunc(ident, funcArgs, stringArgs);
+            }
+
+            return 0;
+        }
+
         int start = pos;
         while (pos < expr.Length && (char.IsDigit(expr[pos]) || expr[pos] == '.'))
             pos++;
@@ -451,6 +829,49 @@ public static class DrawLogicInterpreter
         if (start == pos) return 0;
         return float.TryParse(expr.AsSpan(start, pos - start),
             NumberStyles.Float, CultureInfo.InvariantCulture, out var r) ? r : 0;
+    }
+
+    private static float EvalMathFunc(string name, List<float> args, List<string> stringArgs)
+    {
+        switch (name)
+        {
+            case "Ceil" when args.Count >= 1:
+                return (float)Math.Ceiling(args[0]);
+            case "Floor" when args.Count >= 1:
+                return (float)Math.Floor(args[0]);
+            case "Sin" when args.Count >= 1:
+                return (float)Math.Sin(args[0]);
+            case "Cos" when args.Count >= 1:
+                return (float)Math.Cos(args[0]);
+            case "Sqrt" when args.Count >= 1:
+                return (float)Math.Sqrt(args[0]);
+            case "Min" when args.Count >= 2:
+                return Math.Min(args[0], args[1]);
+            case "Max" when args.Count >= 2:
+                return Math.Max(args[0], args[1]);
+            case "Mul" when args.Count >= 2:
+                return args[0] * args[1];
+            case "Div" when args.Count >= 2:
+                return args[1] != 0 ? args[0] / args[1] : 0;
+            case "Mod" when args.Count >= 2:
+                return args[1] != 0 ? args[0] % args[1] : 0;
+            case "Plus" when args.Count >= 2:
+                return args[0] + args[1];
+            case "Minus" when args.Count >= 2:
+                return args[0] - args[1];
+            case "Clamp" when args.Count >= 3:
+                return Math.Clamp(args[0], args[1], args[2]);
+
+            case "GetVar" when stringArgs.Count >= 1:
+                return _evalCtx != null ? GetVarFallback(stringArgs[0], _evalCtx) : 0;
+            case "getVarH" when stringArgs.Count >= 1 && args.Count >= 1:
+                return _evalCtx != null ? GetVarHandExplicit(stringArgs[0], (int)args[0], _evalCtx) : 0;
+            case "getVarC" when stringArgs.Count >= 1 && args.Count >= 2:
+                return _evalCtx != null ? GetVarCardExplicit(stringArgs[0], (int)args[0], (int)args[1], _evalCtx) : 0;
+
+            default:
+                return 0;
+        }
     }
 
     private static void SkipSpace(string s, ref int pos)

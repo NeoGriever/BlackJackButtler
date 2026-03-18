@@ -103,13 +103,13 @@ public partial class BlackJackButtlerWindow
                 ImGui.SetNextItemWidth(50);
                 if (ImGui.Combo("##val", ref valueIndex, _cardValueLabels, _cardValueLabels.Length))
                 {
-                    _handEditCards[i] = new DeckCard { Value = valueIndex + 1, Suit = (CardSuit)suitIndex };
+                    _handEditCards[i] = new DeckCard { Value = valueIndex + 1, Suit = (CardSuit)suitIndex, DrawnAt = DateTime.UtcNow };
                 }
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(110);
                 if (ImGui.Combo("##suit", ref suitIndex, _suitLabels, _suitLabels.Length))
                 {
-                    _handEditCards[i] = new DeckCard { Value = valueIndex + 1, Suit = (CardSuit)suitIndex };
+                    _handEditCards[i] = new DeckCard { Value = valueIndex + 1, Suit = (CardSuit)suitIndex, DrawnAt = DateTime.UtcNow };
                 }
                 ImGui.SameLine();
 
@@ -130,7 +130,7 @@ public partial class BlackJackButtlerWindow
             if (_handEditCards.Count < 16)
             {
                 if (BJBGui.Button("+ Add Card"))
-                    _handEditCards.Add(new DeckCard { Value = 1, Suit = CardSuit.Spades });
+                    _handEditCards.Add(new DeckCard { Value = 1, Suit = CardSuit.Spades, DrawnAt = DateTime.UtcNow });
             }
 
             ImGui.Spacing();

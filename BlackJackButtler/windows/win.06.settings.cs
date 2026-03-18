@@ -447,6 +447,94 @@ public partial class BlackJackButtlerWindow
                     _save();
                 if (ImGui.IsItemHovered())
                     ImGui.SetTooltip("Active: Face the configured direction when entering Waiting, Deal, Dealer, or Payout phase.\nInactive: Only at round start or via /initialviewdirection command.");
+
+                ImGui.Spacing();
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Draw Logic");
+                ImGui.Separator();
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Scale");
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (BJBGui.SliderFloat("##dl_scale", ref _config.DrawLogicScale, 0.05f, 4.0f, "%.2fx"))
+                {
+                    _config.DrawLogicScale = (float)(Math.Round(_config.DrawLogicScale / 0.05) * 0.05);
+                    _config.DrawLogicScale = Math.Clamp(_config.DrawLogicScale, 0.05f, 4.0f);
+                    _save();
+                }
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Offset X");
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (ImGui.DragFloat("##dl_offset_x", ref _config.DrawLogicOffsetX, 0.01f, -100f, 100f, "%.2f"))
+                    _save();
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Offset Y");
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (ImGui.DragFloat("##dl_offset_y", ref _config.DrawLogicOffsetY, 0.01f, -100f, 100f, "%.2f"))
+                    _save();
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Offset Z");
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (ImGui.DragFloat("##dl_offset_z", ref _config.DrawLogicOffsetZ, 0.01f, -100f, 100f, "%.2f"))
+                    _save();
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Offset Rotation");
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (BJBGui.SliderFloat("##dl_offset_r", ref _config.DrawLogicOffsetR, 0.0f, 359.99f, "%.2f\u00b0"))
+                    _save();
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Suit Colors");
+                ImGui.Separator();
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Spades");
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (ImGui.ColorEdit4("##dl_color_spades", ref _config.DrawLogicColorSpades, ImGuiColorEditFlags.NoAlpha))
+                {
+                    _config.DrawLogicColorSpades.W = 1.0f;
+                    _save();
+                }
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Clubs");
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (ImGui.ColorEdit4("##dl_color_clubs", ref _config.DrawLogicColorClubs, ImGuiColorEditFlags.NoAlpha))
+                {
+                    _config.DrawLogicColorClubs.W = 1.0f;
+                    _save();
+                }
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Hearts");
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (ImGui.ColorEdit4("##dl_color_hearts", ref _config.DrawLogicColorHearts, ImGuiColorEditFlags.NoAlpha))
+                {
+                    _config.DrawLogicColorHearts.W = 1.0f;
+                    _save();
+                }
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Diamonds");
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (ImGui.ColorEdit4("##dl_color_diamonds", ref _config.DrawLogicColorDiamonds, ImGuiColorEditFlags.NoAlpha))
+                {
+                    _config.DrawLogicColorDiamonds.W = 1.0f;
+                    _save();
+                }
             }
 
             ImGui.EndTabItem();
@@ -791,6 +879,15 @@ public partial class BlackJackButtlerWindow
         TryApply<Vector4>(j, "AutoContinueBarColor",                  v => _config.AutoContinueBarColor = v);
         TryApply<float> (j, "AutoContinueBarHeight",                  v => _config.AutoContinueBarHeight = v);
         TryApply<bool>  (j, "AutoContinueBarShowText",                v => _config.AutoContinueBarShowText = v);
+        TryApply<float> (j, "DrawLogicScale",                          v => _config.DrawLogicScale = v);
+        TryApply<float> (j, "DrawLogicOffsetX",                        v => _config.DrawLogicOffsetX = v);
+        TryApply<float> (j, "DrawLogicOffsetY",                        v => _config.DrawLogicOffsetY = v);
+        TryApply<float> (j, "DrawLogicOffsetZ",                        v => _config.DrawLogicOffsetZ = v);
+        TryApply<float> (j, "DrawLogicOffsetR",                        v => _config.DrawLogicOffsetR = v);
+        TryApply<Vector4>(j, "DrawLogicColorSpades",                   v => _config.DrawLogicColorSpades = v);
+        TryApply<Vector4>(j, "DrawLogicColorClubs",                    v => _config.DrawLogicColorClubs = v);
+        TryApply<Vector4>(j, "DrawLogicColorHearts",                   v => _config.DrawLogicColorHearts = v);
+        TryApply<Vector4>(j, "DrawLogicColorDiamonds",                 v => _config.DrawLogicColorDiamonds = v);
     }
 
     private void DoFullReplace() {
