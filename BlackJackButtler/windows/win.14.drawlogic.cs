@@ -17,23 +17,28 @@ public partial class BlackJackButtlerWindow
         _config.DrawLogicSeeded = true;
         if (_config.DrawLogicEntries.Count == 0)
         {
+            var seedScript = "// Golden cross at player feet (0.3 yalm radius)\n"
+                           + "SetDrawColor(1.0, 0.85, 0.0, 0.7)\n"
+                           + "IterateHand {\n"
+                           + "    BeginShape(<pos>.x, <pos>.y, <pos>.z)\n"
+                           + "    BeginPath()\n"
+                           + "    MoveTo(-0.3, Mul(<HandIndex>, 0.2), -0.3)\n"
+                           + "    LineTo(0.3, Mul(<HandIndex>, 0.2), 0.3)\n"
+                           + "    EndPath()\n"
+                           + "    BeginPath()\n"
+                           + "    MoveTo(0.3, Mul(<HandIndex>, 0.2), -0.3)\n"
+                           + "    LineTo(-0.3, Mul(<HandIndex>, 0.2), 0.3)\n"
+                           + "    EndPath()\n"
+                           + "}\n"
+                           + "FinishShape()\n"
+                           + "Draw()";
+            var path = DrawLogicScriptManager.CreateNewFile(0);
+            DrawLogicScriptManager.WriteScript(path, seedScript);
             _config.DrawLogicEntries.Add(new DrawLogicEntry
             {
                 Name = "Player Cross",
                 IsIterate = true,
-                Script = "// Golden cross at player feet (0.3 yalm radius)\n"
-                       + "SetDrawColor(1.0, 0.85, 0.0, 0.7)\n"
-                       + "BeginShape(<pos>.x, <pos>.y, <pos>.z)\n"
-                       + "BeginPath()\n"
-                       + "MoveTo(-0.3, 0, -0.3)\n"
-                       + "LineTo(0.3, 0, 0.3)\n"
-                       + "EndPath()\n"
-                       + "BeginPath()\n"
-                       + "MoveTo(0.3, 0, -0.3)\n"
-                       + "LineTo(-0.3, 0, 0.3)\n"
-                       + "EndPath()\n"
-                       + "FinishShape()\n"
-                       + "Draw()",
+                ScriptPath = path,
             });
         }
         _save();
@@ -84,7 +89,8 @@ public partial class BlackJackButtlerWindow
         if (!canAdd) ImGui.BeginDisabled();
         if (BJBGui.Button("+ New Entry"))
         {
-            entries.Add(new DrawLogicEntry { Name = _newDrawLogicName.Trim() });
+            var newPath = DrawLogicScriptManager.CreateNewFile(entries.Count);
+            entries.Add(new DrawLogicEntry { Name = _newDrawLogicName.Trim(), ScriptPath = newPath });
             _newDrawLogicName = "";
             _save();
         }
@@ -138,13 +144,56 @@ public partial class BlackJackButtlerWindow
                     _save();
                 }
 
-                ImGui.TextUnformatted("Script:");
-                var script = entry.Script;
-                if (ImGui.InputTextMultiline($"##dl_script_{i}", ref script, 8192,
-                    new Vector2(-1, 200), ImGuiInputTextFlags.AllowTabInput))
+                var scriptPath = entry.ScriptPath;
+                ImGui.SetNextItemWidth(300f);
+                ImGui.InputText($"##dl_path_{i}", ref scriptPath, 256, ImGuiInputTextFlags.ReadOnly);
+                ImGui.SameLine();
+                if (BJBGui.SmallButton($"...##dl_browse_{i}"))
+                    ImGui.OpenPopup($"dl_pathpopup_{i}");
+                ImGui.SameLine();
+                if (BJBGui.SmallButton($"Reload##dl_reload_{i}"))
                 {
-                    entry.Script = script;
+                    entry.Script = DrawLogicScriptManager.ReloadScript(entry.ScriptPath);
+                }
+
+                ImGui.SameLine();
+                bool autoReloadAvail = DrawLogicDebugManager.IsActive;
+                if (!autoReloadAvail) ImGui.BeginDisabled();
+                var autoReload = entry.AutoReload;
+                if (ImGui.Checkbox($"Auto-Reload##dl_autoreload_{i}", ref autoReload))
+                {
+                    if (autoReload)
+                    {
+                        foreach (var other in entries) other.AutoReload = false;
+                        entry.AutoReload = true;
+                        DrawLogicScriptManager.SetAutoReload(entry.ScriptPath);
+                    }
+                    else
+                    {
+                        entry.AutoReload = false;
+                        DrawLogicScriptManager.ClearAutoReload();
+                    }
                     _save();
+                }
+                if (!autoReloadAvail)
+                {
+                    ImGui.EndDisabled();
+                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                        ImGui.SetTooltip("Enable Debug Mode to use Auto-Reload.");
+                }
+
+                if (ImGui.BeginPopup($"dl_pathpopup_{i}"))
+                {
+                    ImGui.TextUnformatted("Script Path (relative):");
+                    var editPath = entry.ScriptPath;
+                    ImGui.SetNextItemWidth(300f);
+                    if (ImGui.InputText($"##dl_pathedit_{i}", ref editPath, 256, ImGuiInputTextFlags.EnterReturnsTrue))
+                    {
+                        entry.ScriptPath = editPath.Trim();
+                        _save();
+                        ImGui.CloseCurrentPopup();
+                    }
+                    ImGui.EndPopup();
                 }
 
                 bool isFirst = i == 0;
@@ -186,9 +235,10 @@ public partial class BlackJackButtlerWindow
 
         if (toRemove >= 0)
         {
-            var deletedName = entries[toRemove].Name;
+            var deletedEntry = entries[toRemove];
+            DrawLogicScriptManager.SoftDeleteFile(deletedEntry.ScriptPath);
             entries.RemoveAt(toRemove);
-            if (_config.DrawLogicStartEntry == deletedName)
+            if (_config.DrawLogicStartEntry == deletedEntry.Name)
                 _config.DrawLogicStartEntry = "";
             _save();
         }
@@ -207,6 +257,17 @@ public partial class BlackJackButtlerWindow
             var (vPlayers, vDealer) = DrawLogicDebugManager.BuildVirtualPlayers();
             players = vPlayers;
             dealer = vDealer;
+        }
+
+        foreach (var e in _config.DrawLogicEntries)
+        {
+            if (!string.IsNullOrEmpty(e.ScriptPath))
+            {
+                if (e.AutoReload)
+                    DrawLogicScriptManager.CheckAndApplyFileChange(e);
+                else
+                    e.Script = DrawLogicScriptManager.ReadScript(e.ScriptPath);
+            }
         }
 
         try

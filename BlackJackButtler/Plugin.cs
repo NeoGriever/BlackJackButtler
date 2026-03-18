@@ -88,6 +88,7 @@ public sealed class Plugin : IDalamudPlugin
         StatsManager.Init(Configuration);
         ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
         VipManager.Init(Path.GetDirectoryName(PluginInterface.GetPluginConfigDirectory())!);
+        DrawLogicScriptManager.Init(PluginInterface.GetPluginConfigDirectory(), Configuration);
 
         notepadWindow = new NotepadWindow(Configuration, () => Configuration.Save(), () => mainWindow?.GetWindowRect() ?? (Vector2.Zero, Vector2.Zero));
         windowSystem.AddWindow(notepadWindow);
@@ -331,6 +332,7 @@ public sealed class Plugin : IDalamudPlugin
         if (_frameworkHooked) Framework.Update -= OnFrameworkUpdate;
 
         NearbyAlertManager.Dispose();
+        DrawLogicScriptManager.Dispose();
 
         CommandManager.RemoveHandler(CommandName);
 

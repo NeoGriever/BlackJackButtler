@@ -237,6 +237,16 @@ public static class DrawLogicInterpreter
                 continue;
             }
 
+            if (line.StartsWith("if ") && line.TrimEnd().EndsWith("{"))
+            {
+                var resolvedLine = ReplaceTokens(line, ctx);
+                var (body, endIdx) = ExtractBlock(lines, i);
+                if (body != null && EvaluateIfCondition(resolvedLine))
+                    Execute(body, ctx, allEntries, depth);
+                i = endIdx + 1;
+                continue;
+            }
+
             _evalCtx = ctx;
             line = ReplaceTokens(line, ctx);
 
@@ -877,5 +887,23 @@ public static class DrawLogicInterpreter
     private static void SkipSpace(string s, ref int pos)
     {
         while (pos < s.Length && char.IsWhiteSpace(s[pos])) pos++;
+    }
+
+    private static bool EvaluateIfCondition(string resolvedLine)
+    {
+        var trimmed = resolvedLine.Trim();
+        if (!trimmed.StartsWith("if ")) return false;
+
+        var inner = trimmed.Substring(3);
+        if (inner.EndsWith("{"))
+            inner = inner.Substring(0, inner.Length - 1);
+
+        var eqIdx = inner.IndexOf('=');
+        if (eqIdx < 0) return false;
+
+        var left = inner.Substring(0, eqIdx).Trim();
+        var right = inner.Substring(eqIdx + 1).Trim();
+
+        return string.Equals(left, right, StringComparison.Ordinal);
     }
 }

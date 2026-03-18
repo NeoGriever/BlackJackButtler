@@ -102,6 +102,7 @@ public sealed class Configuration : IPluginConfiguration
     public List<DrawLogicEntry> DrawLogicEntries = new();
     public string DrawLogicStartEntry = "";
     public bool DrawLogicSeeded = false;
+    public string DrawLogicScriptDir = "";
 
     public float DrawLogicScale = 1.0f;
     public float DrawLogicOffsetX = 0.0f;
@@ -217,8 +218,10 @@ public sealed class DrawLogicEntry
 {
     public string Name { get; set; } = "New Entry";
     public string Script { get; set; } = "";
+    public string ScriptPath { get; set; } = "";
     public bool IsIterate { get; set; } = true;
     public bool IsActive { get; set; } = true;
+    public bool AutoReload { get; set; } = false;
 }
 
 [Serializable]
