@@ -11,6 +11,7 @@ public struct DeckCard
 
     public int Value;
     public CardSuit Suit;
+    public DateTime DrawnAt;
 
     public string Symbol => Suit switch {
         CardSuit.Diamonds => "♦",

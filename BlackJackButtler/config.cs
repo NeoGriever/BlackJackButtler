@@ -103,6 +103,16 @@ public sealed class Configuration : IPluginConfiguration
     public string DrawLogicStartEntry = "";
     public bool DrawLogicSeeded = false;
 
+    public float DrawLogicScale = 1.0f;
+    public float DrawLogicOffsetX = 0.0f;
+    public float DrawLogicOffsetY = 0.0f;
+    public float DrawLogicOffsetZ = 0.0f;
+    public float DrawLogicOffsetR = 0.0f;
+    public Vector4 DrawLogicColorSpades = new(0f, 0f, 0f, 1f);
+    public Vector4 DrawLogicColorClubs = new(0f, 0f, 0f, 1f);
+    public Vector4 DrawLogicColorHearts = new(1f, 0f, 0f, 1f);
+    public Vector4 DrawLogicColorDiamonds = new(1f, 0f, 0f, 1f);
+
     public UserLevel CurrentLevel = UserLevel.Beginner;
 
     public static string[] StandardBatchNames => DefaultsManager.GetDefaultMessages().Select(m => m.Name).ToArray();
@@ -208,6 +218,7 @@ public sealed class DrawLogicEntry
     public string Name { get; set; } = "New Entry";
     public string Script { get; set; } = "";
     public bool IsIterate { get; set; } = true;
+    public bool IsActive { get; set; } = true;
 }
 
 [Serializable]

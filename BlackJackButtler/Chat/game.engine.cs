@@ -37,6 +37,7 @@ public static partial class GameEngine
     {
         if (cardValue <= 0) return;
         var deckCard = DeckManager.PullCard(cardValue);
+        deckCard.DrawnAt = DateTime.UtcNow;
         var recipientName = ResolveRecipientNameForCard();
 
         PlayerState? target = null;
