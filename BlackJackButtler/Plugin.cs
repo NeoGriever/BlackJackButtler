@@ -86,6 +86,7 @@ public sealed class Plugin : IDalamudPlugin
             Configuration.Save();
 
         StatsManager.Init(Configuration);
+        RoundLogManager.Init(PluginInterface.GetPluginConfigDirectory());
         ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
         VipManager.Init(Path.GetDirectoryName(PluginInterface.GetPluginConfigDirectory())!);
         DrawLogicScriptManager.Init(PluginInterface.GetPluginConfigDirectory(), Configuration);

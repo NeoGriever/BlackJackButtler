@@ -45,6 +45,8 @@ public class HandState
     public bool IsBust = false;
     public bool IsDoubleDown = false;
     public bool IsNaturalBlackJack = false;
+    public List<string> ActionLog = new();
+    public long RoundResult = 0;
 
     public HandState(long initialBet) { Bet = initialBet; }
 
@@ -54,6 +56,8 @@ public class HandState
         IsStand = IsStand,
         IsBust = IsBust,
         IsDoubleDown = IsDoubleDown,
-        IsNaturalBlackJack = IsNaturalBlackJack
+        IsNaturalBlackJack = IsNaturalBlackJack,
+        ActionLog = new List<string>(ActionLog),
+        RoundResult = RoundResult
     };
 }

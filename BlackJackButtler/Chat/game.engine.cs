@@ -207,6 +207,7 @@ public static partial class GameEngine
                     if (hand.IsBust)
                     {
                         bustList.Add(shortName);
+                        hand.RoundResult = -hand.Bet;
                         p.LastRoundResult -= hand.Bet;
                     }
                     else if (dealerBust || pScore > dealerScore || (cfg.PlayerBJWinsOnTie && pScore == 21 && dealerScore == 21))
@@ -217,17 +218,20 @@ public static partial class GameEngine
                         else if (pScore == 21) mult = cfg.MultiplierDirtyBlackjackWin;
 
                         long winAmount = (long)(hand.Bet * mult);
+                        hand.RoundResult = winAmount;
                         p.Bank += (hand.Bet + winAmount);
                         p.LastRoundResult += winAmount;
                     }
                     else if (pScore == dealerScore)
                     {
                         pushList.Add(shortName);
+                        hand.RoundResult = 0;
                         p.Bank += hand.Bet;
                     }
                     else
                     {
                         lossList.Add(shortName);
+                        hand.RoundResult = -hand.Bet;
                         p.LastRoundResult -= hand.Bet;
                     }
                 }
@@ -264,6 +268,7 @@ public static partial class GameEngine
 
                     if (hand.IsBust)
                     {
+                        hand.RoundResult = -hand.Bet;
                         p.LastRoundResult -= hand.Bet;
                         await CommandExecutor.ExecuteGroup("ResultPlayerBusted", p.DisplayName, cfg);
                     }
@@ -274,17 +279,20 @@ public static partial class GameEngine
                         else if (pScore == 21) mult = cfg.MultiplierDirtyBlackjackWin;
 
                         long winAmount = (long)(hand.Bet * mult);
+                        hand.RoundResult = winAmount;
                         p.Bank += (hand.Bet + winAmount);
                         p.LastRoundResult += winAmount;
                         await CommandExecutor.ExecuteGroup("ResultPlayerWin", p.DisplayName, cfg);
                     }
                     else if (pScore == dealerScore)
                     {
+                        hand.RoundResult = 0;
                         p.Bank += hand.Bet;
                         await CommandExecutor.ExecuteGroup("ResultPlayerPush", p.DisplayName, cfg);
                     }
                     else
                     {
+                        hand.RoundResult = -hand.Bet;
                         p.LastRoundResult -= hand.Bet;
                         await CommandExecutor.ExecuteGroup("ResultPlayerLost", p.DisplayName, cfg);
                     }
@@ -293,8 +301,7 @@ public static partial class GameEngine
         }
 
         ActivityLogManager.LogRoundEnd(dealer, players);
-        if (StatsManager.IsRunning)
-            StatsManager.RecordRound(dealer, players, cfg);
+        RoundLogManager.AddRound(dealer, players, cfg);
 
         try
         {
