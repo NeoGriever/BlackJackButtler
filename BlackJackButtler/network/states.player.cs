@@ -25,6 +25,7 @@ public class PlayerState
     public long Bank = 0;
     public long CurrentBet = 0;
     public long LastRoundResult = 0;
+    public long BankAtRoundStart = 0;
 
     public List<HandState> Hands = new();
     public int CurrentHandIndex = 0;
@@ -161,6 +162,7 @@ public class PlayerState
             Bank = Bank,
             CurrentBet = CurrentBet,
             LastRoundResult = LastRoundResult,
+            BankAtRoundStart = BankAtRoundStart,
 
             Hands = Hands.Select(h => h.Clone()).ToList(),
             CurrentHandIndex = CurrentHandIndex,

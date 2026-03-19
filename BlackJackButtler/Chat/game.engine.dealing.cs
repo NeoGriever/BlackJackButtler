@@ -42,7 +42,9 @@ public static partial class GameEngine
             p.IsCurrentTurn = false;
             p.CurrentHandIndex = 0;
             p.HasInitialHandDealt = false;
+            p.BankAtRoundStart = p.Bank;
         }
+        dealer.BankAtRoundStart = 0;
 
         Interlocked.Exchange(ref _payoutGuard, 0);
         CurrentPhase = GamePhase.InitialDeal;
@@ -290,10 +292,18 @@ public static partial class GameEngine
     public static async Task ActionHit(PlayerState p, Configuration cfg, List<PlayerState> players)
     {
         await ExecutePlayerAction(p, "Hit", cfg, players, async () => {
+            if (p.CurrentHandIndex >= 0 && p.CurrentHandIndex < p.Hands.Count)
+                p.Hands[p.CurrentHandIndex].ActionLog.Add("Hit");
             TargetPlayer(p.Name);
             SetForcedRecipient(p.Name);
             try { await CommandExecutor.ExecuteGroup("Hit", p.Name, cfg); }
             finally { ClearForcedRecipient(); }
+            if (p.CurrentHandIndex >= 0 && p.CurrentHandIndex < p.Hands.Count && p.Hands[p.CurrentHandIndex].IsBust)
+            {
+                var log = p.Hands[p.CurrentHandIndex].ActionLog;
+                if (log.Count > 0 && log[^1] == "Hit")
+                    log[^1] = "Bust";
+            }
         });
         SaveSessionIfNeeded(players);
     }
@@ -301,7 +311,10 @@ public static partial class GameEngine
     public static async Task ActionStand(PlayerState p, Configuration cfg, List<PlayerState> players)
     {
         if (p.CurrentHandIndex >= 0 && p.CurrentHandIndex < p.Hands.Count)
+        {
             p.Hands[p.CurrentHandIndex].IsStand = true;
+            p.Hands[p.CurrentHandIndex].ActionLog.Add("Stand");
+        }
 
         TargetPlayer(p.Name);
         SetForcedRecipient(p.Name);
@@ -357,6 +370,7 @@ public static partial class GameEngine
         await ExecutePlayerAction(p, "DD", cfg, players, async () => {
             var hand = p.Hands[p.CurrentHandIndex];
             hand.IsDoubleDown = true;
+            hand.ActionLog.Add("DD");
             hand.Bet *= 2;
             TargetPlayer(p.Name);
             SetForcedRecipient(p.Name);
@@ -426,6 +440,7 @@ public static partial class GameEngine
 
         var currentHand = p.Hands[p.CurrentHandIndex];
         if (currentHand.Cards.Count != 2) return;
+        currentHand.ActionLog.Add("Split");
 
         var cardToMove = currentHand.Cards[1];
         currentHand.Cards.RemoveAt(1);
@@ -452,10 +467,21 @@ public static partial class GameEngine
 
         CurrentPhase = GamePhase.DealerTurn;
 
+        if (dealer.Hands.Count > 0)
+            dealer.Hands[0].ActionLog.Add("Hit");
+
         TargetPlayer(dealer.Name);
         SetForcedRecipient(dealer.Name);
         try { await CommandExecutor.ExecuteGroup("DealHit", dealer.Name, cfg); }
         finally { ClearForcedRecipient(); }
+
+        if (dealer.Hands.Count > 0 && dealer.Hands[0].IsBust)
+        {
+            var log = dealer.Hands[0].ActionLog;
+            if (log.Count > 0 && log[^1] == "Hit")
+                log[^1] = "Bust";
+        }
+
         SaveSessionIfNeeded(players);
     }
 
@@ -466,6 +492,9 @@ public static partial class GameEngine
         if (dealer == null) return;
 
         CurrentPhase = GamePhase.Payout;
+
+        if (dealer.Hands.Count > 0)
+            dealer.Hands[0].ActionLog.Add("Stand");
 
         TargetPlayer(dealer.Name);
         SetForcedRecipient(dealer.Name);

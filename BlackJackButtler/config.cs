@@ -66,6 +66,8 @@ public sealed class Configuration : IPluginConfiguration
     public float PayoutPercent = 30f;
     public long GilPerHour = 250000;
     public int ClipHoursMode = 0;
+    public bool UseFixedWage = false;
+    public long FixedWage = 500000;
 
     public bool dismissDevWarning = false;
 

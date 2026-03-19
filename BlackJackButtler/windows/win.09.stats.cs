@@ -15,12 +15,27 @@ public partial class BlackJackButtlerWindow
 
     private void DrawStatsPage()
     {
-        ImGui.TextUnformatted("Stats");
-        ImGui.Separator();
-
         if (_clipHoursMode < 0)
             _clipHoursMode = _config.ClipHoursMode;
 
+        if (ImGui.BeginTabBar("##stats_tabs"))
+        {
+            if (ImGui.BeginTabItem("Stats"))
+            {
+                DrawStatsTab();
+                ImGui.EndTabItem();
+            }
+            if (ImGui.BeginTabItem("Round Log"))
+            {
+                DrawRoundLogTab();
+                ImGui.EndTabItem();
+            }
+            ImGui.EndTabBar();
+        }
+    }
+
+    private void DrawStatsTab()
+    {
         ImGui.Spacing();
 
         ImGui.BeginDisabled(StatsManager.IsRunning);
@@ -97,11 +112,30 @@ public partial class BlackJackButtlerWindow
             _save();
         }
 
-        long gilPerHour = _config.GilPerHour;
-        if (BJBGui.InputLong("Gil/Hour", ref gilPerHour, 50000, 100000))
+        bool useFixed = _config.UseFixedWage;
+        if (ImGui.Checkbox("Fixed Wage", ref useFixed))
         {
-            _config.GilPerHour = gilPerHour;
+            _config.UseFixedWage = useFixed;
             _save();
+        }
+
+        if (_config.UseFixedWage)
+        {
+            long fixedWage = _config.FixedWage;
+            if (BJBGui.InputLong("Fixed Wage##input", ref fixedWage, 50000, 100000))
+            {
+                _config.FixedWage = fixedWage;
+                _save();
+            }
+        }
+        else
+        {
+            long gilPerHour = _config.GilPerHour;
+            if (BJBGui.InputLong("Gil/Hour", ref gilPerHour, 50000, 100000))
+            {
+                _config.GilPerHour = gilPerHour;
+                _save();
+            }
         }
 
         ImGui.Separator();
@@ -109,26 +143,29 @@ public partial class BlackJackButtlerWindow
         var timePassed = StatsManager.GetTimePassed();
         ImGui.TextUnformatted($"Time passed:     {(int)timePassed.TotalHours:D2}:{timePassed.Minutes:D2}");
 
-        ImGui.TextUnformatted("Clip hours:");
-        ImGui.SameLine();
-
-        string[] modes = { "Up", "Down", "Even" };
-        for (int i = 0; i < 3; i++)
+        if (!_config.UseFixedWage)
         {
-            if (i > 0) ImGui.SameLine();
-            bool selected = _clipHoursMode == i;
-            if (selected)
+            ImGui.TextUnformatted("Clip hours:");
+            ImGui.SameLine();
+
+            string[] modes = { "Up", "Down", "Even" };
+            for (int i = 0; i < 3; i++)
             {
-                ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
-                ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
+                if (i > 0) ImGui.SameLine();
+                bool selected = _clipHoursMode == i;
+                if (selected)
+                {
+                    ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
+                    ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
+                }
+                if (ImGui.SmallButton(modes[i]))
+                {
+                    _clipHoursMode = i;
+                    _config.ClipHoursMode = i;
+                    _save();
+                }
+                if (selected) ImGui.PopStyleColor(2);
             }
-            if (ImGui.SmallButton(modes[i]))
-            {
-                _clipHoursMode = i;
-                _config.ClipHoursMode = i;
-                _save();
-            }
-            if (selected) ImGui.PopStyleColor(2);
         }
 
         ImGui.Spacing();
@@ -137,19 +174,45 @@ public partial class BlackJackButtlerWindow
         {
             DrawCalculation(timePassed);
         }
+    }
 
-        ImGui.Separator();
-        ImGui.TextUnformatted("Round Log:");
+    private void DrawRoundLogTab()
+    {
+        ImGui.Spacing();
+
+        var io = ImGui.GetIO();
+        ImGui.BeginDisabled(!io.KeyCtrl);
+        if (BJBGui.SmallButton("Clear##roundlog_clear"))
+        {
+            RoundLogManager.ClearLog();
+        }
+        ImGui.EndDisabled();
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip("Hold CTRL to clear");
+
         ImGui.Spacing();
 
         float logHeight = ImGui.GetContentRegionAvail().Y;
         if (logHeight < 60) logHeight = 60;
-        if (ImGui.BeginChild("##round_log", new Vector2(0, logHeight), true))
+        if (ImGui.BeginChild("##persistent_round_log", new Vector2(0, logHeight), true))
         {
-            for (int i = 0; i < StatsManager.RoundLog.Count; i++)
+            ImGui.PushFont(UiBuilder.MonoFont);
+            var log = RoundLogManager.GetLog();
+            string separator = new string('=', 50);
+
+            for (int i = log.Count - 1; i >= 0; i--)
             {
-                ImGui.TextWrapped($"#{i + 1}: {StatsManager.RoundLog[i]}");
+                var entry = log[i];
+                ImGui.TextUnformatted(separator);
+                ImGui.TextUnformatted(entry.Timestamp);
+                foreach (var line in entry.Lines)
+                    ImGui.TextUnformatted(line);
             }
+
+            if (log.Count > 0)
+                ImGui.TextUnformatted(separator);
+
+            ImGui.PopFont();
         }
         ImGui.EndChild();
     }
@@ -165,8 +228,12 @@ public partial class BlackJackButtlerWindow
         long profit = diff - tips;
         float payoutPercent = _config.PayoutPercent;
         double clippedHours = StatsManager.GetClippedHours(_clipHoursMode);
-        long gilPerHour = _config.GilPerHour;
-        long hourlyDeduction = (long)Math.Round(clippedHours * gilPerHour);
+
+        long hourlyDeduction;
+        if (_config.UseFixedWage)
+            hourlyDeduction = _config.FixedWage;
+        else
+            hourlyDeduction = (long)Math.Round(clippedHours * _config.GilPerHour);
 
         bool isLoss = profit < 0;
         long payoutAmount = isLoss ? 0 : (long)Math.Round(profit * (payoutPercent / 100.0));
@@ -196,12 +263,6 @@ public partial class BlackJackButtlerWindow
         string Signed(string label, string number) =>
             label.PadRight(signCol - 1) + "-" + number.PadLeft(numAreaWidth);
 
-        string gilLabel = gilPerHour >= 1000000 ? $"{gilPerHour / 1000000.0:0.#}m"
-                        : gilPerHour >= 1000    ? $"{gilPerHour / 1000}k"
-                        : gilPerHour.ToString("N0");
-        string hoursLabel = $"  {(int)timePassed.TotalHours:D2}:{timePassed.Minutes:D2} x {gilLabel}";
-        string payoutLabel = $"  {payoutPercent:0}%:";
-
         var green = new Vector4(0f, 1f, 0f, 1f);
         var red = new Vector4(1f, 0f, 0f, 1f);
 
@@ -221,17 +282,41 @@ public partial class BlackJackButtlerWindow
         {
             lines.Add((Signed("  Loss:", fAbsProfit), red));
             string tildes = new string('~', numAreaWidth + 1);
+            string payoutLabel = $"  {payoutPercent:0}%:";
             lines.Add((Unsigned(payoutLabel, tildes), null));
-            lines.Add((Signed(hoursLabel, fHourly), null));
-            lines.Add((ruler, null));
-            lines.Add((Signed("  Total loss", fAbsTotal), totalOutcome >= 0 ? green : red));
         }
         else
         {
             lines.Add((Unsigned("  Profit:", fAbsProfit), green));
+            string payoutLabel = $"  {payoutPercent:0}%:";
             lines.Add((Unsigned(payoutLabel, fPayout), null));
+        }
+
+        if (_config.UseFixedWage)
+        {
+            string wageLabel = hourlyDeduction >= 1000000 ? $"{hourlyDeduction / 1000000.0:0.#}m"
+                             : hourlyDeduction >= 1000    ? $"{hourlyDeduction / 1000}k"
+                             : hourlyDeduction.ToString("N0");
+            lines.Add((Signed($"  Fixed {wageLabel}:", fHourly), null));
+        }
+        else
+        {
+            long gilPerHour = _config.GilPerHour;
+            string gilLabel = gilPerHour >= 1000000 ? $"{gilPerHour / 1000000.0:0.#}m"
+                            : gilPerHour >= 1000    ? $"{gilPerHour / 1000}k"
+                            : gilPerHour.ToString("N0");
+            string hoursLabel = $"  {(int)timePassed.TotalHours:D2}:{timePassed.Minutes:D2} x {gilLabel}";
             lines.Add((Signed(hoursLabel, fHourly), null));
-            lines.Add((ruler, null));
+        }
+
+        lines.Add((ruler, null));
+
+        if (isLoss)
+        {
+            lines.Add((Signed("  Total loss", fAbsTotal), totalOutcome >= 0 ? green : red));
+        }
+        else
+        {
             string totalStr = totalOutcome >= 0 ? fAbsTotal : $"-{fAbsTotal}";
             lines.Add((Unsigned("  Total outcome", totalStr), totalOutcome >= 0 ? green : red));
         }
