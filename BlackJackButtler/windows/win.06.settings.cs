@@ -99,6 +99,20 @@ public partial class BlackJackButtlerWindow
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Multiplier applied to all command delays at execution time.\n1.00x = normal speed, 0.50x = twice as fast, 2.00x = twice as slow.\nMinimum effective delay is always 0.3s.");
 
+            ImGui.Spacing();
+            ImGui.TextUnformatted("UTC Offset");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            int utcOffset = _config.UtcOffsetHours;
+            if (BJBGui.InputInt("##utc_offset", ref utcOffset, 1))
+            {
+                _config.UtcOffsetHours = Math.Clamp(utcOffset, -12, 14);
+                if (!_config.UtcOffsetConfigured) _config.UtcOffsetConfigured = true;
+                _save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Hours offset from UTC for round log timestamps.\nEST = -5, PST = -8, CET = +1");
+
             ImGui.Separator();
             ImGui.Spacing();
             if (ImGui.Checkbox("Show Nearby Players", ref _config.ShowNearbyPlayers)) _save();
@@ -888,6 +902,8 @@ public partial class BlackJackButtlerWindow
         TryApply<Vector4>(j, "DrawLogicColorClubs",                    v => _config.DrawLogicColorClubs = v);
         TryApply<Vector4>(j, "DrawLogicColorHearts",                   v => _config.DrawLogicColorHearts = v);
         TryApply<Vector4>(j, "DrawLogicColorDiamonds",                 v => _config.DrawLogicColorDiamonds = v);
+        TryApply<int>   (j, "UtcOffsetHours",                            v => _config.UtcOffsetHours = v);
+        TryApply<bool>  (j, "UtcOffsetConfigured",                       v => _config.UtcOffsetConfigured = v);
     }
 
     private void DoFullReplace() {
