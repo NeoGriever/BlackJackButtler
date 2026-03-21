@@ -180,6 +180,27 @@ public partial class BlackJackButtlerWindow
     {
         ImGui.Spacing();
 
+        if (!_config.UtcOffsetConfigured)
+        {
+            ImGui.TextColored(new Vector4(1f, 1f, 0f, 1f), "Set your UTC offset for round log timestamps.");
+            ImGui.TextUnformatted("UTC Offset");
+            ImGui.SameLine(150f);
+            ImGui.SetNextItemWidth(100f);
+            int offset = _config.UtcOffsetHours;
+            if (BJBGui.InputInt("##utc_offset_prompt", ref offset, 1))
+            {
+                _config.UtcOffsetHours = Math.Clamp(offset, -12, 14);
+                _save();
+            }
+            ImGui.SameLine();
+            if (BJBGui.SmallButton("Confirm##utc_confirm"))
+            {
+                _config.UtcOffsetConfigured = true;
+                _save();
+            }
+            ImGui.Separator();
+        }
+
         var io = ImGui.GetIO();
         ImGui.BeginDisabled(!io.KeyCtrl);
         if (BJBGui.SmallButton("Clear##roundlog_clear"))
@@ -189,6 +210,27 @@ public partial class BlackJackButtlerWindow
         ImGui.EndDisabled();
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             ImGui.SetTooltip("Hold CTRL to clear");
+
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("Copy All##roundlog_copy"))
+        {
+            var log = RoundLogManager.GetLog();
+            string separator = new string('=', 50);
+            var sb = new StringBuilder();
+            sb.AppendLine("```");
+            for (int i = log.Count - 1; i >= 0; i--)
+            {
+                var entry = log[i];
+                sb.AppendLine(separator);
+                sb.AppendLine(RoundLogManager.FormatTimestamp(entry.Timestamp, _config.UtcOffsetHours));
+                foreach (var line in entry.Lines)
+                    sb.AppendLine(line);
+            }
+            if (log.Count > 0)
+                sb.AppendLine(separator);
+            sb.AppendLine("```");
+            ImGui.SetClipboardText(sb.ToString());
+        }
 
         ImGui.Spacing();
 
@@ -204,7 +246,7 @@ public partial class BlackJackButtlerWindow
             {
                 var entry = log[i];
                 ImGui.TextUnformatted(separator);
-                ImGui.TextUnformatted(entry.Timestamp);
+                ImGui.TextUnformatted(RoundLogManager.FormatTimestamp(entry.Timestamp, _config.UtcOffsetHours));
                 foreach (var line in entry.Lines)
                     ImGui.TextUnformatted(line);
             }

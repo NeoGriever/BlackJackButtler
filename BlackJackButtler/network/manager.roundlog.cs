@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -82,13 +83,9 @@ public static class RoundLogManager
 
         try
         {
-            var est = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
-            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, est);
-            var timestamp = now.ToString("MM/dd/yyyy hh:mm tt") + " EST";
-
             var entry = new PersistentRoundEntry
             {
-                Timestamp = timestamp,
+                Timestamp = DateTime.UtcNow.ToString("o"),
                 Lines = lines
             };
 
@@ -302,6 +299,17 @@ public static class RoundLogManager
         if (score == 21 && hand.IsNaturalBlackJack) return "n21";
         if (score == 21) return "d21";
         return score.ToString();
+    }
+
+    public static string FormatTimestamp(string stored, int utcOffsetHours)
+    {
+        if (DateTime.TryParse(stored, null, DateTimeStyles.RoundtripKind, out var parsed) && parsed.Kind == DateTimeKind.Utc)
+        {
+            var local = parsed.AddHours(utcOffsetHours);
+            string suffix = utcOffsetHours == 0 ? " UTC" : utcOffsetHours > 0 ? $" UTC+{utcOffsetHours}" : $" UTC{utcOffsetHours}";
+            return local.ToString("MM/dd/yyyy hh:mm tt") + suffix;
+        }
+        return stored;
     }
 
     public static string FormatGil(long value)

@@ -69,6 +69,9 @@ public sealed class Configuration : IPluginConfiguration
     public bool UseFixedWage = false;
     public long FixedWage = 500000;
 
+    public int UtcOffsetHours = 0;
+    public bool UtcOffsetConfigured = false;
+
     public bool dismissDevWarning = false;
 
     public float InitialViewDirection = 0f;
