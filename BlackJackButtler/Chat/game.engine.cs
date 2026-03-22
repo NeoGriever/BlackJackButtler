@@ -210,11 +210,12 @@ public static partial class GameEngine
                         hand.RoundResult = -hand.Bet;
                         p.LastRoundResult -= hand.Bet;
                     }
-                    else if (dealerBust || pScore > dealerScore || (cfg.PlayerBJWinsOnTie && pScore == 21 && dealerScore == 21))
+                    else if (dealerBust || pScore > dealerScore || hand.IsCharlie || (cfg.PlayerBJWinsOnTie && pScore == 21 && dealerScore == 21))
                     {
                         winList.Add(shortName);
                         float mult = cfg.MultiplierNormalWin;
                         if (hand.IsNaturalBlackJack) mult = cfg.MultiplierBlackjackWin;
+                        else if (hand.IsCharlie) mult = cfg.MultiplierBlackjackWin;
                         else if (pScore == 21) mult = cfg.MultiplierDirtyBlackjackWin;
 
                         long winAmount = (long)(hand.Bet * mult);
@@ -272,10 +273,11 @@ public static partial class GameEngine
                         p.LastRoundResult -= hand.Bet;
                         await CommandExecutor.ExecuteGroup("ResultPlayerBusted", p.DisplayName, cfg);
                     }
-                    else if (dealerBust || pScore > dealerScore || (cfg.PlayerBJWinsOnTie && pScore == 21 && dealerScore == 21))
+                    else if (dealerBust || pScore > dealerScore || hand.IsCharlie || (cfg.PlayerBJWinsOnTie && pScore == 21 && dealerScore == 21))
                     {
                         float mult = cfg.MultiplierNormalWin;
                         if (hand.IsNaturalBlackJack) mult = cfg.MultiplierBlackjackWin;
+                        else if (hand.IsCharlie) mult = cfg.MultiplierBlackjackWin;
                         else if (pScore == 21) mult = cfg.MultiplierDirtyBlackjackWin;
 
                         long winAmount = (long)(hand.Bet * mult);

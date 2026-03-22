@@ -25,12 +25,14 @@ public partial class BlackJackButtlerWindow
         ImGui.Separator();
         DocEntry("BeginShape(x, y, z)", "Start a new shape at world position");
         DocEntry("SetDrawColor(r, g, b, a)", "Set draw color (0.0\u20131.0)");
+        DocEntry("SetFillColor(r, g, b, a)", "Set fill color for closed paths (0 alpha = no fill)");
         DocEntry("BeginPath()", "Start a new path");
         DocEntry("MoveTo(x, y, z)", "Move to position (local offset)");
         DocEntry("LineTo(x, y, z)", "Draw line to position (local offset)");
         DocEntry("EndPath()", "Finish path (open)");
         DocEntry("ClosePath()", "Finish path (closed polygon)");
         DocEntry("FinishShape()", "Finalize shape");
+        DocEntry("DrawChar(letter, offX, offY, scale)", "Draw 7-segment character in current shape");
 
         ImGui.Spacing();
         ImGui.TextColored(new Vector4(1f, 0.85f, 0.4f, 1f), "Shape Functions");
@@ -58,7 +60,10 @@ public partial class BlackJackButtlerWindow
         ImGui.TextDisabled("  IterateCard {");
         ImGui.TextDisabled("    // runs once per card of the current hand");
         ImGui.TextDisabled("  }");
-        ImGui.TextDisabled("  Blocks can be nested (IterateHand > IterateCard).");
+        ImGui.TextDisabled("  IterateLetter {");
+        ImGui.TextDisabled("    // runs once per char of card label (inside IterateCard)");
+        ImGui.TextDisabled("  }");
+        ImGui.TextDisabled("  Blocks can be nested (IterateHand > IterateCard > IterateLetter).");
 
         ImGui.Spacing();
         ImGui.TextColored(new Vector4(1f, 0.85f, 0.4f, 1f), "Conditional Blocks");
@@ -87,6 +92,7 @@ public partial class BlackJackButtlerWindow
         ImGui.TextDisabled("  Ceil(a), Floor(a), Sin(a), Cos(a), Sqrt(a)");
         ImGui.TextDisabled("  Min(a,b), Max(a,b), Clamp(a,min,max)");
         ImGui.TextDisabled("  Mul(a,b), Div(a,b), Mod(a,b), Plus(a,b), Minus(a,b)");
+        ImGui.TextDisabled("  AlterRot(rad, degrees) — rotate radians by degrees");
         ImGui.TextDisabled("  GetVar(\"name\"), getVarH(\"name\",h), getVarC(\"name\",h,c)");
         ImGui.TextDisabled("  Operators: + - * / % and parentheses.");
 
@@ -97,6 +103,9 @@ public partial class BlackJackButtlerWindow
         CopyRow("<pos>.y", "Player Y world position");
         CopyRow("<pos>.z", "Player Z world position");
         CopyRow("<rotation>", "Player rotation (radians)");
+        CopyRow("<userRot>", "Player rotation (= <rotation>)");
+        CopyRow("<dealerDirection>", "Direction to dealer (radians)");
+        CopyRow("<cameraDirection>", "Direction to camera (radians)");
 
         ImGui.Spacing();
         ImGui.TextColored(new Vector4(1f, 0.85f, 0.4f, 1f), "Player Tokens");
@@ -143,6 +152,7 @@ public partial class BlackJackButtlerWindow
         CopyRow("<isbust>", "Hand is bust");
         CopyRow("<isstand>", "Hand is standing");
         CopyRow("<isblackjack>", "Natural blackjack");
+        CopyRow("<ischarlie>", "Charlie (N-card auto-win)");
         CopyRow("<isdone>", "Player is done");
         CopyRow("<isdd>", "Double down active");
 
@@ -167,6 +177,13 @@ public partial class BlackJackButtlerWindow
         CopyRow("<CardColorG>", "Suit color green component");
         CopyRow("<CardColorB>", "Suit color blue component");
         CopyRow("<CardAge>", "0\u21921 over 3 seconds since card was drawn");
+
+        ImGui.Spacing();
+        ImGui.TextColored(new Vector4(1f, 0.85f, 0.4f, 1f), "Letter Tokens (inside IterateLetter)");
+        ImGui.Separator();
+        CopyRow("<letterIndex>", "Current letter index");
+        CopyRow("<letterTotal>", "Total letters in card label");
+        CopyRow("<letter>", "Current letter character");
 
         ImGui.End();
     }

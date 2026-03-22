@@ -80,7 +80,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             Priority = 90,
             Click = _ =>
             {
-                Dalamud.Utility.Util.OpenLink("https://discord.gg/CMCzEH4NZS");
+                Dalamud.Utility.Util.OpenLink("https://discord.gg/HBh4nSbuJp");
             },
             ShowTooltip = () =>
             {

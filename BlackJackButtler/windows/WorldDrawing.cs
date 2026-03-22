@@ -26,6 +26,7 @@ public sealed class DrawPath
     public List<PathCommand> Commands { get; } = new();
     public uint Color { get; set; }
     public bool IsClosed { get; set; }
+    public uint? FillColor { get; set; }
 }
 
 public sealed class Shape
@@ -102,6 +103,16 @@ public sealed class Shape
             var rotated = ApplyRotation(path.Commands[i].Position, angle);
             worldPoints[i] = worldOffset + rotated;
             visible[i] = Plugin.GameGui.WorldToScreen(worldPoints[i], out screenPoints[i]);
+        }
+
+        if (path.FillColor.HasValue && path.IsClosed)
+        {
+            var allVisible = true;
+            for (int i = 0; i < visible.Length; i++)
+                if (!visible[i]) { allVisible = false; break; }
+
+            if (allVisible && screenPoints.Length >= 3)
+                drawList.AddConvexPolyFilled(ref screenPoints[0], screenPoints.Length, path.FillColor.Value);
         }
 
         var stroke = new List<Vector2>();
@@ -201,6 +212,7 @@ public sealed class WorldDrawing
 
     private readonly Stack<ShapeContext> _shapeStack = new();
     private Vector4 _currentColor = new(1f, 1f, 1f, 1f);
+    private Vector4? _currentFillColor;
     private List<PathCommand>? _currentPathCommands;
 
     public float DefaultLineThickness { get; set; } = 2f;
@@ -237,6 +249,11 @@ public sealed class WorldDrawing
     public void SetDrawColor(float r, float g, float b, float a)
     {
         _currentColor = new Vector4(r, g, b, a);
+    }
+
+    public void SetFillColor(float r, float g, float b, float a)
+    {
+        _currentFillColor = a > 0f ? new Vector4(r, g, b, a) : null;
     }
 
     public void BeginPath()
@@ -294,6 +311,9 @@ public sealed class WorldDrawing
         {
             Color = ImGui.GetColorU32(_currentColor),
             IsClosed = closed,
+            FillColor = closed && _currentFillColor.HasValue
+                ? ImGui.GetColorU32(_currentFillColor.Value)
+                : null,
         };
         foreach (var cmd in _currentPathCommands) path.Commands.Add(cmd);
 

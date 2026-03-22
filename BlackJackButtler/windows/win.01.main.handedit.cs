@@ -256,6 +256,8 @@ public partial class BlackJackButtlerWindow
 
         hand.IsBust = best > 21;
         hand.IsNaturalBlackJack = validCards.Count == 2 && best == 21;
+        hand.IsCharlie = _config.EnableCharlie && validCards.Count >= _config.CharlieCardCount && !hand.IsBust;
+        if (hand.IsCharlie) hand.IsStand = true;
         if (hand.IsBust)
             hand.IsStand = true;
 

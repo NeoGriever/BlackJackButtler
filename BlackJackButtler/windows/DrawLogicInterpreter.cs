@@ -5,6 +5,7 @@ using System.Linq;
 using System.Numerics;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
+using FFXIVClientStructs.FFXIV.Client.Game.Control;
 
 namespace BlackJackButtler.Windows;
 
@@ -30,6 +31,7 @@ public sealed class DrawLogicContext
     public bool IsBust;
     public bool IsStand;
     public bool IsBlackjack;
+    public bool IsCharlie;
     public bool IsDone;
     public bool IsDoubleDown;
 
@@ -51,6 +53,13 @@ public sealed class DrawLogicContext
     public int IterCardNumber;
     public int IterCardColor;
     public DateTime IterCardDrawnAt;
+
+    public int IterLetterIndex = -1;
+    public int IterLetterCount = -1;
+    public string IterLetter = "";
+
+    public float DealerDirection;
+    public float CameraDirection;
 }
 
 public static class DrawLogicInterpreter
@@ -64,7 +73,18 @@ public static class DrawLogicInterpreter
     private static Configuration? _execConfig;
 
     private static readonly Dictionary<string, float> _vars = new();
+    private static readonly List<Shape> _pendingDraws = new();
     private static DrawLogicContext? _evalCtx;
+    private static Vector3 _cachedDealerPos;
+    private static float _cachedCameraDirection;
+    private static Vector3 _cachedCameraPosition;
+
+    private static readonly List<string> _debugLog = new();
+    private static bool _debugCapturing;
+    public static IReadOnlyList<string> DebugLog => _debugLog;
+    public static bool HasDebugLog => _debugLog.Count > 0;
+    public static void TriggerDebugCapture() { _debugCapturing = true; }
+    public static void ClearDebugLog() { _debugLog.Clear(); }
 
     public static void ExecuteStartEntry(List<DrawLogicEntry> entries, string startName,
         List<PlayerState> players, PlayerState dealer, Configuration config)
@@ -79,6 +99,15 @@ public static class DrawLogicInterpreter
         _execPlayers = players;
         _execDealer = dealer;
         _execConfig = config;
+        _cachedDealerPos = GetDealerPosition();
+        _cachedCameraDirection = GetCameraDirection();
+        _cachedCameraPosition = GetCameraPosition();
+
+        if (_debugCapturing)
+        {
+            _debugLog.Clear();
+            _debugLog.Add($"DealerPos=({_cachedDealerPos.X:F2}, {_cachedDealerPos.Y:F2}, {_cachedDealerPos.Z:F2})  CamDir={_cachedCameraDirection:F4}");
+        }
 
         try
         {
@@ -91,13 +120,36 @@ public static class DrawLogicInterpreter
                 var ctx = BuildContextNoPlayer(config);
                 Execute(startEntry.Script, ctx, entries, 0);
             }
+
+            FlushPendingDraws();
         }
         finally
         {
+            _pendingDraws.Clear();
+            _debugCapturing = false;
             _execPlayers = null;
             _execDealer = null;
             _execConfig = null;
         }
+    }
+
+    private static void FlushPendingDraws()
+    {
+        if (_pendingDraws.Count == 0) return;
+
+        var camPos = _cachedCameraPosition;
+
+        _pendingDraws.Sort((a, b) =>
+        {
+            var da = Vector3.DistanceSquared(a.Origin, camPos);
+            var db = Vector3.DistanceSquared(b.Origin, camPos);
+            return db.CompareTo(da);
+        });
+
+        foreach (var shape in _pendingDraws)
+            shape.Draw();
+
+        _pendingDraws.Clear();
     }
 
     private static void RunIterated(string script, List<DrawLogicEntry> entries,
@@ -107,9 +159,13 @@ public static class DrawLogicInterpreter
         foreach (var player in active)
         {
             var ctx = BuildContext(player, false, config);
+            if (_debugCapturing)
+                _debugLog.Add($"\n--- Player: {ctx.PlayerName} ---\n  Pos=({ctx.Position.X:F2}, {ctx.Position.Y:F2}, {ctx.Position.Z:F2})  Rot={ctx.Rotation:F4}  DealerDir={ctx.DealerDirection:F4}  CamDir={ctx.CameraDirection:F4}");
             Execute(script, ctx, entries, depth);
         }
         var dealerCtx = BuildContext(dealer, true, config);
+        if (_debugCapturing)
+            _debugLog.Add($"\n--- Dealer: {dealerCtx.PlayerName} ---\n  Pos=({dealerCtx.Position.X:F2}, {dealerCtx.Position.Y:F2}, {dealerCtx.Position.Z:F2})  Rot={dealerCtx.Rotation:F4}  DealerDir={dealerCtx.DealerDirection:F4}  CamDir={dealerCtx.CameraDirection:F4}");
         Execute(script, dealerCtx, entries, depth);
     }
 
@@ -143,6 +199,7 @@ public static class DrawLogicInterpreter
             ctx.IsBust = hand.IsBust;
             ctx.IsStand = hand.IsStand;
             ctx.IsBlackjack = hand.IsNaturalBlackJack;
+            ctx.IsCharlie = hand.IsCharlie;
             ctx.IsDoubleDown = hand.IsDoubleDown;
         }
 
@@ -174,6 +231,9 @@ public static class DrawLogicInterpreter
             }
         }
 
+        ctx.DealerDirection = ComputeDirection(ctx.Position, _cachedDealerPos);
+        ctx.CameraDirection = _cachedCameraDirection;
+
         var nearby = NearbyPlayersManager.GetNearbyPlayers(config);
         ctx.IsNearby = nearby.Any(n => n.Name == player.Name && n.Distance <= config.NearbyDistanceCap);
 
@@ -197,6 +257,9 @@ public static class DrawLogicInterpreter
             ctx.IsVisible = true;
             ctx.PlayerName = local.Name.TextValue;
         }
+
+        ctx.DealerDirection = ComputeDirection(ctx.Position, _cachedDealerPos);
+        ctx.CameraDirection = _cachedCameraDirection;
 
         return ctx;
     }
@@ -237,6 +300,15 @@ public static class DrawLogicInterpreter
                 continue;
             }
 
+            if (line.StartsWith("IterateLetter") && line.TrimEnd().EndsWith("{"))
+            {
+                var (body, endIdx) = ExtractBlock(lines, i);
+                if (body != null)
+                    ExecuteIterateLetter(body, ctx, allEntries, depth);
+                i = endIdx + 1;
+                continue;
+            }
+
             if (line.StartsWith("if ") && line.TrimEnd().EndsWith("{"))
             {
                 var resolvedLine = ReplaceTokens(line, ctx);
@@ -248,10 +320,20 @@ public static class DrawLogicInterpreter
             }
 
             _evalCtx = ctx;
+            var rawLine = line;
             line = ReplaceTokens(line, ctx);
 
             if (TryParseFunctionCall(line, out var funcName, out var args))
+            {
+                if (_debugCapturing)
+                {
+                    if (rawLine != line)
+                        _debugLog.Add($"  {rawLine}\n    → {funcName}({string.Join(", ", args)})");
+                    else
+                        _debugLog.Add($"  {funcName}({string.Join(", ", args)})");
+                }
                 ExecuteFunction(funcName, args, ctx, allEntries, depth);
+            }
 
             i++;
         }
@@ -335,6 +417,27 @@ public static class DrawLogicInterpreter
         }
     }
 
+    private static void ExecuteIterateLetter(string body, DrawLogicContext ctx,
+        List<DrawLogicEntry> allEntries, int depth)
+    {
+        if (ctx.IterCardIndex < 0) return;
+
+        string label = ctx.IterCardNumber switch
+        {
+            1 => "A", 11 => "J", 12 => "Q", 13 => "K",
+            _ => ctx.IterCardNumber.ToString()
+        };
+
+        for (int l = 0; l < label.Length; l++)
+        {
+            var letterCtx = CloneContext(ctx);
+            letterCtx.IterLetterIndex = l;
+            letterCtx.IterLetterCount = label.Length;
+            letterCtx.IterLetter = label[l].ToString();
+            Execute(body, letterCtx, allEntries, depth);
+        }
+    }
+
     private static int MapSuitToUser(CardSuit suit)
     {
         return suit switch
@@ -408,6 +511,13 @@ public static class DrawLogicInterpreter
                 : (DateTime.UtcNow - ctx.IterCardDrawnAt).TotalSeconds;
             float cardAge = (float)Math.Clamp(ageSec / 3.0, 0.0, 1.0);
             line = line.Replace("<CardAge>", cardAge.ToString("F4", CultureInfo.InvariantCulture));
+
+            if (ctx.IterLetterIndex >= 0)
+            {
+                line = line.Replace("<letterTotal>", ctx.IterLetterCount.ToString(CultureInfo.InvariantCulture));
+                line = line.Replace("<letterIndex>", ctx.IterLetterIndex.ToString(CultureInfo.InvariantCulture));
+                line = line.Replace("<letter>", ctx.IterLetter);
+            }
         }
 
         line = line.Replace("<name>", ctx.PlayerName);
@@ -420,6 +530,9 @@ public static class DrawLogicInterpreter
         line = line.Replace("<handindex>", ctx.HandIndex.ToString(CultureInfo.InvariantCulture));
         line = line.Replace("<handcount>", ctx.HandCount.ToString(CultureInfo.InvariantCulture));
         line = line.Replace("<rotation>", ctx.Rotation.ToString("F4", CultureInfo.InvariantCulture));
+        line = line.Replace("<userRot>", ctx.Rotation.ToString("F4", CultureInfo.InvariantCulture));
+        line = line.Replace("<dealerDirection>", ctx.DealerDirection.ToString("F4", CultureInfo.InvariantCulture));
+        line = line.Replace("<cameraDirection>", ctx.CameraDirection.ToString("F4", CultureInfo.InvariantCulture));
 
         line = line.Replace("<isdealer>", ctx.IsDealer ? "1" : "0");
         line = line.Replace("<focused>", ctx.IsFocused ? "1" : "0");
@@ -431,6 +544,7 @@ public static class DrawLogicInterpreter
         line = line.Replace("<isbust>", ctx.IsBust ? "1" : "0");
         line = line.Replace("<isstand>", ctx.IsStand ? "1" : "0");
         line = line.Replace("<isblackjack>", ctx.IsBlackjack ? "1" : "0");
+        line = line.Replace("<ischarlie>", ctx.IsCharlie ? "1" : "0");
         line = line.Replace("<isdone>", ctx.IsDone ? "1" : "0");
         line = line.Replace("<isdd>", ctx.IsDoubleDown ? "1" : "0");
 
@@ -494,6 +608,9 @@ public static class DrawLogicInterpreter
             case "SetDrawColor" when args.Length >= 4:
                 _drawing!.SetDrawColor(EvalFloat(args[0]), EvalFloat(args[1]), EvalFloat(args[2]), EvalFloat(args[3]));
                 break;
+            case "SetFillColor" when args.Length >= 4:
+                _drawing!.SetFillColor(EvalFloat(args[0]), EvalFloat(args[1]), EvalFloat(args[2]), EvalFloat(args[3]));
+                break;
             case "BeginPath":
                 _drawing!.BeginPath();
                 break;
@@ -513,7 +630,11 @@ public static class DrawLogicInterpreter
                 _currentShape = _drawing!.FinishShape();
                 break;
             case "Draw":
-                _currentShape?.Draw();
+                if (_currentShape != null)
+                {
+                    _pendingDraws.Add(_currentShape);
+                    _currentShape = null;
+                }
                 _vars.Clear();
                 break;
             case "Move" when args.Length >= 3:
@@ -527,6 +648,9 @@ public static class DrawLogicInterpreter
                 break;
             case "SetLineThickness" when args.Length >= 1:
                 _drawing!.DefaultLineThickness = EvalFloat(args[0]);
+                break;
+            case "DrawChar" when args.Length >= 4:
+                ExecuteDrawChar(EvalString(args[0]), EvalFloat(args[1]), EvalFloat(args[2]), EvalFloat(args[3]));
                 break;
             case "CallDrawLogic":
                 HandleCallDrawLogic(args, ctx, allEntries, depth);
@@ -631,6 +755,463 @@ public static class DrawLogicInterpreter
         return _vars.TryGetValue(key, out var v) ? v : 0;
     }
 
+    private static Vector2 V(float x, float y) => new(x, y);
+
+    private static readonly Dictionary<char, Vector2[][]> CharDefs = new()
+    {
+        ['0'] = [
+            [V( 0.034f, -0.678f), V( 0.222f, -0.678f),
+             V( 0.222f, -0.865f), V( 0.034f, -0.865f),
+             V(-0.153f, -0.865f), V(-0.341f, -0.865f),
+             V(-0.341f, -0.678f), V(-0.153f, -0.678f),
+             V( 0.034f, -0.678f)],
+            [V( 0.222f, -0.678f), V( 0.222f, -0.490f),
+             V( 0.222f, -0.303f), V( 0.222f, -0.115f),
+             V( 0.222f,  0.072f), V( 0.222f,  0.260f),
+             V( 0.222f,  0.447f), V( 0.222f,  0.635f),
+             V( 0.409f,  0.635f), V( 0.409f,  0.447f),
+             V( 0.409f,  0.260f), V( 0.409f,  0.072f),
+             V( 0.409f, -0.115f), V( 0.409f, -0.303f),
+             V( 0.409f, -0.490f), V( 0.409f, -0.678f),
+             V( 0.222f, -0.678f)],
+            [V(-0.341f, -0.678f), V(-0.528f, -0.678f),
+             V(-0.528f, -0.490f), V(-0.528f, -0.303f),
+             V(-0.528f, -0.115f), V(-0.528f,  0.072f),
+             V(-0.528f,  0.260f), V(-0.528f,  0.447f),
+             V(-0.528f,  0.635f), V(-0.341f,  0.635f),
+             V(-0.341f,  0.447f), V(-0.341f,  0.260f),
+             V(-0.341f,  0.072f), V(-0.341f, -0.115f),
+             V(-0.341f, -0.303f), V(-0.341f, -0.490f),
+             V(-0.341f, -0.678f)],
+            [V( 0.222f,  0.635f), V( 0.034f,  0.635f),
+             V(-0.153f,  0.635f), V(-0.341f,  0.635f),
+             V(-0.341f,  0.822f), V(-0.153f,  0.822f),
+             V( 0.034f,  0.822f), V( 0.222f,  0.822f),
+             V( 0.222f,  0.635f)],
+        ],
+        ['1'] = [
+            [V(-0.118f, -0.865f), V( 0.069f, -0.865f),
+             V( 0.257f, -0.865f), V( 0.257f, -0.678f),
+             V( 0.069f, -0.678f), V( 0.069f, -0.490f),
+             V( 0.069f, -0.303f), V( 0.069f, -0.115f),
+             V( 0.069f,  0.072f), V( 0.069f,  0.260f),
+             V( 0.069f,  0.447f), V( 0.257f,  0.447f),
+             V( 0.257f,  0.635f), V( 0.069f,  0.635f),
+             V( 0.069f,  0.822f), V(-0.118f,  0.822f),
+             V(-0.118f,  0.635f), V(-0.118f,  0.447f),
+             V(-0.118f,  0.260f), V(-0.118f,  0.072f),
+             V(-0.118f, -0.115f), V(-0.118f, -0.303f),
+             V(-0.118f, -0.490f), V(-0.118f, -0.678f),
+             V(-0.306f, -0.678f), V(-0.306f, -0.865f),
+             V(-0.118f, -0.865f)],
+        ],
+        ['2'] = [
+            [V( 0.478f,  0.447f), V( 0.478f,  0.635f),
+             V(0.290f,  0.635f), V(0.290f,  0.447f),
+             V( 0.478f,  0.447f)],
+            [V(-0.272f, -0.678f), V(-0.460f, -0.678f),
+             V(-0.460f, -0.865f), V(-0.272f, -0.865f),
+             V(-0.085f, -0.865f), V( 0.103f, -0.865f),
+             V( 0.290f, -0.865f), V( 0.478f, -0.865f),
+             V( 0.478f, -0.678f), V( 0.478f, -0.490f),
+             V( 0.290f, -0.490f), V( 0.290f, -0.678f),
+             V( 0.103f, -0.678f), V(-0.085f, -0.678f),
+             V(-0.272f, -0.678f)],
+            [V( 0.290f, -0.490f), V( 0.290f, -0.303f),
+             V( 0.103f, -0.303f), V( 0.103f, -0.490f),
+             V( 0.290f, -0.490f)],
+            [V( 0.103f, -0.303f), V( 0.103f, -0.115f),
+             V(-0.085f, -0.115f), V(-0.085f, -0.303f),
+             V( 0.103f, -0.303f)],
+            [V(-0.085f, -0.115f), V(-0.085f,  0.072f),
+             V(-0.272f,  0.072f), V(-0.272f, -0.115f),
+             V(-0.085f, -0.115f)],
+            [V(-0.272f,  0.072f), V(-0.272f,  0.260f),
+             V(-0.272f,  0.447f), V(-0.272f,  0.635f),
+             V(-0.460f,  0.635f), V(-0.460f,  0.447f),
+             V(-0.460f,  0.260f), V(-0.460f,  0.072f),
+             V(-0.272f,  0.072f)],
+            [V(-0.272f,  0.635f), V(-0.085f,  0.635f),
+             V( 0.103f,  0.635f), V( 0.290f,  0.635f),
+             V( 0.290f,  0.822f), V( 0.103f,  0.822f),
+             V(-0.085f,  0.822f), V(-0.272f,  0.822f),
+             V(-0.272f,  0.635f)],
+        ],
+        ['3'] = [
+            [V( 0.477f,  0.447f), V( 0.477f,  0.635f),
+             V( 0.289f,  0.635f), V( 0.289f,  0.447f),
+             V( 0.477f,  0.447f)],
+            [V(-0.086f, -0.678f), V(-0.273f, -0.678f),
+             V(-0.273f, -0.865f), V(-0.086f, -0.865f),
+             V( 0.102f, -0.865f), V( 0.289f, -0.865f),
+             V( 0.289f, -0.678f), V( 0.102f, -0.678f),
+             V(-0.086f, -0.678f)],
+            [V(-0.273f, -0.678f), V(-0.273f, -0.490f),
+             V(-0.273f, -0.303f), V(-0.273f, -0.115f),
+             V(-0.273f,  0.072f), V(-0.461f,  0.072f),
+             V(-0.461f, -0.115f), V(-0.461f, -0.303f),
+             V(-0.461f, -0.490f), V(-0.461f, -0.678f),
+             V(-0.273f, -0.678f)],
+            [V( 0.289f, -0.678f), V( 0.477f, -0.678f),
+             V( 0.477f, -0.490f), V( 0.289f, -0.490f),
+             V( 0.289f, -0.678f)],
+            [V(-0.273f,  0.072f), V(-0.086f,  0.072f),
+             V( 0.102f,  0.072f), V( 0.102f,  0.260f),
+             V(-0.086f,  0.260f), V(-0.273f,  0.260f),
+             V(-0.273f,  0.072f)],
+            [V(-0.273f,  0.260f), V(-0.273f,  0.447f),
+             V(-0.273f,  0.635f), V(-0.461f,  0.635f),
+             V(-0.461f,  0.447f), V(-0.461f,  0.260f),
+             V(-0.273f,  0.260f)],
+            [V(-0.273f,  0.635f), V(-0.086f,  0.635f),
+             V( 0.102f,  0.635f), V( 0.289f,  0.635f),
+             V( 0.289f,  0.822f), V( 0.102f,  0.822f),
+             V(-0.086f,  0.822f), V(-0.273f,  0.822f),
+             V(-0.273f,  0.635f)],
+        ],
+        ['4'] = [
+            [V(-0.180f, -0.865f), V(-0.180f, -0.678f),
+             V(-0.180f, -0.490f), V(-0.180f, -0.303f),
+             V( 0.008f, -0.303f), V( 0.195f, -0.303f),
+             V( 0.383f, -0.303f), V( 0.383f, -0.115f),
+             V( 0.383f,  0.072f), V( 0.383f,  0.260f),
+             V( 0.383f,  0.447f), V( 0.383f,  0.635f),
+             V( 0.195f,  0.635f), V( 0.195f,  0.447f),
+             V( 0.195f,  0.260f), V( 0.195f,  0.072f),
+             V( 0.195f, -0.115f), V( 0.008f, -0.115f),
+             V(-0.180f, -0.115f), V(-0.180f,  0.072f),
+             V(-0.180f,  0.260f), V(-0.180f,  0.447f),
+             V(-0.180f,  0.635f), V(-0.180f,  0.822f),
+             V(-0.367f,  0.822f), V(-0.367f,  0.635f),
+             V(-0.367f,  0.447f), V(-0.367f,  0.260f),
+             V(-0.367f,  0.072f), V(-0.367f, -0.115f),
+             V(-0.367f, -0.303f), V(-0.367f, -0.490f),
+             V(-0.367f, -0.678f), V(-0.367f, -0.865f),
+             V(-0.180f, -0.865f)],
+        ],
+        ['5'] = [
+            [V(-0.093f, -0.677f), V(-0.280f, -0.677f),
+             V(-0.280f, -0.865f), V(-0.093f, -0.865f),
+             V( 0.095f, -0.865f), V( 0.282f, -0.865f),
+             V( 0.282f, -0.677f), V( 0.095f, -0.677f),
+             V(-0.093f, -0.677f)],
+            [V(-0.280f, -0.677f), V(-0.280f, -0.490f),
+             V(-0.280f, -0.302f), V(-0.280f, -0.115f),
+             V(-0.280f,  0.073f), V(-0.468f,  0.073f),
+             V(-0.468f, -0.115f), V(-0.468f, -0.302f),
+             V(-0.468f, -0.490f), V(-0.468f, -0.677f),
+             V(-0.280f, -0.677f)],
+            [V( 0.282f, -0.677f), V( 0.470f, -0.677f),
+             V( 0.470f, -0.490f), V( 0.282f, -0.490f),
+             V( 0.282f, -0.677f)],
+            [V(-0.280f,  0.073f), V(-0.093f,  0.073f),
+             V( 0.095f,  0.073f), V( 0.282f,  0.073f),
+             V( 0.470f,  0.073f), V( 0.470f,  0.260f),
+             V( 0.470f,  0.448f), V( 0.470f,  0.635f),
+             V( 0.282f,  0.635f), V( 0.282f,  0.448f),
+             V( 0.282f,  0.260f), V( 0.095f,  0.260f),
+             V(-0.093f,  0.260f), V(-0.280f,  0.260f),
+             V(-0.280f,  0.073f)],
+            [V(-0.280f,  0.823f), V(-0.468f,  0.823f),
+             V(-0.468f,  0.635f), V(-0.280f,  0.635f),
+             V(-0.093f,  0.635f), V( 0.095f,  0.635f),
+             V( 0.282f,  0.635f), V( 0.282f,  0.823f),
+             V( 0.095f,  0.823f), V(-0.093f,  0.823f),
+             V(-0.280f,  0.823f)],
+        ],
+        ['6'] = [
+            [V(-0.314f,  0.448f), V(-0.314f,  0.635f),
+             V(-0.501f,  0.635f), V(-0.501f,  0.448f),
+             V(-0.314f,  0.448f)],
+            [V(-0.126f, -0.677f), V(-0.314f, -0.677f),
+             V(-0.314f, -0.865f), V(-0.126f, -0.865f),
+             V( 0.061f, -0.865f), V( 0.249f, -0.865f),
+             V( 0.249f, -0.677f), V( 0.061f, -0.677f),
+             V(-0.126f, -0.677f)],
+            [V(-0.314f, -0.677f), V(-0.314f, -0.490f),
+             V(-0.314f, -0.302f), V(-0.314f, -0.115f),
+             V(-0.314f,  0.073f), V(-0.501f,  0.073f),
+             V(-0.501f, -0.115f), V(-0.501f, -0.302f),
+             V(-0.501f, -0.490f), V(-0.501f, -0.677f),
+             V(-0.314f, -0.677f)],
+            [V( 0.249f, -0.677f), V( 0.436f, -0.677f),
+             V( 0.436f, -0.490f), V( 0.436f, -0.302f),
+             V( 0.436f, -0.115f), V( 0.436f,  0.073f),
+             V( 0.436f,  0.260f), V( 0.436f,  0.448f),
+             V( 0.436f,  0.635f), V( 0.249f,  0.635f),
+             V( 0.249f,  0.448f), V( 0.249f,  0.260f),
+             V( 0.061f,  0.260f), V(-0.126f,  0.260f),
+             V(-0.314f,  0.260f), V(-0.314f,  0.073f),
+             V(-0.126f,  0.073f), V( 0.061f,  0.073f),
+             V( 0.249f,  0.073f), V( 0.249f, -0.115f),
+             V( 0.249f, -0.302f), V( 0.249f, -0.490f),
+             V( 0.249f, -0.677f)],
+            [V(-0.314f,  0.635f), V(-0.126f,  0.635f),
+             V( 0.061f,  0.635f), V( 0.249f,  0.635f),
+             V( 0.249f,  0.823f), V( 0.061f,  0.823f),
+             V(-0.126f,  0.823f), V(-0.314f,  0.823f),
+             V(-0.314f,  0.635f)],
+        ],
+        ['7'] = [
+            [V( 0.180f, -0.865f), V( 0.180f, -0.678f),
+             V( 0.180f, -0.490f), V( 0.180f, -0.303f),
+             V( 0.180f, -0.115f), V(-0.008f, -0.115f),
+             V(-0.008f, -0.303f), V(-0.008f, -0.490f),
+             V(-0.008f, -0.678f), V(-0.008f, -0.865f),
+             V( 0.180f, -0.865f)],
+            [V(-0.008f, -0.115f), V(-0.008f,  0.072f),
+             V(-0.195f,  0.072f), V(-0.195f, -0.115f),
+             V(-0.008f, -0.115f)],
+            [V(-0.195f,  0.072f), V(-0.195f,  0.260f),
+             V(-0.195f,  0.447f), V(-0.195f,  0.635f),
+             V(-0.383f,  0.635f), V(-0.383f,  0.447f),
+             V(-0.383f,  0.260f), V(-0.383f,  0.072f),
+             V(-0.195f,  0.072f)],
+            [V(-0.195f,  0.635f), V(-0.008f,  0.635f),
+             V( 0.180f,  0.635f), V( 0.367f,  0.635f),
+             V( 0.555f,  0.635f), V( 0.555f,  0.822f),
+             V( 0.367f,  0.822f), V( 0.180f,  0.822f),
+             V(-0.008f,  0.822f), V(-0.195f,  0.822f),
+             V(-0.195f,  0.635f)],
+        ],
+        ['8'] = [
+            [V( 0.075f, -0.677f), V( 0.262f, -0.677f),
+             V( 0.262f, -0.865f), V( 0.075f, -0.865f),
+             V(-0.113f, -0.865f), V(-0.300f, -0.865f),
+             V(-0.300f, -0.677f), V(-0.113f, -0.677f),
+             V( 0.075f, -0.677f)],
+            [V( 0.262f, -0.677f), V( 0.262f, -0.490f),
+             V( 0.262f, -0.302f), V( 0.262f, -0.115f),
+             V( 0.450f, -0.115f), V( 0.450f, -0.302f),
+             V( 0.450f, -0.490f), V( 0.450f, -0.677f),
+             V( 0.262f, -0.677f)],
+            [V(-0.300f, -0.677f), V(-0.488f, -0.677f),
+             V(-0.488f, -0.490f), V(-0.488f, -0.302f),
+             V(-0.488f, -0.115f), V(-0.300f, -0.115f),
+             V(-0.300f, -0.302f), V(-0.300f, -0.490f),
+             V(-0.300f, -0.677f)],
+            [V( 0.262f, -0.115f), V(0.075f, -0.115f),
+             V(-0.113f, -0.115f), V(-0.300f, -0.115f),
+             V(-0.300f,  0.073f), V(-0.113f,  0.073f),
+             V( 0.075f,  0.073f), V( 0.262f,  0.073f),
+             V( 0.262f, -0.115f)],
+            [V( 0.262f,  0.073f), V( 0.262f,  0.260f),
+             V( 0.262f,  0.448f), V( 0.262f,  0.635f),
+             V( 0.450f,  0.635f), V( 0.450f,  0.448f),
+             V( 0.450f,  0.260f), V( 0.450f,  0.073f),
+             V( 0.262f,  0.073f)],
+            [V(-0.300f,  0.073f), V(-0.488f,  0.073f),
+             V(-0.488f,  0.260f), V(-0.488f,  0.448f),
+             V(-0.488f,  0.635f), V(-0.300f,  0.635f),
+             V(-0.300f,  0.448f), V(-0.300f,  0.260f),
+             V(-0.300f,  0.073f)],
+            [V( 0.262f,  0.635f), V( 0.075f,  0.635f),
+             V(-0.113f,  0.635f), V(-0.300f,  0.635f),
+             V(-0.300f,  0.823f), V(-0.113f,  0.823f),
+             V( 0.075f,  0.823f), V( 0.262f,  0.823f),
+             V( 0.262f,  0.635f)],
+        ],
+        ['9'] = [
+            [V(-0.099f, -0.678f), V(-0.287f, -0.678f),
+             V(-0.287f, -0.865f), V(-0.099f, -0.865f),
+             V( 0.088f, -0.865f), V( 0.276f, -0.865f),
+             V( 0.276f, -0.678f), V( 0.088f, -0.678f),
+             V(-0.099f, -0.678f)],
+            [V(-0.287f, -0.678f), V(-0.287f, -0.490f),
+             V(-0.287f, -0.303f), V(-0.287f, -0.115f),
+             V(-0.099f, -0.115f), V( 0.088f, -0.115f),
+             V( 0.276f, -0.115f), V( 0.276f,  0.072f),
+             V( 0.088f,  0.072f), V(-0.099f,  0.072f),
+             V(-0.287f,  0.072f), V(-0.287f,  0.260f),
+             V(-0.287f,  0.447f), V(-0.287f,  0.635f),
+             V(-0.474f,  0.635f), V(-0.474f,  0.447f),
+             V(-0.474f,  0.260f), V(-0.474f,  0.072f),
+             V(-0.474f, -0.115f), V(-0.474f, -0.303f),
+             V(-0.474f, -0.490f), V(-0.474f, -0.678f),
+             V(-0.287f, -0.678f)],
+            [V( 0.276f, -0.678f), V( 0.463f, -0.678f),
+             V( 0.463f, -0.490f), V( 0.276f, -0.490f),
+             V( 0.276f, -0.678f)],
+            [V( 0.276f,  0.072f), V( 0.463f,  0.072f),
+             V( 0.463f,  0.260f), V( 0.463f,  0.447f),
+             V( 0.463f,  0.635f), V( 0.276f,  0.635f),
+             V( 0.276f,  0.447f), V( 0.276f,  0.260f),
+             V( 0.276f,  0.072f)],
+            [V(-0.287f,  0.635f), V(-0.099f,  0.635f),
+             V( 0.088f,  0.635f), V( 0.276f,  0.635f),
+             V( 0.276f,  0.822f), V( 0.088f,  0.822f),
+             V(-0.099f,  0.822f), V(-0.287f,  0.822f),
+             V(-0.287f,  0.635f)],
+        ],
+        ['A'] = [
+            [V(-0.394f, -0.865f), V(-0.394f, -0.677f),
+             V(-0.394f, -0.490f), V(-0.394f, -0.302f),
+             V(-0.394f, -0.115f), V(-0.206f, -0.115f),
+             V(-0.019f, -0.115f), V( 0.169f, -0.115f),
+             V( 0.356f, -0.115f), V( 0.356f, -0.302f),
+             V( 0.356f, -0.490f), V( 0.356f, -0.677f),
+             V( 0.356f, -0.865f), V( 0.544f, -0.865f),
+             V( 0.544f, -0.677f), V( 0.544f, -0.490f),
+             V( 0.544f, -0.302f), V( 0.544f, -0.115f),
+             V( 0.544f,  0.073f), V( 0.544f,  0.260f),
+             V( 0.544f,  0.448f), V( 0.356f,  0.448f),
+             V( 0.356f,  0.260f), V( 0.356f,  0.073f),
+             V( 0.169f,  0.073f), V(-0.019f,  0.073f),
+             V(-0.206f,  0.073f), V(-0.394f,  0.073f),
+             V(-0.394f,  0.260f), V(-0.394f,  0.448f),
+             V(-0.581f,  0.448f), V(-0.581f,  0.260f),
+             V(-0.581f,  0.073f), V(-0.581f, -0.115f),
+             V(-0.581f, -0.302f), V(-0.581f, -0.490f),
+             V(-0.581f, -0.677f), V(-0.581f, -0.865f),
+             V(-0.394f, -0.865f)],
+            [V(-0.394f,  0.448f), V(-0.206f,  0.448f),
+             V(-0.206f,  0.635f), V(-0.394f,  0.635f),
+             V(-0.394f,  0.448f)],
+            [V( 0.356f,  0.448f), V( 0.356f,  0.635f),
+             V( 0.169f,  0.635f), V( 0.169f,  0.448f),
+             V( 0.356f,  0.448f)],
+            [V(-0.206f,  0.635f), V(-0.019f,  0.635f),
+             V( 0.169f,  0.635f), V( 0.169f,  0.823f),
+             V(-0.019f,  0.823f), V(-0.206f,  0.823f),
+             V(-0.206f,  0.635f)],
+        ],
+        ['J'] = [
+            [V( 0.061f, -0.678f), V(-0.126f, -0.678f),
+             V(-0.126f, -0.865f), V( 0.061f, -0.865f),
+             V( 0.249f, -0.865f), V( 0.249f, -0.678f),
+             V( 0.061f, -0.678f)],
+            [V(-0.126f, -0.678f), V(-0.126f, -0.490f),
+             V(-0.126f, -0.303f), V(-0.126f, -0.115f),
+             V(-0.126f,  0.072f), V(-0.126f,  0.260f),
+             V(-0.126f,  0.447f), V(-0.126f,  0.635f),
+             V( 0.061f,  0.635f), V( 0.061f,  0.822f),
+             V(-0.126f,  0.822f), V(-0.314f,  0.822f),
+             V(-0.501f,  0.822f), V(-0.501f,  0.635f),
+             V(-0.314f,  0.635f), V(-0.314f,  0.447f),
+             V(-0.314f,  0.260f), V(-0.314f,  0.072f),
+             V(-0.314f, -0.115f), V(-0.314f, -0.303f),
+             V(-0.314f, -0.490f), V(-0.314f, -0.678f),
+             V(-0.126f, -0.678f)],
+            [V( 0.249f, -0.678f), V( 0.436f, -0.678f),
+             V( 0.436f, -0.490f), V( 0.436f, -0.303f),
+             V( 0.249f, -0.303f), V( 0.249f, -0.490f),
+             V( 0.249f, -0.678f)],
+        ],
+        ['Q'] = [
+            [V(-0.701f, -0.677f), V(-0.889f, -0.677f),
+             V(-0.889f, -0.865f), V(-0.701f, -0.865f),
+             V(-0.514f, -0.865f), V(-0.514f, -0.677f),
+             V(-0.701f, -0.677f)],
+            [V(-0.139f, -0.677f), V(-0.326f, -0.677f),
+             V(-0.326f, -0.865f), V(-0.139f, -0.865f),
+             V( 0.049f, -0.865f), V( 0.236f, -0.865f),
+             V( 0.424f, -0.865f), V( 0.424f, -0.677f),
+             V( 0.236f, -0.677f), V( 0.049f, -0.677f),
+             V(-0.139f, -0.677f)],
+            [V(-0.514f, -0.677f), V(-0.326f, -0.677f),
+             V(-0.326f, -0.490f), V(-0.514f, -0.490f),
+             V(-0.514f, -0.677f)],
+            [V( 0.424f, -0.677f), V( 0.611f, -0.677f),
+             V( 0.611f, -0.490f), V( 0.424f, -0.490f),
+             V( 0.424f, -0.677f)],
+            [V(-0.514f, -0.490f), V(-0.514f, -0.302f),
+             V(-0.514f, -0.115f), V(-0.514f,  0.073f),
+             V(-0.514f,  0.260f), V(-0.514f,  0.448f),
+             V(-0.701f,  0.448f), V(-0.701f,  0.260f),
+             V(-0.701f,  0.073f), V(-0.701f, -0.115f),
+             V(-0.701f, -0.302f), V(-0.701f, -0.490f),
+             V(-0.514f, -0.490f)],
+            [V(-0.326f, -0.490f), V(-0.139f, -0.490f),
+             V(-0.139f, -0.302f), V(-0.326f, -0.302f),
+             V(-0.326f, -0.490f)],
+            [V( 0.611f, -0.490f), V( 0.799f, -0.490f),
+             V(0.799f, -0.302f), V( 0.799f, -0.115f),
+             V( 0.799f,  0.073f), V( 0.799f,  0.260f),
+             V( 0.799f,  0.448f), V( 0.611f,  0.448f),
+             V( 0.611f,  0.260f), V( 0.611f,  0.073f),
+             V( 0.611f, -0.115f), V( 0.611f, -0.302f),
+             V( 0.611f, -0.490f)],
+            [V(-0.514f,  0.448f), V(-0.326f,  0.448f),
+             V(-0.326f,  0.635f), V(-0.514f,  0.635f),
+             V(-0.514f,  0.448f)],
+            [V( 0.611f,  0.448f), V( 0.611f,  0.635f),
+             V( 0.424f,  0.635f), V( 0.424f,  0.448f),
+             V( 0.611f,  0.448f)],
+            [V(-0.326f,  0.635f), V(-0.139f,  0.635f),
+             V( 0.049f,  0.635f), V( 0.236f,  0.635f),
+             V( 0.424f,  0.635f), V( 0.424f,  0.823f),
+             V( 0.236f,  0.823f), V( 0.049f,  0.823f),
+             V(-0.139f,  0.823f), V(-0.326f,  0.823f),
+             V(-0.326f,  0.635f)],
+        ],
+        ['K'] = [
+            [V(-0.501f, -0.865f), V(-0.501f, -0.678f),
+             V(-0.501f, -0.490f), V(-0.688f, -0.490f),
+             V(-0.688f, -0.678f), V(-0.688f, -0.865f),
+             V(-0.501f, -0.865f)],
+            [V( 0.624f, -0.865f), V( 0.624f, -0.678f),
+             V( 0.624f, -0.490f), V( 0.624f, -0.303f),
+             V( 0.624f, -0.115f), V( 0.624f,  0.072f),
+             V( 0.624f,  0.260f), V( 0.624f,  0.447f),
+             V( 0.624f,  0.635f), V( 0.624f,  0.822f),
+             V( 0.437f,  0.822f), V( 0.437f,  0.635f),
+             V( 0.437f,  0.447f), V( 0.437f,  0.260f),
+             V( 0.437f,  0.072f), V( 0.437f, -0.115f),
+             V( 0.437f, -0.303f), V( 0.437f, -0.490f),
+             V( 0.437f, -0.678f), V( 0.437f, -0.865f),
+             V( 0.624f, -0.865f)],
+            [V(-0.501f, -0.490f), V(-0.313f, -0.490f),
+             V(-0.313f, -0.303f), V(-0.501f, -0.303f),
+             V(-0.501f, -0.490f)],
+            [V(-0.313f, -0.303f), V(-0.126f, -0.303f),
+             V(-0.126f, -0.115f), V(-0.313f, -0.115f),
+             V(-0.313f, -0.303f)],
+            [V(-0.126f, -0.115f), V( 0.062f, -0.115f),
+             V( 0.249f, -0.115f), V( 0.249f,  0.072f),
+             V( 0.062f,  0.072f), V(-0.126f,  0.072f),
+             V(-0.126f, -0.115f)],
+            [V(-0.126f,  0.072f), V(-0.126f,  0.260f),
+             V(-0.313f,  0.260f), V(-0.313f,  0.072f),
+             V(-0.126f,  0.072f)],
+            [V(-0.313f,  0.260f), V(-0.313f,  0.447f),
+             V(-0.501f,  0.447f), V(-0.501f,  0.260f),
+             V(-0.313f,  0.260f)],
+            [V(-0.501f,  0.447f), V(-0.501f,  0.635f),
+             V(-0.501f,  0.822f), V(-0.688f,  0.822f),
+             V(-0.688f,  0.635f), V(-0.688f,  0.447f),
+             V(-0.501f,  0.447f)],
+        ],
+    };
+
+    private static readonly Dictionary<char, float> CharXCorrection = new()
+    {
+        ['0'] = 0.1f,
+        ['1'] = 0.15f,
+    };
+
+    private static void ExecuteDrawChar(string letter, float offsetX, float offsetY, float scale)
+    {
+        if (_drawing == null || string.IsNullOrEmpty(letter)) return;
+        if (!CharDefs.TryGetValue(letter[0], out var paths)) return;
+
+        float xCorrection = CharXCorrection.GetValueOrDefault(letter[0], 0f);
+
+        foreach (var path in paths)
+        {
+            _drawing.BeginPath();
+            for (int i = 0; i < path.Length; i++)
+            {
+                float px = (path[i].X + xCorrection) * scale + offsetX;
+                float py = path[i].Y * scale + offsetY;
+                if (i == 0)
+                    _drawing.MoveTo(px, py, 0);
+                else
+                    _drawing.LineTo(px, py, 0);
+            }
+            _drawing.EndPath();
+        }
+    }
+
     private static void HandleCallDrawLogic(string[] args, DrawLogicContext ctx,
         List<DrawLogicEntry> allEntries, int depth)
     {
@@ -680,6 +1261,7 @@ public static class DrawLogicInterpreter
             IsBust = src.IsBust,
             IsStand = src.IsStand,
             IsBlackjack = src.IsBlackjack,
+            IsCharlie = src.IsCharlie,
             IsDone = src.IsDone,
             IsDoubleDown = src.IsDoubleDown,
             SourcePlayer = src.SourcePlayer,
@@ -698,6 +1280,11 @@ public static class DrawLogicInterpreter
             IterCardNumber = src.IterCardNumber,
             IterCardColor = src.IterCardColor,
             IterCardDrawnAt = src.IterCardDrawnAt,
+            IterLetterIndex = src.IterLetterIndex,
+            IterLetterCount = src.IterLetterCount,
+            IterLetter = src.IterLetter,
+            DealerDirection = src.DealerDirection,
+            CameraDirection = src.CameraDirection,
         };
     }
 
@@ -871,6 +1458,8 @@ public static class DrawLogicInterpreter
                 return args[0] - args[1];
             case "Clamp" when args.Count >= 3:
                 return Math.Clamp(args[0], args[1], args[2]);
+            case "AlterRot" when args.Count >= 2:
+                return args[0] + args[1] * (MathF.PI / 180f);
 
             case "GetVar" when stringArgs.Count >= 1:
                 return _evalCtx != null ? GetVarFallback(stringArgs[0], _evalCtx) : 0;
@@ -905,5 +1494,39 @@ public static class DrawLogicInterpreter
         var right = inner.Substring(eqIdx + 1).Trim();
 
         return string.Equals(left, right, StringComparison.Ordinal);
+    }
+
+    private static Vector3 GetDealerPosition()
+    {
+        if (DrawLogicDebugManager.IsActive) return Vector3.Zero;
+        var local = Plugin.ObjectTable.LocalPlayer;
+        return local?.Position ?? Vector3.Zero;
+    }
+
+    private static unsafe float GetCameraDirection()
+    {
+        var cm = CameraManager.Instance();
+        if (cm == null) return 0f;
+        var cam = cm->GetActiveCamera();
+        if (cam == null) return 0f;
+        return cam->DirH + MathF.PI;
+    }
+
+    private static unsafe Vector3 GetCameraPosition()
+    {
+        var cm = CameraManager.Instance();
+        if (cm == null) return Vector3.Zero;
+        var cam = cm->GetActiveCamera();
+        if (cam == null) return Vector3.Zero;
+        var p = cam->SceneCamera.Position;
+        return new Vector3(p.X, p.Y, p.Z);
+    }
+
+    private static float ComputeDirection(Vector3 from, Vector3 to)
+    {
+        var dx = to.X - from.X;
+        var dz = to.Z - from.Z;
+        if (dx == 0f && dz == 0f) return 0f;
+        return MathF.Atan2(dx, dz);
     }
 }

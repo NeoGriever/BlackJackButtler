@@ -296,6 +296,7 @@ public static class RoundLogManager
     private static string GetScoreLabel(HandState hand, int score)
     {
         if (hand.IsBust) return ">21";
+        if (hand.IsCharlie) return $"c{score}";
         if (score == 21 && hand.IsNaturalBlackJack) return "n21";
         if (score == 21) return "d21";
         return score.ToString();

@@ -45,6 +45,7 @@ public class HandState
     public bool IsBust = false;
     public bool IsDoubleDown = false;
     public bool IsNaturalBlackJack = false;
+    public bool IsCharlie = false;
     public List<string> ActionLog = new();
     public long RoundResult = 0;
 
@@ -57,6 +58,7 @@ public class HandState
         IsBust = IsBust,
         IsDoubleDown = IsDoubleDown,
         IsNaturalBlackJack = IsNaturalBlackJack,
+        IsCharlie = IsCharlie,
         ActionLog = new List<string>(ActionLog),
         RoundResult = RoundResult
     };

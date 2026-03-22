@@ -10,6 +10,7 @@ public partial class BlackJackButtlerWindow
 {
     private bool _showDrawLogicDoc = false;
     private string _newDrawLogicName = "";
+    private string _lastDlScriptHash = "";
 
     private void EnsureDrawLogicSeed()
     {
@@ -17,29 +18,15 @@ public partial class BlackJackButtlerWindow
         _config.DrawLogicSeeded = true;
         if (_config.DrawLogicEntries.Count == 0)
         {
-            var seedScript = "// Golden cross at player feet (0.3 yalm radius)\n"
-                           + "SetDrawColor(1.0, 0.85, 0.0, 0.7)\n"
-                           + "IterateHand {\n"
-                           + "    BeginShape(<pos>.x, <pos>.y, <pos>.z)\n"
-                           + "    BeginPath()\n"
-                           + "    MoveTo(-0.3, Mul(<HandIndex>, 0.2), -0.3)\n"
-                           + "    LineTo(0.3, Mul(<HandIndex>, 0.2), 0.3)\n"
-                           + "    EndPath()\n"
-                           + "    BeginPath()\n"
-                           + "    MoveTo(0.3, Mul(<HandIndex>, 0.2), -0.3)\n"
-                           + "    LineTo(-0.3, Mul(<HandIndex>, 0.2), 0.3)\n"
-                           + "    EndPath()\n"
-                           + "}\n"
-                           + "FinishShape()\n"
-                           + "Draw()";
-            var path = DrawLogicScriptManager.CreateNewFile(0);
-            DrawLogicScriptManager.WriteScript(path, seedScript);
+            var path = DrawLogicScriptManager.CreateDefaultScript();
             _config.DrawLogicEntries.Add(new DrawLogicEntry
             {
-                Name = "Player Cross",
+                Name = "Visualize Cards",
                 IsIterate = true,
+                IsActive = true,
                 ScriptPath = path,
             });
+            _config.DrawLogicStartEntry = "Visualize Cards";
         }
         _save();
     }
@@ -51,6 +38,8 @@ public partial class BlackJackButtlerWindow
         ImGui.TextUnformatted("Draw Logic");
         ImGui.SameLine();
         if (BJBGui.SmallButton("?##drawlogic_doc")) _showDrawLogicDoc = !_showDrawLogicDoc;
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("Debug##drawlogic_dbg")) Plugin.Instance.OpenDrawLogicDebug();
         ImGui.Separator();
         ImGui.TextDisabled("Scriptable world-drawing system. Define draw commands that execute per frame.");
         ImGui.TextDisabled("When 'Iterate' is on, the script runs once per active player + dealer.");
@@ -154,6 +143,22 @@ public partial class BlackJackButtlerWindow
                 if (BJBGui.SmallButton($"Reload##dl_reload_{i}"))
                 {
                     entry.Script = DrawLogicScriptManager.ReloadScript(entry.ScriptPath);
+                }
+                ImGui.SameLine();
+                var ctrlForDefault = ImGui.GetIO().KeyCtrl;
+                if (!ctrlForDefault) ImGui.BeginDisabled();
+                if (BJBGui.SmallButton($"Create Default##dl_default_{i}"))
+                {
+                    var defaultPath = DrawLogicScriptManager.CreateDefaultScript();
+                    entry.ScriptPath = defaultPath;
+                    entry.Script = DrawLogicScriptManager.ReloadScript(defaultPath);
+                    _save();
+                }
+                if (!ctrlForDefault)
+                {
+                    ImGui.EndDisabled();
+                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                        ImGui.SetTooltip("Hold CTRL to create/overwrite default script.");
                 }
 
                 ImGui.SameLine();
@@ -268,6 +273,14 @@ public partial class BlackJackButtlerWindow
                 else
                     e.Script = DrawLogicScriptManager.ReadScript(e.ScriptPath);
             }
+        }
+
+        var currentHash = string.Join("|", _config.DrawLogicEntries.Select(e => e.Script?.Length.ToString() ?? ""));
+        if (currentHash != _lastDlScriptHash)
+        {
+            if (!string.IsNullOrEmpty(_lastDlScriptHash))
+                DrawLogicInterpreter.TriggerDebugCapture();
+            _lastDlScriptHash = currentHash;
         }
 
         try

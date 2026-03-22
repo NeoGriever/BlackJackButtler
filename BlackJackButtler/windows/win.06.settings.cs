@@ -170,6 +170,21 @@ public partial class BlackJackButtlerWindow
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: If the player has a Blackjack (natural or dirty) and the dealer also has 21, the player wins.\nInactive: Both having 21 results in a push.");
 
             ImGui.Spacing();
+            if (ImGui.Checkbox("Enable Charlie", ref _config.EnableCharlie)) _save();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("A player who draws N cards without busting\nautomatically wins with BJ payout (1.5x).");
+            if (_config.EnableCharlie)
+            {
+                ImGui.SameLine(300f);
+                ImGui.SetNextItemWidth(200f);
+                if (BJBGui.InputInt("##charlie_card_count", ref _config.CharlieCardCount, 1))
+                {
+                    _config.CharlieCardCount = Math.Clamp(_config.CharlieCardCount, 3, 7);
+                    _save();
+                }
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip("Number of cards needed for Charlie (3-7).");
+            }
+
+            ImGui.Spacing();
             ImGui.Spacing();
             ImGui.TextUnformatted("Round Behavior");
             ImGui.Separator();
@@ -848,6 +863,8 @@ public partial class BlackJackButtlerWindow
         TryApply<float> (j, "MultiplierDirtyBlackjackWin",            v => _config.MultiplierDirtyBlackjackWin = v);
         TryApply<bool>  (j, "RefundFullDoubleDownOnPush",             v => _config.RefundFullDoubleDownOnPush = v);
         TryApply<bool>  (j, "PlayerBJWinsOnTie",                      v => _config.PlayerBJWinsOnTie = v);
+        TryApply<bool>  (j, "EnableCharlie",                         v => _config.EnableCharlie = v);
+        TryApply<int>   (j, "CharlieCardCount",                      v => _config.CharlieCardCount = v);
         TryApply<bool>  (j, "EnableBankInput",                        v => _config.EnableBankInput = v);
         TryApply<bool>  (j, "EnableAntiDouble",                       v => _config.EnableAntiDouble = v);
         TryApply<long>  (j, "MinBet",                                 v => _config.MinBet = v);
