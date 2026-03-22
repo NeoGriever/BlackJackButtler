@@ -529,7 +529,7 @@ public static partial class GameEngine
 
     private static bool IsPlayerFinished(PlayerState p)
     {
-        return p.Hands.Count > 0 && p.Hands.All(h => h.IsStand || h.IsBust || h.IsNaturalBlackJack);
+        return p.Hands.Count > 0 && p.Hands.All(h => h.IsStand || h.IsBust || h.IsNaturalBlackJack || h.IsCharlie);
     }
 
     private static List<PlayerState> GetActivePlayers(List<PlayerState> players)

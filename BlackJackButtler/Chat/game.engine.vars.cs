@@ -25,5 +25,5 @@ public static partial class GameEngine
     public static void SetDebugMode(bool enabled) => _debugMode = enabled;
 
     private static bool IsHandDone(HandState h)
-        => h.IsStand || h.IsBust || h.IsNaturalBlackJack;
+        => h.IsStand || h.IsBust || h.IsNaturalBlackJack || h.IsCharlie;
 }

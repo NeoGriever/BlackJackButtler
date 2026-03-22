@@ -79,7 +79,7 @@ public partial class BlackJackButtlerWindow
     private void DrawCommandGroupTable(CommandGroup group)
     {
         bool showAD = _config.EnableAntiDouble;
-        int colCount = showAD ? 7 : 6;
+        int colCount = 6 + (showAD ? 1 : 0) + 1;
         if (!ImGui.BeginTable($"table_{group.Name}", colCount, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
             return;
 
@@ -87,6 +87,7 @@ public partial class BlackJackButtlerWindow
         ImGui.TableSetupColumn("Grp",                    ImGuiTableColumnFlags.WidthFixed,   45);
         ImGui.TableSetupColumn("Command / Chat Message", ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableSetupColumn("Wait (s)",               ImGuiTableColumnFlags.WidthFixed,  100);
+        ImGui.TableSetupColumn("1x",                    ImGuiTableColumnFlags.WidthFixed,   25);
         if (showAD)
             ImGui.TableSetupColumn("AD",                 ImGuiTableColumnFlags.WidthFixed,   25);
         ImGui.TableSetupColumn("",                       ImGuiTableColumnFlags.WidthFixed,   50);
@@ -183,7 +184,13 @@ public partial class BlackJackButtlerWindow
                 _save();
             }
 
-            // Col 4 — anti-double (conditional)
+            // Col 4 — fixed delay
+            ImGui.TableNextColumn();
+            if (ImGui.Checkbox("##fixed", ref cmd.FixedDelay)) _save();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Fixed Delay: Ignore Command Speed multiplier.\nAlways use the base delay (1x).");
+
+            // Col 5 — anti-double (conditional)
             if (showAD)
             {
                 ImGui.TableNextColumn();

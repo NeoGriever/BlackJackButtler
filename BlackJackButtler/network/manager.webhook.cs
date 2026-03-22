@@ -45,16 +45,19 @@ public static class WebhookManager
                         result = "BUST";
                         if (webhook.ShowBetAmounts) amountStr = $" (-{hand.Bet:N0})";
                     }
-                    else if (dealerBust || pScore > dealerScore || (cfg.PlayerBJWinsOnTie && pScore == 21 && dealerScore == 21))
+                    else if (dealerBust || pScore > dealerScore || hand.IsCharlie || (cfg.PlayerBJWinsOnTie && pScore == 21 && dealerScore == 21))
                     {
                         float mult = cfg.MultiplierNormalWin;
                         if (hand.IsNaturalBlackJack) mult = cfg.MultiplierBlackjackWin;
+                        else if (hand.IsCharlie) mult = cfg.MultiplierBlackjackWin;
                         else if (pScore == 21) mult = cfg.MultiplierDirtyBlackjackWin;
 
                         long winAmount = (long)(hand.Bet * mult);
 
                         if (hand.IsNaturalBlackJack)
                             result = "BLACKJACK";
+                        else if (hand.IsCharlie)
+                            result = "CHARLIE";
                         else
                             result = "WIN";
 

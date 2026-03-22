@@ -13,6 +13,7 @@ public class PluginCommand
     public float Delay = 0.5f;
     public int GroupId = 0;
     public bool NonDoubled = false;
+    public bool FixedDelay = false;
 }
 
 [Serializable]

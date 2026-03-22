@@ -1012,6 +1012,11 @@ public partial class BlackJackButtlerWindow
                     if (ImGui.IsItemHovered()) ImGui.SetTooltip("Dirty BlackJack (3+ Cards)");
                 }
             }
+            else if (hand.IsCharlie)
+            {
+                ImGui.TextColored(new Vector4(0.4f, 1.0f, 0.4f, 1.0f), $"C{best}");
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip($"Charlie ({hand.Cards.Count} cards)");
+            }
             else if (hand.IsBust)
             {
                 var color = new Vector4(1.0f, 0.2f, 0.2f, 1.0f);

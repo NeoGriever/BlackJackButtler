@@ -51,7 +51,7 @@ public static class ActivityLogManager
             {
                 int score = p.GetBestScore(i);
                 string cards = p.GetCardsString(i);
-                string bj = p.Hands[i].IsNaturalBlackJack ? " BJ" : (score == 21 ? " 21" : "");
+                string bj = p.Hands[i].IsNaturalBlackJack ? " BJ" : (p.Hands[i].IsCharlie ? " Charlie" : (score == 21 ? " 21" : ""));
                 Append($"PLAYER: {p.DisplayName} Hand{(p.Hands.Count > 1 ? $"#{i + 1}" : "")}: {cards} ({score}{bj}) | Bank: {p.Bank:N0}");
             }
         }

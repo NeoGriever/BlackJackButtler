@@ -100,6 +100,11 @@ public static class DefaultsManager
                 { "Text": "/p #{Player Dirty BlackJack Messages} <se.7>", "Delay": 1.3 },
                 { "Text": "/wow motion", "Delay": 3.4 }
             ],
+            "PlayerCharlie": [
+                { "Text": "/ft", "Delay": 0.5 },
+                { "Text": "/p #{Player Charlie Messages} <se.7>", "Delay": 1.3 },
+                { "Text": "/wow motion", "Delay": 3.4 }
+            ],
             "PlayerBust": [
                 { "Text": "/ft", "Delay": 0.5 },
                 { "Text": "/p #{Player Busts Messages} <se.11>", "Delay": 0.8 },
@@ -287,6 +292,13 @@ public static class DefaultsManager
             "Player Dirty BlackJack Messages": [
                 "\ue070 ${HandIndex}Wohoo. <t> got a blackjack. Fantastic! \ue070",
                 "\ue070 ${HandIndex}Unbelievable. A BLACKJACK FOR <t>! CONGRATS! \ue070"
+            ],
+
+            "Player Charlie Messages": [
+                "\ue070 ${HandIndex}Incredible! <t> drew enough cards without busting - CHARLIE! Automatic win! \ue070",
+                "\ue070 ${HandIndex}CHARLIE! <t> survived all those cards and walks away a winner! \ue070",
+                "\ue070 ${HandIndex}<t> just pulled off a CHARLIE! Auto-win with bonus payout! \ue070",
+                "\ue070 ${HandIndex}The impossible happened - <t> has a CHARLIE! Instant victory! \ue070"
             ],
 
             "Player Busts Messages": [

@@ -55,6 +55,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly BlackJackButtlerWindow mainWindow;
     private readonly ChatLogBuffer chatLog = new(20);
     private readonly DebugLogWindow debugLogWindow;
+    private readonly DrawLogicDebugWindow drawLogicDebugWindow;
     private readonly NotepadWindow notepadWindow;
     private DateTime _lastSync = DateTime.MinValue;
     private DateTime _lastIdleTick = DateTime.MinValue;
@@ -71,6 +72,7 @@ public sealed class Plugin : IDalamudPlugin
         ? (DateTime.Now - Instance._lastChatActivity).TotalSeconds : 0.0;
 
     public void OpenDebugPopout() => debugLogWindow.IsOpen = true;
+    public void OpenDrawLogicDebug() => drawLogicDebugWindow.IsOpen = true;
     public BlackJackButtlerWindow GetMainWindow() => mainWindow;
     private string _cachedLocalName = string.Empty;
 
@@ -98,6 +100,9 @@ public sealed class Plugin : IDalamudPlugin
 
         debugLogWindow = new DebugLogWindow(mainWindow);
         windowSystem.AddWindow(debugLogWindow);
+
+        drawLogicDebugWindow = new DrawLogicDebugWindow();
+        windowSystem.AddWindow(drawLogicDebugWindow);
 
         DebugCommandSink = mainWindow.AddDebugLog;
         windowSystem.AddWindow(mainWindow);

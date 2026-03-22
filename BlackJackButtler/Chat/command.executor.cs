@@ -297,7 +297,7 @@ public static class CommandExecutor
                     if (!skipDelay)
                     {
                         float skipEffDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
-                            : Math.Max(MinCommandDelay, effectiveCmd.Delay * cfg.CommandSpeedMultiplier);
+                            : Math.Max(MinCommandDelay, effectiveCmd.Delay * (effectiveCmd.FixedDelay ? 1f : cfg.CommandSpeedMultiplier));
                         if (skipEffDelay > 0)
                         {
                             window.AddDebugLog($"[Executor] Waiting delay {skipEffDelay}s despite skip...");
@@ -346,7 +346,7 @@ public static class CommandExecutor
                 }
 
                 float effectiveDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
-                    : Math.Max(MinCommandDelay, effectiveCmd.Delay * cfg.CommandSpeedMultiplier);
+                    : Math.Max(MinCommandDelay, effectiveCmd.Delay * (effectiveCmd.FixedDelay ? 1f : cfg.CommandSpeedMultiplier));
 
                 if (effectiveDelay > 0)
                 {
@@ -545,7 +545,7 @@ public static class CommandExecutor
                     if (!skipDelayInt)
                     {
                         float skipEffDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
-                            : Math.Max(MinCommandDelay, effectiveCmd.Delay * cfg.CommandSpeedMultiplier);
+                            : Math.Max(MinCommandDelay, effectiveCmd.Delay * (effectiveCmd.FixedDelay ? 1f : cfg.CommandSpeedMultiplier));
                         if (skipEffDelay > 0)
                         {
                             window.AddDebugLog($"[Executor-Internal] Waiting delay {skipEffDelay}s despite skip...");
@@ -560,7 +560,7 @@ public static class CommandExecutor
                 _lastSentRawText = effectiveCmd.Text;
 
                 float effectiveDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
-                    : Math.Max(MinCommandDelay, effectiveCmd.Delay * cfg.CommandSpeedMultiplier);
+                    : Math.Max(MinCommandDelay, effectiveCmd.Delay * (effectiveCmd.FixedDelay ? 1f : cfg.CommandSpeedMultiplier));
 
                 if (effectiveDelay > 0)
                 {

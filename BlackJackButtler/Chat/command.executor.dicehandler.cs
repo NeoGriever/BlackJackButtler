@@ -130,6 +130,15 @@ public static class DiceResultHandler
                     newGroup = "PlayerBust";
                     window.AddDebugLog($"[DiceHandler] Player bust ({best} points) - canceling current chain and triggering PlayerBust");
                 }
+                else if (cfg.EnableCharlie && hand.Cards.Count >= cfg.CharlieCardCount && !hand.IsBust)
+                {
+                    hand.IsCharlie = true;
+                    hand.IsStand = true;
+                    hand.ActionLog.Add("Charlie");
+                    shouldCancel = true;
+                    newGroup = "PlayerCharlie";
+                    window.AddDebugLog($"[DiceHandler] Player Charlie ({hand.Cards.Count} cards) - triggering PlayerCharlie");
+                }
                 else if (best == 21)
                 {
                     hand.IsStand = true;
@@ -178,7 +187,7 @@ public static class DiceResultHandler
                     window.AddDebugLog($"[DiceHandler-Cancel] Internal group {newGroup} completed");
 
                     if (!isDealer && (newGroup == "PlayerBust" || newGroup == "PlayerBJ" ||
-                        newGroup == "PlayerDirtyBJ" || newGroup == "PlayerDDForcedStand"))
+                        newGroup == "PlayerDirtyBJ" || newGroup == "PlayerDDForcedStand" || newGroup == "PlayerCharlie"))
                     {
                         window.AddDebugLog($"[DiceHandler-Cancel] Calling NextTurn after {newGroup}");
                         GameEngine.NextTurn(players, cfg);

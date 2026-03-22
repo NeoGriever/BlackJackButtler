@@ -25,6 +25,8 @@ public sealed class Configuration : IPluginConfiguration
     public float MultiplierDirtyBlackjackWin = 1.0f;
     public bool RefundFullDoubleDownOnPush = false;
     public bool PlayerBJWinsOnTie = false;
+    public bool EnableCharlie = false;
+    public int CharlieCardCount = 5;
     public bool EnableBankInput = false;
     public float CommandSpeedMultiplier = 1.0f;
     public bool UnlockWaitTimer = false;
