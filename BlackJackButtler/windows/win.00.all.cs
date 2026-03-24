@@ -19,6 +19,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private readonly Configuration _config;
     private Action _save;
     private bool _presetDirty = false;
+    private bool _customEditMode = false;
     private readonly ChatLogBuffer _chatLog;
     private readonly Dalamud.Interface.ImGuiFileDialog.FileDialogManager _fileDialogManager = new();
 
@@ -177,6 +178,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         var sidebarWidth = _isSidebarVisible ? 200f : 0f;
 
         var level = _config.CurrentLevel;
+        if (level == UserLevel.Custom) EnsureCustomVisiblePages();
 
         if (_isSidebarVisible)
         {
@@ -184,27 +186,40 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             if (ImGui.SmallButton("<##hide_sidebar")) _isSidebarVisible = false;
             ImGui.SameLine();
             ImGui.TextUnformatted("BlackJack Buttler");
+            if (level == UserLevel.Custom)
+            {
+                ImGui.SameLine();
+                if (_customEditMode) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 0.9f));
+                if (ImGui.SmallButton("\u270F##custom_edit")) _customEditMode = !_customEditMode;
+                if (_customEditMode) ImGui.PopStyleColor();
+            }
+            else
+            {
+                _customEditMode = false;
+            }
 
-            ImGui.Separator();                  NavButton(Page.Main, "Main");
+            ImGui.Separator();                                          NavButton(Page.Main, "Main");
             ImGui.Separator();
-            if(level >= UserLevel.Dev)          NavButton(Page.Regexes, "Regex");
-            if(level >= UserLevel.Advanced)     NavButton(Page.Messages, "Messages");
-            if(level >= UserLevel.Advanced)     NavButton(Page.Commands, "Commands");
-            if(level >= UserLevel.Advanced)     NavButton(Page.OwnButtons, "Own Buttons");
-            if(level >= UserLevel.Advanced)     NavButton(Page.Webhooks, "Webhooks");
-            if(level >= UserLevel.Advanced)     NavButton(Page.Presets, "Presets");
-            ImGui.Separator();                  NavButton(Page.Settings, "Settings");
-                                                NavButton(Page.Stats, "Stats");
-            ImGui.Separator();                  NavButton(Page.RoundLog, "Round History");
-            if(level >= UserLevel.Dev)          NavButton(Page.Vars, "Variables");
-            if(level >= UserLevel.Dev)          NavButton(Page.Debug, "DEBUG");
-            if(level >= UserLevel.Dev)          NavButton(Page.MacroImport, "Macro Import");
-            if(level >= UserLevel.Dev)          NavButton(Page.DrawLogic, "Draw Logic");
+            if(ShouldShowPage(Page.Regexes, level))                     NavButton(Page.Regexes, "Regex");
+            if(ShouldShowPage(Page.Messages, level))                    NavButton(Page.Messages, "Messages");
+            if(ShouldShowPage(Page.Commands, level))                    NavButton(Page.Commands, "Commands");
+            if(ShouldShowPage(Page.OwnButtons, level))                  NavButton(Page.OwnButtons, "Own Buttons");
+            if(ShouldShowPage(Page.Webhooks, level))                    NavButton(Page.Webhooks, "Webhooks");
+            if(ShouldShowPage(Page.Presets, level))                     NavButton(Page.Presets, "Presets");
+            ImGui.Separator();
+            if(ShouldShowPage(Page.Settings, level))                    NavButton(Page.Settings, "Settings");
+            if(ShouldShowPage(Page.Stats, level))                       NavButton(Page.Stats, "Stats");
+            ImGui.Separator();
+            if(ShouldShowPage(Page.RoundLog, level))                    NavButton(Page.RoundLog, "Round History");
+            if(ShouldShowPage(Page.Vars, level))                        NavButton(Page.Vars, "Variables");
+            if(ShouldShowPage(Page.Debug, level))                       NavButton(Page.Debug, "DEBUG");
+            if(ShouldShowPage(Page.MacroImport, level))                 NavButton(Page.MacroImport, "Macro Import");
+            if(ShouldShowPage(Page.DrawLogic, level))                   NavButton(Page.DrawLogic, "Draw Logic");
 
             var remainingHeight = ImGui.GetContentRegionAvail().Y;
             if (remainingHeight > 50) ImGui.SetCursorPosY(ImGui.GetCursorPosY() + remainingHeight - 50);
 
-                                                NavButton(Page.Thanks, "Thanks to");
+            if(ShouldShowPage(Page.Thanks, level))                      NavButton(Page.Thanks, "Thanks to");
 
             ImGui.EndChild();
             ImGui.SameLine();
@@ -326,13 +341,50 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.2f, 0.4f, 0.75f, 1f));
         }
 
-        if (ImGui.Button(label, new Vector2(-1, 40))) _page = page;
+        if (_customEditMode && _config.CurrentLevel == UserLevel.Custom && page != Page.Main)
+        {
+            var pageName = page.ToString();
+            bool visible = _config.CustomVisiblePages.Contains(pageName);
+            if (ImGui.Checkbox($"##cv_{pageName}", ref visible))
+            {
+                if (visible) { if (!_config.CustomVisiblePages.Contains(pageName)) _config.CustomVisiblePages.Add(pageName); }
+                else _config.CustomVisiblePages.Remove(pageName);
+                _save();
+            }
+            ImGui.SameLine();
+            if (ImGui.Button(label, new Vector2(-1, 40))) _page = page;
+        }
+        else
+        {
+            if (ImGui.Button(label, new Vector2(-1, 40))) _page = page;
+        }
 
         if (selected)
         {
             ImGui.PopStyleColor(2);
             ImGui.PopStyleVar();
         }
+    }
+
+    private bool ShouldShowPage(Page page, UserLevel level)
+    {
+        if (level == UserLevel.Custom)
+            return _customEditMode || _config.CustomVisiblePages.Contains(page.ToString());
+
+        return page switch
+        {
+            Page.Regexes or Page.Vars or Page.Debug or Page.MacroImport or Page.DrawLogic => level >= UserLevel.Dev,
+            Page.Messages or Page.Commands or Page.OwnButtons or Page.Webhooks or Page.Presets => level >= UserLevel.Advanced,
+            _ => true,
+        };
+    }
+
+    private void EnsureCustomVisiblePages()
+    {
+        if (_config.CustomVisiblePages.Count > 0) return;
+        foreach (Page p in Enum.GetValues(typeof(Page)))
+            if (p != Page.Main) _config.CustomVisiblePages.Add(p.ToString());
+        _save();
     }
 
 }

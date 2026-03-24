@@ -93,7 +93,7 @@ public static class CommandExecutor
         }
 
         bool hasAlias = pState != null && !string.IsNullOrWhiteSpace(pState.Alias);
-        string aliasOrT = hasAlias ? pState!.Alias! : "<t>";
+        string aliasOrT = hasAlias ? pState!.Alias! : targetName;
 
         var trimmed = text.TrimStart();
         bool keepFirstT = hasAlias
@@ -112,11 +112,6 @@ public static class CommandExecutor
         else
         {
             text = text.Replace("<t>", aliasOrT);
-        }
-
-        if (Plugin.IsDebugMode && !hasAlias)
-        {
-            text = text.Replace("<t>", targetName);
         }
 
         if (pState != null)

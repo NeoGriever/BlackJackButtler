@@ -81,9 +81,16 @@ public partial class BlackJackButtlerWindow
             ImGui.TextUnformatted("User Level");
             ImGui.SameLine(300f);
             ImGui.SetNextItemWidth(200f);
-            if (BJBGui.Combo("##user_level", ref level, "Beginner\0Advanced\0Dev\0")) {
+            if (BJBGui.Combo("##user_level", ref level, "Beginner\0Advanced\0Dev\0Custom\0")) {
                 _config.CurrentLevel = (UserLevel)level;
                 _save();
+            }
+            if (_config.CurrentLevel == UserLevel.Custom)
+            {
+                ImGui.SameLine();
+                if (_customEditMode) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 0.9f));
+                if (BJBGui.SmallButton("\u270F##custom_edit_settings")) _customEditMode = !_customEditMode;
+                if (_customEditMode) ImGui.PopStyleColor();
             }
 
             ImGui.Spacing();
