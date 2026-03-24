@@ -615,6 +615,20 @@ public partial class BlackJackButtlerWindow
                 _save();
             }
 
+            ImGui.Spacing();
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Popout Bar");
+            ImGui.Separator();
+            ImGui.Spacing();
+
+            ImGui.TextUnformatted("Transparent Background");
+            ImGui.SameLine(300f);
+            if (ImGui.Checkbox("##bar_nobg", ref _config.ButtonBarNoBackground)) _save();
+
+            ImGui.TextUnformatted("Lock Position");
+            ImGui.SameLine(300f);
+            if (ImGui.Checkbox("##bar_lock", ref _config.ButtonBarLocked)) _save();
+
             ImGui.EndTabItem();
         }
     }

@@ -458,6 +458,35 @@ public partial class BlackJackButtlerWindow
     {
         if (_config.CustomButtonOrder.Count == 0 && _config.CustomCommandGroups.Count == 0) return;
 
+        if (_config.ButtonBarPopout)
+        {
+            if (BJBGui.SmallButton("\u2190##popout_close"))
+            {
+                _config.ButtonBarPopout = false;
+                Plugin.Instance.CloseButtonBar();
+                _save();
+            }
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Show buttons here");
+            ImGui.Spacing();
+            return;
+        }
+
+        RenderCustomButtons("main");
+
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("\u2192##popout_open"))
+        {
+            _config.ButtonBarPopout = true;
+            Plugin.Instance.OpenButtonBar();
+            _save();
+        }
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Pop out buttons");
+
+        ImGui.Spacing();
+    }
+
+    internal void RenderCustomButtons(string idSuffix)
+    {
         bool isRunning = CommandExecutor.IsRunning;
         if (isRunning) ImGui.BeginDisabled();
 
@@ -531,9 +560,9 @@ public partial class BlackJackButtlerWindow
 
             bool clicked;
             if (colorPushCount > 0 && group.UseCustomTextColor)
-                clicked = ImGui.Button($"{group.Name}##custom_{i}");
+                clicked = ImGui.Button($"{group.Name}##{idSuffix}_{i}");
             else
-                clicked = BJBGui.Button($"{group.Name}##custom_{i}");
+                clicked = BJBGui.Button($"{group.Name}##{idSuffix}_{i}");
 
             if (colorPushCount > 0) ImGui.PopStyleColor(colorPushCount);
 
@@ -553,7 +582,6 @@ public partial class BlackJackButtlerWindow
         }
 
         if (isRunning) ImGui.EndDisabled();
-        ImGui.Spacing();
     }
 
     private bool IsLocalPlayerPartyLeader()

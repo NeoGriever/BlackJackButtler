@@ -106,6 +106,10 @@ public sealed class Configuration : IPluginConfiguration
     public float CustomButtonFontScale = 1.0f;
     public bool CustomButtonUseMono = false;
 
+    public bool ButtonBarPopout = false;
+    public bool ButtonBarNoBackground = false;
+    public bool ButtonBarLocked = false;
+
     public List<DrawLogicEntry> DrawLogicEntries = new();
     public string DrawLogicStartEntry = "";
     public bool DrawLogicSeeded = false;

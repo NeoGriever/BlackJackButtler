@@ -57,6 +57,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly DebugLogWindow debugLogWindow;
     private readonly DrawLogicDebugWindow drawLogicDebugWindow;
     private readonly NotepadWindow notepadWindow;
+    private readonly CustomButtonBarWindow buttonBarWindow;
     private DateTime _lastSync = DateTime.MinValue;
     private DateTime _lastIdleTick = DateTime.MinValue;
     private volatile bool _autoActionInFlight = false;
@@ -73,6 +74,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public void OpenDebugPopout() => debugLogWindow.IsOpen = true;
     public void OpenDrawLogicDebug() => drawLogicDebugWindow.IsOpen = true;
+    public void OpenButtonBar() { buttonBarWindow.RequestRepositioning(); buttonBarWindow.IsOpen = true; }
+    public void CloseButtonBar() => buttonBarWindow.IsOpen = false;
     public BlackJackButtlerWindow GetMainWindow() => mainWindow;
     private string _cachedLocalName = string.Empty;
 
@@ -97,6 +100,11 @@ public sealed class Plugin : IDalamudPlugin
         windowSystem.AddWindow(notepadWindow);
 
         mainWindow = new BlackJackButtlerWindow(Configuration, () => Configuration.Save(), chatLog, notepadWindow);
+
+        buttonBarWindow = new CustomButtonBarWindow(Configuration, () => Configuration.Save(),
+            () => mainWindow?.GetWindowRect() ?? (Vector2.Zero, Vector2.Zero), mainWindow);
+        windowSystem.AddWindow(buttonBarWindow);
+        if (Configuration.ButtonBarPopout) buttonBarWindow.IsOpen = true;
 
         debugLogWindow = new DebugLogWindow(mainWindow);
         windowSystem.AddWindow(debugLogWindow);
