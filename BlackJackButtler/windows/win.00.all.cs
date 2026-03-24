@@ -13,7 +13,7 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow : Window, IDisposable
 {
-    private enum Page { Main, Regexes, Messages, Commands , OwnButtons , Settings , Vars , RoundLog , Debug , MacroImport , Thanks , Stats , Webhooks , Presets , DrawLogic }
+    private enum Page { Main, Regexes, Messages, Commands , OwnButtons , Settings , Vars , RoundLog , Debug , Thanks , Stats , Webhooks , Presets , DrawLogic }
     private Page _page = Page.Main;
 
     private readonly Configuration _config;
@@ -213,7 +213,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             if(ShouldShowPage(Page.RoundLog, level))                    NavButton(Page.RoundLog, "Round History");
             if(ShouldShowPage(Page.Vars, level))                        NavButton(Page.Vars, "Variables");
             if(ShouldShowPage(Page.Debug, level))                       NavButton(Page.Debug, "DEBUG");
-            if(ShouldShowPage(Page.MacroImport, level))                 NavButton(Page.MacroImport, "Macro Import");
             if(ShouldShowPage(Page.DrawLogic, level))                   NavButton(Page.DrawLogic, "Draw Logic");
 
             var remainingHeight = ImGui.GetContentRegionAvail().Y;
@@ -273,7 +272,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Vars:         DrawVarsPage(); break;
             case Page.RoundLog:     DrawRoundLogPage(); break;
             case Page.Debug:        DrawDebugPage(); break;
-            case Page.MacroImport:  DrawMacroImportPage(); break;
             case Page.Thanks:       DrawThanksPage(); break;
             case Page.Stats:        DrawStatsPage(); break;
             case Page.Webhooks:     DrawWebhooksPage(); break;
@@ -373,7 +371,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
         return page switch
         {
-            Page.Regexes or Page.Vars or Page.Debug or Page.MacroImport or Page.DrawLogic => level >= UserLevel.Dev,
+            Page.Regexes or Page.Vars or Page.Debug or Page.DrawLogic => level >= UserLevel.Dev,
             Page.Messages or Page.Commands or Page.OwnButtons or Page.Webhooks or Page.Presets => level >= UserLevel.Advanced,
             _ => true,
         };
