@@ -96,18 +96,34 @@ public static class CommandExecutor
         string aliasOrT = hasAlias ? pState!.Alias! : targetName;
 
         var trimmed = text.TrimStart();
-        bool keepFirstT = hasAlias
-            && (trimmed.StartsWith("/tell ", StringComparison.OrdinalIgnoreCase)
-             || trimmed.StartsWith("/trade ", StringComparison.OrdinalIgnoreCase));
+        bool isTellCommand = trimmed.StartsWith("/tell ", StringComparison.OrdinalIgnoreCase)
+                          || trimmed.StartsWith("/t ", StringComparison.OrdinalIgnoreCase);
 
-        if (keepFirstT)
+        if (isTellCommand && text.Contains("<t>"))
         {
+            string currentTarget = Plugin.IsDebugMode
+                ? GameEngine.GetCurrentTargetName()
+                : (Plugin.TargetManager.Target?.Name.TextValue ?? string.Empty);
+
+            bool isCorrectlyTargeted = pState != null
+                && !string.IsNullOrWhiteSpace(currentTarget)
+                && currentTarget.Equals(pState.Name, StringComparison.OrdinalIgnoreCase);
+
             var idx = text.IndexOf("<t>", StringComparison.Ordinal);
-            if (idx >= 0)
+            string firstReplacement;
+            if (isCorrectlyTargeted)
             {
-                var after = text[(idx + 3)..].Replace("<t>", aliasOrT);
-                text = string.Concat(text.AsSpan(0, idx + 3), after);
+                firstReplacement = "<t>";
             }
+            else
+            {
+                string realName = pState?.Name ?? targetName;
+                string worldName = pState != null ? VipManager.ResolveWorldName(pState.WorldId) : string.Empty;
+                firstReplacement = !string.IsNullOrWhiteSpace(worldName)
+                    ? $"{realName}@{worldName}" : realName;
+            }
+            var after = text[(idx + 3)..].Replace("<t>", aliasOrT);
+            text = string.Concat(text.AsSpan(0, idx), firstReplacement, after);
         }
         else
         {
@@ -158,7 +174,7 @@ public static class CommandExecutor
         return text.Replace("+{PlayerScore}", score.ToString(CultureInfo.InvariantCulture));
     }
 
-    private static string ReplaceMessageStacks(string text, Configuration cfg, string targetPlayerName, PlayerState? pState)
+    private static string ReplaceMessageStacks(string text, Configuration cfg)
     {
         return StackTokenRegex.Replace(text, m =>
         {
@@ -172,13 +188,7 @@ public static class CommandExecutor
             if (batch == null)
                 return string.Empty;
 
-            var msg = batch.GetNextMessage() ?? string.Empty;
-
-            msg = ProcessContextTokens(msg, pState, targetPlayerName, cfg);
-            msg = ReplacePlayerScoreFirst(msg);
-            msg = VariableManager.ProcessMessage(msg);
-
-            return msg;
+            return batch.GetNextMessage(cfg.EnableAntiDouble) ?? string.Empty;
         });
     }
 
@@ -276,11 +286,9 @@ public static class CommandExecutor
 
                 window.AddDebugLog($"[Executor] Processing Step {step}: {effectiveCmd.Text}");
 
-                string processedText = ProcessContextTokens(effectiveCmd.Text, pState, targetPlayerName, cfg);
-
+                string processedText = ReplaceMessageStacks(effectiveCmd.Text, cfg);
+                processedText = ProcessContextTokens(processedText, pState, targetPlayerName, cfg);
                 processedText = ReplacePlayerScoreFirst(processedText);
-                processedText = ReplaceMessageStacks(processedText, cfg, targetPlayerName, pState);
-
                 processedText = VariableManager.ProcessMessage(processedText);
 
                 window.AddDebugLog($"[Executor] Final Text Step {step}: {processedText}");
@@ -372,9 +380,9 @@ public static class CommandExecutor
         if (string.IsNullOrWhiteSpace(text))
             return text;
 
+        text = ReplaceMessageStacks(text, cfg);
         text = ProcessContextTokens(text, pState, targetPlayerName, cfg);
         text = ReplacePlayerScoreFirst(text);
-        text = ReplaceMessageStacks(text, cfg, targetPlayerName, pState);
         text = VariableManager.ProcessMessage(text);
 
         return text;
@@ -524,11 +532,9 @@ public static class CommandExecutor
 
                 window.AddDebugLog($"[Executor-Internal] Processing Step {step}: {effectiveCmd.Text}");
 
-                string processedText = ProcessContextTokens(effectiveCmd.Text, pState, targetPlayerName, cfg);
-
+                string processedText = ReplaceMessageStacks(effectiveCmd.Text, cfg);
+                processedText = ProcessContextTokens(processedText, pState, targetPlayerName, cfg);
                 processedText = ReplacePlayerScoreFirst(processedText);
-                processedText = ReplaceMessageStacks(processedText, cfg, targetPlayerName, pState);
-
                 processedText = VariableManager.ProcessMessage(processedText);
 
                 window.AddDebugLog($"[Executor-Internal] Final Text Step {step}: {processedText}");

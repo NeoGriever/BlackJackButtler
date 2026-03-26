@@ -45,7 +45,12 @@ public static class WebhookManager
                         result = "BUST";
                         if (webhook.ShowBetAmounts) amountStr = $" (-{hand.Bet:N0})";
                     }
-                    else if (dealerBust || pScore > dealerScore || hand.IsCharlie || (cfg.PlayerBJWinsOnTie && pScore == 21 && dealerScore == 21))
+                    else if (pScore == dealerScore && pScore == 21 && GameEngine.EvaluateBJTie(hand, dealer, cfg.BlackjackTieRule) < 0)
+                    {
+                        result = "LOST";
+                        if (webhook.ShowBetAmounts) amountStr = $" (-{hand.Bet:N0})";
+                    }
+                    else if (dealerBust || pScore > dealerScore || hand.IsCharlie || (pScore == 21 && dealerScore == 21 && GameEngine.EvaluateBJTie(hand, dealer, cfg.BlackjackTieRule) > 0))
                     {
                         float mult = cfg.MultiplierNormalWin;
                         if (hand.IsNaturalBlackJack) mult = cfg.MultiplierBlackjackWin;
