@@ -130,7 +130,7 @@ public partial class BlackJackButtlerWindow
             _config.MultiplierBlackjackWin             = snap.MultiplierBlackjackWin;
             _config.MultiplierDirtyBlackjackWin        = snap.MultiplierDirtyBlackjackWin;
             _config.RefundFullDoubleDownOnPush         = snap.RefundFullDoubleDownOnPush;
-            _config.PlayerBJWinsOnTie                  = snap.PlayerBJWinsOnTie;
+            _config.BlackjackTieRule                    = snap.BlackjackTieRule;
             _config.EnableCharlie                      = snap.EnableCharlie;
             _config.CharlieCardCount                   = snap.CharlieCardCount;
             _config.EnableBankInput                    = snap.EnableBankInput;

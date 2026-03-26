@@ -173,8 +173,14 @@ public partial class BlackJackButtlerWindow
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: If a player has DD and got pushed, the DD bet gets pushed too.\nInactive: If a player has DD and got pushed, the DD bet is lost.");
 
             ImGui.Spacing();
-            if (ImGui.Checkbox("Player BJ wins on tie", ref _config.PlayerBJWinsOnTie)) _save();
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: If the player has a Blackjack (natural or dirty) and the dealer also has 21, the player wins.\nInactive: Both having 21 results in a push.");
+            int bjTieRule = (int)_config.BlackjackTieRule;
+            ImGui.SetNextItemWidth(250f);
+            if (BJBGui.Combo("BJ Tie Rule##bj_tie_rule", ref bjTieRule, "Always Push\0Player NatBJ Wins\0Dealer NatBJ Wins\0NatBJ Beats Dirty\0"))
+            {
+                _config.BlackjackTieRule = (BlackjackTieRule)bjTieRule;
+                _save();
+            }
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Determines the outcome when both player and dealer have 21:\n- Always Push: Any 21 tie is a push.\n- Player NatBJ Wins: Player's Natural BJ wins the tie.\n- Dealer NatBJ Wins: Dealer's Natural BJ wins the tie.\n- NatBJ Beats Dirty: Natural BJ beats Dirty 21, same type pushes.");
 
             ImGui.Spacing();
             if (ImGui.Checkbox("Enable Charlie", ref _config.EnableCharlie)) _save();
@@ -211,7 +217,7 @@ public partial class BlackJackButtlerWindow
 
             ImGui.Spacing();
             if (ImGui.Checkbox("Anti-Double", ref _config.EnableAntiDouble)) _save();
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Skips commands marked with AD flag when the previous command had identical text.\nEnable per command in the Commands page.");
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Defines AD-flagged entries will not get executed twice.");
 
             ImGui.Spacing();
             if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
@@ -883,7 +889,7 @@ public partial class BlackJackButtlerWindow
         TryApply<float> (j, "MultiplierBlackjackWin",                 v => _config.MultiplierBlackjackWin = v);
         TryApply<float> (j, "MultiplierDirtyBlackjackWin",            v => _config.MultiplierDirtyBlackjackWin = v);
         TryApply<bool>  (j, "RefundFullDoubleDownOnPush",             v => _config.RefundFullDoubleDownOnPush = v);
-        TryApply<bool>  (j, "PlayerBJWinsOnTie",                      v => _config.PlayerBJWinsOnTie = v);
+        TryApply<int>   (j, "BlackjackTieRule",                       v => _config.BlackjackTieRule = (BlackjackTieRule)v);
         TryApply<bool>  (j, "EnableCharlie",                         v => _config.EnableCharlie = v);
         TryApply<int>   (j, "CharlieCardCount",                      v => _config.CharlieCardCount = v);
         TryApply<bool>  (j, "EnableBankInput",                        v => _config.EnableBankInput = v);

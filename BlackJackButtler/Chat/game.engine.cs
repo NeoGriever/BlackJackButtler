@@ -172,6 +172,20 @@ public static partial class GameEngine
         await logic();
     }
 
+    internal static int EvaluateBJTie(HandState hand, PlayerState dealer, BlackjackTieRule rule)
+    {
+        bool playerNat = hand.IsNaturalBlackJack;
+        bool dealerNat = dealer.Hands.Count > 0 && dealer.Hands[0].IsNaturalBlackJack;
+
+        return rule switch
+        {
+            BlackjackTieRule.PlayerNatBJWins => playerNat ? 1 : 0,
+            BlackjackTieRule.DealerNatBJWins => dealerNat ? -1 : 0,
+            BlackjackTieRule.NatBJBeatsDirty => playerNat == dealerNat ? 0 : (playerNat ? 1 : -1),
+            _ => 0,
+        };
+    }
+
     public static async Task EvaluateFinalResults(List<PlayerState> players, PlayerState dealer, Configuration cfg)
     {
         if (Interlocked.CompareExchange(ref _payoutGuard, 1, 0) != 0)
@@ -210,7 +224,13 @@ public static partial class GameEngine
                         hand.RoundResult = -hand.Bet;
                         p.LastRoundResult -= hand.Bet;
                     }
-                    else if (dealerBust || pScore > dealerScore || hand.IsCharlie || (cfg.PlayerBJWinsOnTie && pScore == 21 && dealerScore == 21))
+                    else if (pScore == dealerScore && pScore == 21 && EvaluateBJTie(hand, dealer, cfg.BlackjackTieRule) < 0)
+                    {
+                        lossList.Add(shortName);
+                        hand.RoundResult = -hand.Bet;
+                        p.LastRoundResult -= hand.Bet;
+                    }
+                    else if (dealerBust || pScore > dealerScore || hand.IsCharlie || (pScore == 21 && dealerScore == 21 && EvaluateBJTie(hand, dealer, cfg.BlackjackTieRule) > 0))
                     {
                         winList.Add(shortName);
                         float mult = cfg.MultiplierNormalWin;
@@ -273,7 +293,13 @@ public static partial class GameEngine
                         p.LastRoundResult -= hand.Bet;
                         await CommandExecutor.ExecuteGroup("ResultPlayerBusted", p.DisplayName, cfg);
                     }
-                    else if (dealerBust || pScore > dealerScore || hand.IsCharlie || (cfg.PlayerBJWinsOnTie && pScore == 21 && dealerScore == 21))
+                    else if (pScore == dealerScore && pScore == 21 && EvaluateBJTie(hand, dealer, cfg.BlackjackTieRule) < 0)
+                    {
+                        hand.RoundResult = -hand.Bet;
+                        p.LastRoundResult -= hand.Bet;
+                        await CommandExecutor.ExecuteGroup("ResultPlayerLost", p.DisplayName, cfg);
+                    }
+                    else if (dealerBust || pScore > dealerScore || hand.IsCharlie || (pScore == 21 && dealerScore == 21 && EvaluateBJTie(hand, dealer, cfg.BlackjackTieRule) > 0))
                     {
                         float mult = cfg.MultiplierNormalWin;
                         if (hand.IsNaturalBlackJack) mult = cfg.MultiplierBlackjackWin;

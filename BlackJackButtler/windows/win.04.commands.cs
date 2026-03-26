@@ -78,9 +78,7 @@ public partial class BlackJackButtlerWindow
     /// </summary>
     private void DrawCommandGroupTable(CommandGroup group)
     {
-        bool showAD = _config.EnableAntiDouble;
-        int colCount = 6 + (showAD ? 1 : 0) + 1;
-        if (!ImGui.BeginTable($"table_{group.Name}", colCount, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+        if (!ImGui.BeginTable($"table_{group.Name}", 8, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
             return;
 
         ImGui.TableSetupColumn("Act",                    ImGuiTableColumnFlags.WidthFixed,   30);
@@ -88,8 +86,7 @@ public partial class BlackJackButtlerWindow
         ImGui.TableSetupColumn("Command / Chat Message", ImGuiTableColumnFlags.WidthStretch);
         ImGui.TableSetupColumn("Wait (s)",               ImGuiTableColumnFlags.WidthFixed,  100);
         ImGui.TableSetupColumn("1x",                    ImGuiTableColumnFlags.WidthFixed,   25);
-        if (showAD)
-            ImGui.TableSetupColumn("AD",                 ImGuiTableColumnFlags.WidthFixed,   25);
+        ImGui.TableSetupColumn("AD",                     ImGuiTableColumnFlags.WidthFixed,   25);
         ImGui.TableSetupColumn("",                       ImGuiTableColumnFlags.WidthFixed,   50);
         ImGui.TableSetupColumn("X",                      ImGuiTableColumnFlags.WidthFixed,   30);
         ImGui.TableHeadersRow();
@@ -190,16 +187,14 @@ public partial class BlackJackButtlerWindow
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Fixed Delay: Ignore Command Speed multiplier.\nAlways use the base delay (1x).");
 
-            // Col 5 — anti-double (conditional)
-            if (showAD)
-            {
-                ImGui.TableNextColumn();
-                if (ImGui.Checkbox("##ad", ref cmd.NonDoubled)) _save();
-                if (ImGui.IsItemHovered())
-                    ImGui.SetTooltip("Anti-Double: Skip if previous command had the same text.");
-            }
+            // Col 5 — anti-double
+            ImGui.TableNextColumn();
+            bool isAD = cmd.NonDoubled;
+            if (isAD) { ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor); ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor); }
+            if (BJBGui.SmallButton($"AD##ad_{group.Name}_{i}")) { cmd.NonDoubled = !cmd.NonDoubled; _save(); }
+            if (isAD) ImGui.PopStyleColor(2);
 
-            // Col 5 — up / down
+            // Col 6 — up / down
             ImGui.TableNextColumn();
             bool isFirst = i == 0;
             bool isLast  = i == group.Commands.Count - 1;

@@ -7,6 +7,7 @@ using BlackJackButtler.Regex;
 
 namespace BlackJackButtler;
 public enum UserLevel { Beginner, Advanced, Dev, Custom }
+public enum BlackjackTieRule { AlwaysPush, PlayerNatBJWins, DealerNatBJWins, NatBJBeatsDirty }
 
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
@@ -24,7 +25,7 @@ public sealed class Configuration : IPluginConfiguration
     public float MultiplierBlackjackWin = 1.5f;
     public float MultiplierDirtyBlackjackWin = 1.0f;
     public bool RefundFullDoubleDownOnPush = false;
-    public bool PlayerBJWinsOnTie = false;
+    public BlackjackTieRule BlackjackTieRule = BlackjackTieRule.AlwaysPush;
     public bool EnableCharlie = false;
     public int CharlieCardCount = 5;
     public bool EnableBankInput = false;
@@ -177,26 +178,52 @@ public sealed class MessageBatch
   public string Name { get; set; } = "New Batch";
   public bool IsExpanded { get; set; } = true;
   public List<string> Messages { get; set; } = new();
+  public List<bool> ADFlags { get; set; } = new();
   public SelectionMode Mode { get; set; } = SelectionMode.Random;
   public int IterativeIndex { get; set; } = 0;
+  [Newtonsoft.Json.JsonIgnore] public string LastSelected = string.Empty;
 
-  public string GetNextMessage()
+  public bool GetAD(int index) => index >= 0 && index < ADFlags.Count && ADFlags[index];
+
+  public void SetAD(int index, bool value)
+  {
+    while (ADFlags.Count <= index) ADFlags.Add(false);
+    ADFlags[index] = value;
+  }
+
+  public string GetNextMessage(bool enableAntiDouble = false)
   {
     if (Messages.Count == 0) return string.Empty;
 
+    int startIndex;
     switch (Mode)
     {
       case SelectionMode.First:
-        return Messages[0];
+        startIndex = 0;
+        break;
       case SelectionMode.Iterative:
         if (IterativeIndex >= Messages.Count) IterativeIndex = 0;
-        var msg = Messages[IterativeIndex];
+        startIndex = IterativeIndex;
         IterativeIndex = (IterativeIndex + 1) % Messages.Count;
-        return msg;
+        break;
       case SelectionMode.Random:
       default:
-        return Messages[Random.Shared.Next(Messages.Count)];
+        startIndex = Random.Shared.Next(Messages.Count);
+        break;
     }
+
+    string picked = Messages[startIndex];
+
+    if (enableAntiDouble && GetAD(startIndex) && picked == LastSelected && Messages.Count > 1)
+    {
+      int nextIndex = (startIndex + 1) % Messages.Count;
+      picked = Messages[nextIndex];
+      if (Mode == SelectionMode.Iterative)
+        IterativeIndex = (nextIndex + 1) % Messages.Count;
+    }
+
+    LastSelected = picked;
+    return picked;
   }
 }
 
