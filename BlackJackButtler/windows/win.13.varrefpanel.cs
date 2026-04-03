@@ -24,6 +24,7 @@ public partial class BlackJackButtlerWindow
         ImGui.TextColored(new Vector4(1f, 0.85f, 0.4f, 1f), "Context Tokens");
         ImGui.Separator();
         CopyRow("<t>", "Target player name (alias-aware)");
+        CopyRow("<.>", "Protected <t> — unaffected by replacements (for /tell target)");
         CopyRow("<points>", "Current hand points (e.g. 15/25)");
         CopyRow("<cards>", "Current hand cards");
         CopyRow("<minbet>", $"Min bet ({_config.MinBet.ToString("N0", culture)} Gil)");

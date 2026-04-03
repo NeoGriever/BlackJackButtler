@@ -42,6 +42,7 @@ public partial class BlackJackButtlerWindow
         if (BJBGui.Button("Start Bank"))
         {
             StatsManager.StartSession();
+            SaveSessionFromUI();
         }
         ImGui.EndDisabled();
 
@@ -51,6 +52,7 @@ public partial class BlackJackButtlerWindow
         if (BJBGui.Button("Stop Bank"))
         {
             StatsManager.StopSession();
+            SaveSessionFromUI();
         }
         ImGui.EndDisabled();
 
@@ -75,6 +77,7 @@ public partial class BlackJackButtlerWindow
                 if (BJBGui.SmallButton("OK##edit_start_bank_ok") || ImGui.IsKeyPressed(ImGuiKey.Enter))
                 {
                     StatsManager.StartBank = _editStartBankValue;
+                    SaveSessionFromUI();
                     ImGui.CloseCurrentPopup();
                 }
                 ImGui.EndPopup();
@@ -89,13 +92,22 @@ public partial class BlackJackButtlerWindow
         bool holdingShift = io.KeyShift;
 
         if (BJBGui.SmallButton("50k"))
+        {
             StatsManager.AddTip(holdingShift ? -50000 : 50000);
+            SaveSessionFromUI();
+        }
         ImGui.SameLine();
         if (BJBGui.SmallButton("100k"))
+        {
             StatsManager.AddTip(holdingShift ? -100000 : 100000);
+            SaveSessionFromUI();
+        }
         ImGui.SameLine();
         if (BJBGui.SmallButton("500k"))
+        {
             StatsManager.AddTip(holdingShift ? -500000 : 500000);
+            SaveSessionFromUI();
+        }
 
         if (holdingShift)
         {

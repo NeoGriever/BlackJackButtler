@@ -16,6 +16,8 @@ public static class RegexEngine
 
     public static void ClearNextRoundVotes() => _nextRoundVotes.Clear();
 
+    public static bool HasPlayerVoted(string name) => _nextRoundVotes.Contains(name);
+
     public static int? LastDetectedCardValue { get; private set; }
 
     public static bool TryConsumeDetectedCard(out int cardValue)

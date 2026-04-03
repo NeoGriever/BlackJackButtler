@@ -17,6 +17,12 @@ public class SessionSnapshot
     public List<(int Index, GameSnapshot Snapshot)> GameHistory { get; set; } = new();
     public int CurrentHistoryIndex { get; set; }
     public bool IsRecognitionActive { get; set; }
+    public long StatsStartBank { get; set; }
+    public long? StatsEndBank { get; set; }
+    public DateTime? StatsStartTime { get; set; }
+    public DateTime? StatsEndTime { get; set; }
+    public long StatsTips { get; set; }
+    public bool StatsIsRunning { get; set; }
 }
 
 public static class SessionManager
@@ -39,11 +45,6 @@ public static class SessionManager
             return;
         }
 
-        if (phase == GamePhase.Waiting || phase == GamePhase.InitialDeal)
-        {
-            return;
-        }
-
         try
         {
             var snapshot = new SessionSnapshot
@@ -54,7 +55,13 @@ public static class SessionManager
                 Dealer = dealer.Clone(),
                 GameHistory = GameLog.GetAllSnapshots(),
                 CurrentHistoryIndex = GameLog.CurrentIndex,
-                IsRecognitionActive = isRecognitionActive
+                IsRecognitionActive = isRecognitionActive,
+                StatsStartBank = StatsManager.StartBank,
+                StatsEndBank = StatsManager.EndBank,
+                StatsStartTime = StatsManager.StartTime,
+                StatsEndTime = StatsManager.EndTime,
+                StatsTips = StatsManager.Tips,
+                StatsIsRunning = StatsManager.IsRunning
             };
 
             var json = JsonConvert.SerializeObject(snapshot, Formatting.Indented, new JsonSerializerSettings
@@ -147,6 +154,13 @@ public static class SessionManager
             phase = snapshot.CurrentPhase;
             history = snapshot.GameHistory;
             currentHistoryIndex = snapshot.CurrentHistoryIndex;
+
+            StatsManager.StartBank = snapshot.StatsStartBank;
+            StatsManager.EndBank = snapshot.StatsEndBank;
+            StatsManager.StartTime = snapshot.StatsStartTime;
+            StatsManager.EndTime = snapshot.StatsEndTime;
+            StatsManager.Tips = snapshot.StatsTips;
+            StatsManager.IsRunning = snapshot.StatsIsRunning;
 
             Plugin.Log.Information($"[SessionManager] Session restored successfully - {players.Count} players, Phase: {phase}");
             return true;

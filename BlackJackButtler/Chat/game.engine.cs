@@ -344,6 +344,8 @@ public static partial class GameEngine
         {
             Plugin.Log.Error($"[WebhookManager] Failed to trigger webhook: {ex.Message}");
         }
+
+        SaveSessionIfNeeded(players);
     }
 
     private static string FormatResultCategory(List<string> names, string singular, string plural)

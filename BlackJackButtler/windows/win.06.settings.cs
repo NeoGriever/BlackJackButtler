@@ -764,6 +764,10 @@ public partial class BlackJackButtlerWindow
         if (ImGui.BeginTabItem("System"))
         {
             ImGui.Spacing();
+
+            if (ImGui.Checkbox("Disable update popup", ref _config.DisableUpdatePopup)) _save();
+
+            ImGui.Spacing();
             ImGui.TextUnformatted("Defaults");
             ImGui.Separator();
             ImGui.Spacing();
