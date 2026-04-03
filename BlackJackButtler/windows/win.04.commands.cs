@@ -45,8 +45,6 @@ public partial class BlackJackButtlerWindow
                 "Stand" => "Player Stand",
                 "DD" => "Player Double Down",
                 "Split" => "Player Split",
-                "PlayerBJ" => "Player has Natural Blackjack",
-                "PlayerDirtyBJ" => "Player has Dirty Blackjack",
                 "PlayerBust" => "Player Busted",
                 "DealStart" => "Dealer Start",
                 "DealHit" => "Dealer Hit",

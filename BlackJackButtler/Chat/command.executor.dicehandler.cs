@@ -76,8 +76,8 @@ public static class DiceResultHandler
                         hand.IsStand = true;
                         hand.IsNaturalBlackJack = true;
                         shouldCancel = true;
-                        newGroup = "PlayerBJ";
-                        window.AddDebugLog("[DiceHandler] Player natural blackjack - triggering PlayerBJ");
+                        newGroup = "Natural BlackJack Notify";
+                        window.AddDebugLog("[DiceHandler] Player natural blackjack - triggering Natural BlackJack Notify");
                     }
                     else
                     {
@@ -136,14 +136,14 @@ public static class DiceResultHandler
                     hand.IsStand = true;
                     hand.ActionLog.Add("Charlie");
                     shouldCancel = true;
-                    newGroup = "PlayerCharlie";
-                    window.AddDebugLog($"[DiceHandler] Player Charlie ({hand.Cards.Count} cards) - triggering PlayerCharlie");
+                    newGroup = "Charlie Notify";
+                    window.AddDebugLog($"[DiceHandler] Player Charlie ({hand.Cards.Count} cards) - triggering Charlie Notify");
                 }
                 else if (best == 21)
                 {
                     hand.IsStand = true;
                     shouldCancel = true;
-                    newGroup = (hand.Cards.Count == 2 && hand.IsNaturalBlackJack) ? "PlayerBJ" : "PlayerDirtyBJ";
+                    newGroup = (hand.Cards.Count == 2 && hand.IsNaturalBlackJack) ? "Natural BlackJack Notify" : "Dirty BlackJack Notify";
                     window.AddDebugLog($"[DiceHandler] Player hit 21 - triggering {newGroup}");
                 }
                 else if (hand.IsDoubleDown)
@@ -158,8 +158,8 @@ public static class DiceResultHandler
 
         if (shouldCancel && !string.IsNullOrEmpty(newGroup))
         {
-            window.AddDebugLog($"[DiceHandler] Completing current group before starting: {newGroup}");
-            CommandExecutor.NotifyDiceResult();
+            window.AddDebugLog($"[DiceHandler] Canceling current group before starting: {newGroup}");
+            CommandExecutor.CancelCurrentGroup();
             CommandExecutor.SignalFollowUpPending();
 
             Task.Run(async () =>
@@ -182,12 +182,12 @@ public static class DiceResultHandler
                         window.AddDebugLog("[DiceHandler-Cancel] Skipped wait (executor already finished)");
                     }
 
-                    window.AddDebugLog($"[DiceHandler-Cancel] Executing internal group: {newGroup}");
-                    await CommandExecutor.ExecuteInternalGroup(newGroup, target.Name, cfg);
-                    window.AddDebugLog($"[DiceHandler-Cancel] Internal group {newGroup} completed");
+                    window.AddDebugLog($"[DiceHandler-Cancel] Executing group: {newGroup}");
+                    await CommandExecutor.ExecuteGroup(newGroup, target.DisplayName, cfg);
+                    window.AddDebugLog($"[DiceHandler-Cancel] Group {newGroup} completed");
 
-                    if (!isDealer && (newGroup == "PlayerBust" || newGroup == "PlayerBJ" ||
-                        newGroup == "PlayerDirtyBJ" || newGroup == "PlayerDDForcedStand" || newGroup == "PlayerCharlie"))
+                    if (!isDealer && (newGroup == "PlayerBust" || newGroup == "Natural BlackJack Notify" ||
+                        newGroup == "Dirty BlackJack Notify" || newGroup == "PlayerDDForcedStand" || newGroup == "Charlie Notify"))
                     {
                         window.AddDebugLog($"[DiceHandler-Cancel] Calling NextTurn after {newGroup}");
                         GameEngine.NextTurn(players, cfg);

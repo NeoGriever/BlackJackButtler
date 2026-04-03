@@ -77,6 +77,9 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool dismissDevWarning = false;
 
+    public string LastSeenVersion = "";
+    public bool DisableUpdatePopup = false;
+
     public float InitialViewDirection = 0f;
     public bool LookEveryTime = false;
 
@@ -114,6 +117,7 @@ public sealed class Configuration : IPluginConfiguration
     public List<DrawLogicEntry> DrawLogicEntries = new();
     public string DrawLogicStartEntry = "";
     public bool DrawLogicSeeded = false;
+    public bool DotTokenMigrated = false;
     public string DrawLogicScriptDir = "";
 
     public float DrawLogicScale = 1.0f;

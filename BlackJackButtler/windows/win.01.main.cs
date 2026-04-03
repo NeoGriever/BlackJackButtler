@@ -681,6 +681,7 @@ public partial class BlackJackButtlerWindow
                 if (joinPhase == GamePhase.InitialDeal || joinPhase == GamePhase.PlayersTurn || joinPhase == GamePhase.DealerTurn)
                     p.JoinedMidRound = true;
                 ActivityLogManager.LogPlayerJoin(p.DisplayName);
+                SaveSessionFromUI();
             }
             if (hlJoin) ImGui.PopStyleColor(2);
         }
@@ -705,6 +706,7 @@ public partial class BlackJackButtlerWindow
                     p.IsCurrentTurn = false;
                 }
                 p.CurrentBet = 0;
+                SaveSessionFromUI();
             }
             if (hlLeave) ImGui.PopStyleColor(2);
         }
@@ -807,7 +809,15 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.TableNextColumn();
-        var nameColor = p.IsCurrentTurn ? new Vector4(1f, 1f, 0.2f, 1f) : new Vector4(1, 1, 1, 1);
+        Vector4 nameColor;
+        if (p.IsCurrentTurn)
+            nameColor = new Vector4(1f, 1f, 0.2f, 1f);
+        else if (p.IsActivePlayer && !p.IsOnHold
+                 && RegexEngine.HasPlayerVoted(p.Name)
+                 && (GameEngine.CurrentPhase == GamePhase.Waiting || GameEngine.CurrentPhase == GamePhase.Payout))
+            nameColor = new Vector4(0.2f, 1f, 0.2f, 1f);
+        else
+            nameColor = new Vector4(1, 1, 1, 1);
         ImGui.TextColored(nameColor, p.DisplayName);
 
         ImGui.TableNextColumn();
@@ -831,6 +841,7 @@ public partial class BlackJackButtlerWindow
                     ActivityLogManager.LogBankChange(p.DisplayName, oldBank, p.Bank);
                     _bankSnapshot.Remove(p.UIID);
                 }
+                SaveSessionFromUI();
             }
             if (!_config.EnableBankInput) ImGui.EndDisabled();
 
@@ -868,6 +879,7 @@ public partial class BlackJackButtlerWindow
                     p.Bank = undoEntry.amount;
                     StatsManager.AddTip(-undoEntry.amount);
                     _bankToTipUndo.Remove(p.UIID);
+                    SaveSessionFromUI();
                 }
                 ImGui.PopStyleColor();
                 if (ImGui.IsItemHovered())
@@ -889,6 +901,7 @@ public partial class BlackJackButtlerWindow
                     StatsManager.AddTip(amount);
                     p.Bank = 0;
                     _bankToTipUndo[p.UIID] = (amount, DateTime.Now);
+                    SaveSessionFromUI();
                 }
                 ImGui.PopFont();
                 if (!canHeart || !ctrlDown) ImGui.EndDisabled();
@@ -908,6 +921,7 @@ public partial class BlackJackButtlerWindow
             {
                 p.CurrentBet = p.GetEffectiveMaxBet(_config);
                 _save();
+                SaveSessionFromUI();
             }
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip($"Set bet to max ({p.GetEffectiveMaxBet(_config):N0})");
@@ -962,6 +976,7 @@ public partial class BlackJackButtlerWindow
                 ActivityLogManager.LogBetSet(p.DisplayName, p.CurrentBet);
                 _betSnapshot.Remove(p.UIID);
             }
+            SaveSessionFromUI();
         }
         if (hlBet) ImGui.PopStyleColor(2);
 
@@ -1079,6 +1094,9 @@ public partial class BlackJackButtlerWindow
         { "DD", "Auto-DD" },
         { "Split", "Auto-split" },
         { "SplitDraw", "Auto-split-draw" },
+        { "Natural BlackJack Notify", "Nat.BJ" },
+        { "Dirty BlackJack Notify", "Dirty BJ" },
+        { "Charlie Notify", "Charlie" },
     };
 
     private void DrawEmergencyStopRow(PlayerState p)

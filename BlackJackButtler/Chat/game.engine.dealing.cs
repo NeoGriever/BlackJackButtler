@@ -611,6 +611,8 @@ public static partial class GameEngine
 
         if (wasCurrentTurn && CurrentPhase != GamePhase.Waiting && CurrentPhase != GamePhase.Payout)
             NextTurn(allPlayers, cfg);
+
+        SaveSessionIfNeeded(allPlayers);
     }
 
     private static void SaveSessionIfNeeded(List<PlayerState> players)

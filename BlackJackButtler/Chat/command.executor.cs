@@ -310,6 +310,7 @@ public static class CommandExecutor
                     continue;
                 }
                 processedText = resolvedCommand;
+                processedText = processedText.Replace("<.>", "<t>");
 
                 bool isDiceCommand = processedText.Trim().StartsWith("/dice", StringComparison.OrdinalIgnoreCase);
 
@@ -384,6 +385,7 @@ public static class CommandExecutor
         text = ProcessContextTokens(text, pState, targetPlayerName, cfg);
         text = ReplacePlayerScoreFirst(text);
         text = VariableManager.ProcessMessage(text);
+        text = text.Replace("<.>", "<t>");
 
         return text;
     }
@@ -556,6 +558,7 @@ public static class CommandExecutor
                     continue;
                 }
                 processedText = resolvedCommandInt;
+                processedText = processedText.Replace("<.>", "<t>");
 
                 ChatCommandRouter.Send(processedText, cfg, $"{groupName}:internal:{step}");
                 _lastSentRawText = effectiveCmd.Text;

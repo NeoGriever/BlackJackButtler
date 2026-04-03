@@ -58,6 +58,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly DrawLogicDebugWindow drawLogicDebugWindow;
     private readonly NotepadWindow notepadWindow;
     private readonly CustomButtonBarWindow buttonBarWindow;
+    private readonly UpdatePopupWindow updatePopupWindow;
     private DateTime _lastSync = DateTime.MinValue;
     private DateTime _lastIdleTick = DateTime.MinValue;
     private volatile bool _autoActionInFlight = false;
@@ -90,6 +91,9 @@ public sealed class Plugin : IDalamudPlugin
         if (DefaultsMigration.RunMigration(Configuration))
             Configuration.Save();
 
+        if (DefaultsMigration.MigrateTellDotToken(Configuration))
+            Configuration.Save();
+
         StatsManager.Init(Configuration);
         RoundLogManager.Init(PluginInterface.GetPluginConfigDirectory());
         ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
@@ -112,8 +116,17 @@ public sealed class Plugin : IDalamudPlugin
         drawLogicDebugWindow = new DrawLogicDebugWindow();
         windowSystem.AddWindow(drawLogicDebugWindow);
 
+        updatePopupWindow = new UpdatePopupWindow(Configuration, () => Configuration.Save());
+        windowSystem.AddWindow(updatePopupWindow);
+
         DebugCommandSink = mainWindow.AddDebugLog;
         windowSystem.AddWindow(mainWindow);
+
+        var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "";
+        if (Configuration.LastSeenVersion != currentVersion && !Configuration.DisableUpdatePopup)
+            updatePopupWindow.IsOpen = true;
+        Configuration.LastSeenVersion = currentVersion;
+        Configuration.Save();
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) {HelpMessage = "Open BlackJack Buttler."});
 

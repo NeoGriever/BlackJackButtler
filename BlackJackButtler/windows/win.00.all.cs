@@ -45,6 +45,12 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private JObject? _tempImportJson;
     private bool _showImportModal = false;
     private bool _openImportConfirmPopup = false;
+
+    private int _presetChangeCount = 0;
+    private int? _presetImportTargetIndex;
+    private bool _openPresetImportConfirm = false;
+    private bool _showPresetImportModal = false;
+    private string? _presetImportJson;
     private bool _isSidebarVisible = true;
     private string? _pendingSettingsFocus;
     private string? _pendingSettingsTab;
@@ -113,6 +119,11 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     public void OpenMain() { _page = Page.Main; IsOpen = true; Plugin.Instance.UpdateEventHooks(); }
     public void OpenSettings() { _page = Page.Settings; IsOpen = true; Plugin.Instance.UpdateEventHooks(); }
 
+    private void SaveSessionFromUI()
+    {
+        SessionManager.SaveSession(_players, _dealer, GameEngine.CurrentPhase, IsRecognitionActive);
+    }
+
     public override void OnClose()
     {
         Plugin.Instance.UpdateEventHooks();
@@ -124,9 +135,14 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     public override void PreDraw()
     {
         DeckCard.ShowSuits = !_config.HideCardSuits;
+        if (_presetDirty)
+        {
+            RecomputePresetChangeCount();
+            _presetDirty = false;
+        }
         var ver = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
         var label = _config.ActivePresetName ?? "Default";
-        var dirty = _presetDirty ? "*" : "";
+        var dirty = _presetChangeCount > 0 ? "*" : "";
         WindowName = $"BlackJack Buttler v{ver} [{label}{dirty}]###BlackJackButtler";
     }
 

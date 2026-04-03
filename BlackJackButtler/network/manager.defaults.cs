@@ -89,18 +89,18 @@ public static class DefaultsManager
                 { "Text": "/bstance motion", "Delay": 4.5 },
                 { "Text": "/dice party 13", "Delay": 0.8 }
             ],
-            "PlayerBJ": [
+            "Natural BlackJack Notify": [
                 { "Text": "/ft", "Delay": 0.5 },
                 { "Text": "/p #{Player BlackJack Messages} <se.7>", "Delay": 1.3 },
                 { "Text": "/wow motion", "Delay": 0.8 },
                 { "Text": "/shout #{Player BlackJack Messages Shout}", "Delay": 3.4 }
             ],
-            "PlayerDirtyBJ": [
+            "Dirty BlackJack Notify": [
                 { "Text": "/ft", "Delay": 0.5 },
                 { "Text": "/p #{Player Dirty BlackJack Messages} <se.7>", "Delay": 1.3 },
                 { "Text": "/wow motion", "Delay": 3.4 }
             ],
-            "PlayerCharlie": [
+            "Charlie Notify": [
                 { "Text": "/ft", "Delay": 0.5 },
                 { "Text": "/p #{Player Charlie Messages} <se.7>", "Delay": 1.3 },
                 { "Text": "/wow motion", "Delay": 3.4 }
