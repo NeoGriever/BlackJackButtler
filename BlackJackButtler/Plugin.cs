@@ -94,6 +94,13 @@ public sealed class Plugin : IDalamudPlugin
         if (DefaultsMigration.MigrateTellDotToken(Configuration))
             Configuration.Save();
 
+        if (!Configuration.NotifyGroupsMigrated)
+        {
+            Configuration.NotifyGroupsMigrated = true;
+            DefaultsMigration.MigrateNotifyGroups(Configuration);
+            Configuration.Save();
+        }
+
         StatsManager.Init(Configuration);
         RoundLogManager.Init(PluginInterface.GetPluginConfigDirectory());
         ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
