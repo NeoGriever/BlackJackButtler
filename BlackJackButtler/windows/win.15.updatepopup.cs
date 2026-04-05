@@ -13,17 +13,20 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.6.0.9\n" +
+        "v1.7.0.0\n" +
         "\n" +
-        "- Charlie/NatBJ/DirtyBJ notifications\n" +
-        "  now cancel the running command\n" +
-        "  and use full dice/emergency-stop\n" +
-        "  support\n" +
-        "- Renamed internal group names to\n" +
-        "  readable labels\n" +
-        "- New: Migrate Configurations button\n" +
-        "  to update BJ/Charlie commands\n" +
-        "  and messages\n";
+        "- Fix: Natural BlackJack, Dirty\n" +
+        "  BlackJack and Charlie notifications\n" +
+        "  now trigger correctly\n" +
+        "- Config migration now runs\n" +
+        "  automatically at startup\n" +
+        "\n" +
+        "IMPORTANT: Please click the\n" +
+        "'Migrate Configurations' button\n" +
+        "below to receive the updated\n" +
+        "commands and messages for Charlie,\n" +
+        "Natural BlackJack and Dirty\n" +
+        "BlackJack.\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",
