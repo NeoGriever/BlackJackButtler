@@ -80,6 +80,11 @@ public sealed class Configuration : IPluginConfiguration
     public string LastSeenVersion = "";
     public bool DisableUpdatePopup = false;
 
+    public bool ImportantNoticeAcknowledged = false;
+
+    public string BlacklistDetectedAt = "";
+    public bool BlacklistActive = false;
+
     public float InitialViewDirection = 0f;
     public bool LookEveryTime = false;
 

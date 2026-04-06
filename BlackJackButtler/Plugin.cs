@@ -59,6 +59,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly NotepadWindow notepadWindow;
     private readonly CustomButtonBarWindow buttonBarWindow;
     private readonly UpdatePopupWindow updatePopupWindow;
+    private readonly ImportantNoticeWindow importantNoticeWindow;
+    private readonly BlacklistBannerWindow blacklistBannerWindow;
     private DateTime _lastSync = DateTime.MinValue;
     private DateTime _lastIdleTick = DateTime.MinValue;
     private volatile bool _autoActionInFlight = false;
@@ -106,6 +108,7 @@ public sealed class Plugin : IDalamudPlugin
         ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
         VipManager.Init(Path.GetDirectoryName(PluginInterface.GetPluginConfigDirectory())!);
         DrawLogicScriptManager.Init(PluginInterface.GetPluginConfigDirectory(), Configuration);
+        BlacklistManager.Init(Configuration);
 
         notepadWindow = new NotepadWindow(Configuration, () => Configuration.Save(), () => mainWindow?.GetWindowRect() ?? (Vector2.Zero, Vector2.Zero));
         windowSystem.AddWindow(notepadWindow);
@@ -126,6 +129,13 @@ public sealed class Plugin : IDalamudPlugin
         updatePopupWindow = new UpdatePopupWindow(Configuration, () => Configuration.Save());
         windowSystem.AddWindow(updatePopupWindow);
 
+        importantNoticeWindow = new ImportantNoticeWindow(Configuration, () => Configuration.Save());
+        windowSystem.AddWindow(importantNoticeWindow);
+
+        blacklistBannerWindow = new BlacklistBannerWindow();
+        windowSystem.AddWindow(blacklistBannerWindow);
+        blacklistBannerWindow.IsOpen = true;
+
         DebugCommandSink = mainWindow.AddDebugLog;
         windowSystem.AddWindow(mainWindow);
 
@@ -133,6 +143,10 @@ public sealed class Plugin : IDalamudPlugin
         if (Configuration.LastSeenVersion != currentVersion && !Configuration.DisableUpdatePopup)
             updatePopupWindow.IsOpen = true;
         Configuration.LastSeenVersion = currentVersion;
+
+        if (!Configuration.ImportantNoticeAcknowledged)
+            importantNoticeWindow.IsOpen = true;
+
         Configuration.Save();
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) {HelpMessage = "Open BlackJack Buttler."});

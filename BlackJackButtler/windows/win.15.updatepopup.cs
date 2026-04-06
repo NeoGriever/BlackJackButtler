@@ -13,20 +13,12 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.7.0.0\n" +
+        "v1.7.0.1\n" +
         "\n" +
-        "- Fix: Natural BlackJack, Dirty\n" +
-        "  BlackJack and Charlie notifications\n" +
-        "  now trigger correctly\n" +
-        "- Config migration now runs\n" +
-        "  automatically at startup\n" +
-        "\n" +
-        "IMPORTANT: Please click the\n" +
-        "'Migrate Configurations' button\n" +
-        "below to receive the updated\n" +
-        "commands and messages for Charlie,\n" +
-        "Natural BlackJack and Dirty\n" +
-        "BlackJack.\n";
+        "- Added important notice popup\n" +
+        "  (one-time, 3 languages)\n" +
+        "- Added blacklist system with\n" +
+        "  remote check and grace period\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",
