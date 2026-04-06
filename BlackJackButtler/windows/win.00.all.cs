@@ -148,6 +148,13 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     public override void Draw()
     {
+        if (BlacklistManager.IsBlocked)
+        {
+            ImGui.TextColored(new Vector4(0.6f, 0.0f, 0.0f, 1f),
+                "This plugin has been disabled.");
+            return;
+        }
+
         _lastWindowPos = ImGui.GetWindowPos();
         _lastWindowSize = ImGui.GetWindowSize();
 
