@@ -28,6 +28,7 @@ public sealed class Configuration : IPluginConfiguration
     public BlackjackTieRule BlackjackTieRule = BlackjackTieRule.AlwaysPush;
     public bool EnableCharlie = false;
     public int CharlieCardCount = 5;
+    public bool CharlieInstantWin = true;
     public bool EnableBankInput = false;
     public float CommandSpeedMultiplier = 1.0f;
     public bool UnlockWaitTimer = false;
@@ -58,6 +59,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool AutoDealerDraw = false;
     public bool AutoRun = false;
     public int DealerDrawsUntil = 17;
+    public bool DealerSoftRule = true;
     public bool SmallResult = false;
     public bool AutostartRoundOnlyOnMultiplePlayers = true;
     public bool EnableAntiDouble = false;

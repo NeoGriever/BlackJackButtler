@@ -230,7 +230,7 @@ public static partial class GameEngine
                         hand.RoundResult = -hand.Bet;
                         p.LastRoundResult -= hand.Bet;
                     }
-                    else if (dealerBust || pScore > dealerScore || hand.IsCharlie || (pScore == 21 && dealerScore == 21 && EvaluateBJTie(hand, dealer, cfg.BlackjackTieRule) > 0))
+                    else if (dealerBust || pScore > dealerScore || (hand.IsCharlie && cfg.CharlieInstantWin) || (pScore == 21 && dealerScore == 21 && EvaluateBJTie(hand, dealer, cfg.BlackjackTieRule) > 0))
                     {
                         winList.Add(shortName);
                         float mult = cfg.MultiplierNormalWin;
@@ -299,7 +299,7 @@ public static partial class GameEngine
                         p.LastRoundResult -= hand.Bet;
                         await CommandExecutor.ExecuteGroup("ResultPlayerLost", p.DisplayName, cfg);
                     }
-                    else if (dealerBust || pScore > dealerScore || hand.IsCharlie || (pScore == 21 && dealerScore == 21 && EvaluateBJTie(hand, dealer, cfg.BlackjackTieRule) > 0))
+                    else if (dealerBust || pScore > dealerScore || (hand.IsCharlie && cfg.CharlieInstantWin) || (pScore == 21 && dealerScore == 21 && EvaluateBJTie(hand, dealer, cfg.BlackjackTieRule) > 0))
                     {
                         float mult = cfg.MultiplierNormalWin;
                         if (hand.IsNaturalBlackJack) mult = cfg.MultiplierBlackjackWin;

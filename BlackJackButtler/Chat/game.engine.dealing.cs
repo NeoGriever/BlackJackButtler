@@ -606,6 +606,7 @@ public static partial class GameEngine
         player.IsCurrentTurn = false;
         player.IsOnBench = false;
         player.HasInitialHandDealt = false;
+        player.ReadySkip = false;
 
         Plugin.Instance.GetMainWindow().AddDebugLog($"[Engine] {player.DisplayName} deactivated mid-round (bet refunded: {player.HasInitialHandDealt}).", false);
 

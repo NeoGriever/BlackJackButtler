@@ -14,6 +14,8 @@ public class PluginCommand
     public int GroupId = 0;
     public bool NonDoubled = false;
     public bool FixedDelay = false;
+    public bool IsCommandRef = false;
+    public string CommandRefName = string.Empty;
 }
 
 [Serializable]
@@ -24,7 +26,8 @@ public class CommandLineGroup
 
     public PluginCommand? PickNext(List<PluginCommand> candidates)
     {
-        var enabled = candidates.Where(c => c.Enabled && !string.IsNullOrWhiteSpace(c.Text)).ToList();
+        var enabled = candidates.Where(c => c.Enabled &&
+            (!string.IsNullOrWhiteSpace(c.Text) || (c.IsCommandRef && !string.IsNullOrWhiteSpace(c.CommandRefName)))).ToList();
         if (enabled.Count == 0) return null;
 
         switch (Mode)

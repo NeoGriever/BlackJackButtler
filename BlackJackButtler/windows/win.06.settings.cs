@@ -195,7 +195,36 @@ public partial class BlackJackButtlerWindow
                     _save();
                 }
                 if (ImGui.IsItemHovered()) ImGui.SetTooltip("Number of cards needed for Charlie (3-7).");
+
+                ImGui.Spacing();
+                bool noInstantWin = !_config.CharlieInstantWin;
+                if (ImGui.Checkbox("No instant win for Charlies (still beatable)", ref noInstantWin))
+                {
+                    _config.CharlieInstantWin = !noInstantWin;
+                    _save();
+                }
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip("When active, Charlies compete against the dealer's score normally.\nThey still get the BJ payout bonus (+50%) when winning.");
             }
+
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Dealer stands on");
+            ImGui.SameLine();
+            int softRule = _config.DealerSoftRule ? 0 : 1;
+            ImGui.SetNextItemWidth(80f);
+            if (BJBGui.Combo("##dealer_soft_hard", ref softRule, "Soft\0Hard\0"))
+            {
+                _config.DealerSoftRule = softRule == 0;
+                _save();
+            }
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Soft: Dealer hits on soft threshold (e.g. Ace+6 = hit).\nHard: Dealer stands on any score >= threshold.");
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(100f);
+            if (BJBGui.InputInt("##dealer_draws_until", ref _config.DealerDrawsUntil, 1))
+            {
+                _config.DealerDrawsUntil = Math.Clamp(_config.DealerDrawsUntil, 3, 20);
+                _save();
+            }
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Dealer draws until this score (3-20).");
 
             ImGui.Spacing();
             ImGui.Spacing();
@@ -896,6 +925,7 @@ public partial class BlackJackButtlerWindow
         TryApply<int>   (j, "BlackjackTieRule",                       v => _config.BlackjackTieRule = (BlackjackTieRule)v);
         TryApply<bool>  (j, "EnableCharlie",                         v => _config.EnableCharlie = v);
         TryApply<int>   (j, "CharlieCardCount",                      v => _config.CharlieCardCount = v);
+        TryApply<bool>  (j, "CharlieInstantWin",                     v => _config.CharlieInstantWin = v);
         TryApply<bool>  (j, "EnableBankInput",                        v => _config.EnableBankInput = v);
         TryApply<bool>  (j, "EnableAntiDouble",                       v => _config.EnableAntiDouble = v);
         TryApply<long>  (j, "MinBet",                                 v => _config.MinBet = v);
@@ -906,6 +936,7 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "AutoDealerDraw",                         v => _config.AutoDealerDraw = v);
         TryApply<bool>  (j, "AutoRun",                                v => _config.AutoRun = v);
         TryApply<int>   (j, "DealerDrawsUntil",                       v => _config.DealerDrawsUntil = v);
+        TryApply<bool>  (j, "DealerSoftRule",                         v => _config.DealerSoftRule = v);
         TryApply<bool>  (j, "SmallResult",                            v => _config.SmallResult = v);
         TryApply<bool>  (j, "AutostartRoundOnlyOnMultiplePlayers",     v => _config.AutostartRoundOnlyOnMultiplePlayers = v);
         TryApply<float> (j, "CommandSpeedMultiplier",                  v => _config.CommandSpeedMultiplier = v);

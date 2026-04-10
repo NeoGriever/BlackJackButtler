@@ -14,6 +14,8 @@ public static class CommandExecutor
     private static readonly RRX.Regex StackTokenRegex = new(@"#\{([^}]+)\}", RRX.RegexOptions.Compiled);
     private static readonly RRX.Regex DicePartyRegex = new(@"^/dice\s+party\s+(\d+)\s*$", RRX.RegexOptions.Compiled | RRX.RegexOptions.IgnoreCase);
     private const float MinCommandDelay = 0.3f;
+    private const int MaxInternalDepth = 5;
+    private static int _internalDepth = 0;
     private static bool _isRunning = false;
     public static bool IsRunning => _isRunning;
 
@@ -244,7 +246,9 @@ public static class CommandExecutor
 
             if (cmd.GroupId == 0)
             {
-                if (!cmd.Enabled || string.IsNullOrWhiteSpace(cmd.Text))
+                bool hasContent = !string.IsNullOrWhiteSpace(cmd.Text) ||
+                    (cmd.IsCommandRef && !string.IsNullOrWhiteSpace(cmd.CommandRefName));
+                if (!cmd.Enabled || !hasContent)
                 {
                     window.AddDebugLog($"[Executor] Skip Step {step} (Disabled or Empty)");
                     continue;
@@ -278,6 +282,22 @@ public static class CommandExecutor
 
             try
             {
+                if (effectiveCmd.IsCommandRef && !string.IsNullOrWhiteSpace(effectiveCmd.CommandRefName))
+                {
+                    if (_cancel) break;
+                    window.AddDebugLog($"[Executor] Step {step}: Executing command ref '{effectiveCmd.CommandRefName}'");
+                    await ExecuteInternalGroup(effectiveCmd.CommandRefName, targetPlayerName, cfg);
+
+                    float refDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
+                        : Math.Max(MinCommandDelay, effectiveCmd.Delay * (effectiveCmd.FixedDelay ? 1f : cfg.CommandSpeedMultiplier));
+                    if (refDelay > 0)
+                    {
+                        window.AddDebugLog($"[Executor] Post-ref delay {refDelay}s...");
+                        try { await Task.Delay(TimeSpan.FromSeconds(refDelay), _delayCts!.Token); } catch (OperationCanceledException) { }
+                    }
+                    continue;
+                }
+
                 if (cfg.EnableAntiDouble && effectiveCmd.NonDoubled && effectiveCmd.Text == _lastSentRawText)
                 {
                     window.AddDebugLog($"[Executor] Step {step} skipped (Anti-Double: same as last sent)");
@@ -366,6 +386,7 @@ public static class CommandExecutor
 
         _isRunning = false;
         _cancel = false;
+        _internalDepth = 0;
         _currentGroupName = string.Empty;
         _currentTargetPlayer = string.Empty;
         _currentGroupHasDice = false;
@@ -454,7 +475,13 @@ public static class CommandExecutor
     {
         if (_cancel) return;
         var window = Plugin.Instance.GetMainWindow();
-        window.AddDebugLog($"[Executor-Internal] Start Chain: {groupName} -> {targetPlayerName}");
+        if (_internalDepth >= MaxInternalDepth)
+        {
+            window.AddDebugLog($"[Executor-Internal] Max nesting depth reached for '{groupName}', skipping");
+            return;
+        }
+        _internalDepth++;
+        window.AddDebugLog($"[Executor-Internal] Start Chain: {groupName} -> {targetPlayerName} (depth {_internalDepth})");
         var players = window.GetPlayers();
         var dealer = window.GetDealer();
 
@@ -492,7 +519,9 @@ public static class CommandExecutor
 
             if (cmd.GroupId == 0)
             {
-                if (!cmd.Enabled || string.IsNullOrWhiteSpace(cmd.Text))
+                bool hasContent = !string.IsNullOrWhiteSpace(cmd.Text) ||
+                    (cmd.IsCommandRef && !string.IsNullOrWhiteSpace(cmd.CommandRefName));
+                if (!cmd.Enabled || !hasContent)
                 {
                     window.AddDebugLog($"[Executor-Internal] Skip Step {step} (Disabled or Empty)");
                     continue;
@@ -526,6 +555,22 @@ public static class CommandExecutor
 
             try
             {
+                if (effectiveCmd.IsCommandRef && !string.IsNullOrWhiteSpace(effectiveCmd.CommandRefName))
+                {
+                    if (_cancel) break;
+                    window.AddDebugLog($"[Executor-Internal] Step {step}: Executing nested command ref '{effectiveCmd.CommandRefName}'");
+                    await ExecuteInternalGroup(effectiveCmd.CommandRefName, targetPlayerName, cfg);
+
+                    float refDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
+                        : Math.Max(MinCommandDelay, effectiveCmd.Delay * (effectiveCmd.FixedDelay ? 1f : cfg.CommandSpeedMultiplier));
+                    if (refDelay > 0)
+                    {
+                        window.AddDebugLog($"[Executor-Internal] Post-ref delay {refDelay}s...");
+                        await Task.Delay(TimeSpan.FromSeconds(refDelay));
+                    }
+                    continue;
+                }
+
                 if (cfg.EnableAntiDouble && effectiveCmd.NonDoubled && effectiveCmd.Text == _lastSentRawText)
                 {
                     window.AddDebugLog($"[Executor-Internal] Step {step} skipped (Anti-Double: same as last sent)");
@@ -578,6 +623,7 @@ public static class CommandExecutor
             }
         }
 
+        _internalDepth--;
         window.AddDebugLog($"[Executor-Internal] Chain End: {groupName}");
     }
 }

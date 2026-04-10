@@ -16,6 +16,7 @@ public class PlayerState
     public bool WasOnHoldThisRound = false;
     public bool IsOnBench = false;
     public bool JoinedMidRound = false;
+    public bool ReadySkip = false;
 
     public bool IsInParty = true;
     public bool IsCurrentTurn = false;
@@ -153,6 +154,7 @@ public class PlayerState
             WasOnHoldThisRound = WasOnHoldThisRound,
             IsOnBench = IsOnBench,
             JoinedMidRound = JoinedMidRound,
+            ReadySkip = ReadySkip,
 
             IsInParty = IsInParty,
             IsCurrentTurn = IsCurrentTurn,

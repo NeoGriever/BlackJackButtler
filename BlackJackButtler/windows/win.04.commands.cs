@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 
@@ -162,11 +163,47 @@ public partial class BlackJackButtlerWindow
                     ImGui.SetTooltip("Gruppe (0 = keine Gruppe).\nGleiche Nummer = ein Befehl pro Auslösung (iterativ/zufällig).");
             }
 
-            // Col 2 — command text (indented when in a group)
+            // Col 2 — command text or command reference
             ImGui.TableNextColumn();
             if (cmd.GroupId != 0) ImGui.Indent(10f);
-            ImGui.SetNextItemWidth(-1);
-            if (ImGui.InputText("##text", ref cmd.Text, 256)) _save();
+            if (cmd.IsCommandRef)
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.8f, 1f));
+            if (BJBGui.SmallButton($"C##cmdref_{group.Name}_{i}"))
+            {
+                cmd.IsCommandRef = !cmd.IsCommandRef;
+                _save();
+            }
+            if (cmd.IsCommandRef) ImGui.PopStyleColor();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip(cmd.IsCommandRef ? "Command Reference (click for Message)" : "Message (click for Command Reference)");
+            ImGui.SameLine();
+            if (cmd.IsCommandRef)
+            {
+                var allGroups = _config.CommandGroups.Concat(_config.CustomCommandGroups)
+                    .Where(g => !g.Name.Equals(group.Name, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+                var groupNames = allGroups.Select(g => g.Name).ToArray();
+                int selectedIdx = Array.FindIndex(groupNames, n => n.Equals(cmd.CommandRefName, StringComparison.OrdinalIgnoreCase));
+                if (selectedIdx < 0) selectedIdx = 0;
+                ImGui.SetNextItemWidth(-1);
+                if (groupNames.Length > 0)
+                {
+                    if (BJBGui.Combo($"##cmdref_combo_{group.Name}_{i}", ref selectedIdx, groupNames, groupNames.Length))
+                    {
+                        cmd.CommandRefName = groupNames[selectedIdx];
+                        _save();
+                    }
+                }
+                else
+                {
+                    ImGui.TextDisabled("No other groups available");
+                }
+            }
+            else
+            {
+                ImGui.SetNextItemWidth(-1);
+                if (ImGui.InputText($"##text_{group.Name}_{i}", ref cmd.Text, 256)) _save();
+            }
             if (cmd.GroupId != 0) ImGui.Unindent(10f);
 
             // Col 3 — delay slider

@@ -38,6 +38,7 @@ public enum RegexAction
     HighlightSplit,
     NextRound,
     BankTell,
+    ExecuteOwnButton,
 }
 
 [Serializable]
