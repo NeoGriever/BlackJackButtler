@@ -18,6 +18,22 @@ public static class RegexEngine
 
     public static bool HasPlayerVoted(string name) => _nextRoundVotes.Contains(name);
 
+    public static void CheckAutoReadyStart(List<PlayerState> players, Configuration cfg)
+    {
+        var phase = GameEngine.CurrentPhase;
+        if (phase != GamePhase.Waiting && phase != GamePhase.Payout) return;
+
+        var activePlayers = players.Where(pl => pl.IsActivePlayer && !pl.IsOnHold).ToList();
+        if (activePlayers.Count < 2) return;
+        if (!activePlayers.All(pl => pl.ReadySkip || _nextRoundVotes.Contains(pl.Name))) return;
+
+        _nextRoundVotes.Clear();
+        if (cfg.AutoRun)
+            Task.Run(() => GameEngine.StartInitialDeal(players, cfg));
+        else
+            Plugin.Instance.GetMainWindow().SetHighlightNewRound();
+    }
+
     public static int? LastDetectedCardValue { get; private set; }
 
     public static bool TryConsumeDetectedCard(out int cardValue)
@@ -280,7 +296,7 @@ public static class RegexEngine
                     break;
                 _nextRoundVotes.Add(p.Name);
                 var activePlayers = players.Where(pl => pl.IsActivePlayer && !pl.IsOnHold).ToList();
-                if (activePlayers.All(pl => _nextRoundVotes.Contains(pl.Name)))
+                if (activePlayers.All(pl => pl.ReadySkip || _nextRoundVotes.Contains(pl.Name)))
                 {
                     _nextRoundVotes.Clear();
                     if (activePlayers.Count == 1 && cfg.AutostartRoundOnlyOnMultiplePlayers)
@@ -296,6 +312,28 @@ public static class RegexEngine
                         Plugin.Instance.GetMainWindow().SetHighlightNewRound();
                     }
                 }
+                break;
+            }
+
+            case RegexAction.ExecuteOwnButton:
+            {
+                if (string.IsNullOrWhiteSpace(entry.ActionParam)) break;
+                if (CommandExecutor.IsRunning) break;
+                var obWindow = Plugin.Instance.GetMainWindow();
+                var targetName = p?.DisplayName ?? msg.Name;
+                var groupName = entry.ActionParam;
+                obWindow.AddDebugLog($"[RegexEngine] ExecuteOwnButton '{groupName}' for {targetName}");
+                var capturedP = p;
+                Task.Run(async () =>
+                {
+                    if (capturedP != null)
+                    {
+                        GameEngine.TargetPlayer(capturedP.Name);
+                        VariableManager.SetPlayerVariables(capturedP);
+                    }
+                    await CommandExecutor.ExecuteGroup(groupName, targetName, cfg);
+                    GameEngine.TargetPlayer(obWindow.GetDealer().Name);
+                });
                 break;
             }
 

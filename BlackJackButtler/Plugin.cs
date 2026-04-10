@@ -253,9 +253,12 @@ public sealed class Plugin : IDalamudPlugin
                     {
                         var (min, max) = dealer.CalculatePoints(0);
                         int score = (max.HasValue && max.Value <= 21) ? max.Value : min;
-                        if (score < Configuration.DealerDrawsUntil)
+                        bool isSoft = max.HasValue && max.Value <= 21 && max.Value != min;
+                        bool shouldHit = score < Configuration.DealerDrawsUntil
+                            || (Configuration.DealerSoftRule && isSoft && score == Configuration.DealerDrawsUntil);
+                        if (shouldHit)
                         {
-                            mainWindow.AddDebugLog($"[AutoDealer] Hit: score={score} < {Configuration.DealerDrawsUntil}");
+                            mainWindow.AddDebugLog($"[AutoDealer] Hit: score={score} (soft={isSoft}) vs {(Configuration.DealerSoftRule ? "soft" : "hard")} {Configuration.DealerDrawsUntil}");
                             _autoActionInFlight = true;
                             var players = mainWindow.GetPlayers();
                             Task.Run(async () => {
@@ -265,7 +268,7 @@ public sealed class Plugin : IDalamudPlugin
                         }
                         else
                         {
-                            mainWindow.AddDebugLog($"[AutoDealer] Stand: score={score} >= {Configuration.DealerDrawsUntil}");
+                            mainWindow.AddDebugLog($"[AutoDealer] Stand: score={score} (soft={isSoft}) vs {(Configuration.DealerSoftRule ? "soft" : "hard")} {Configuration.DealerDrawsUntil}");
                             _autoActionInFlight = true;
                             var players = mainWindow.GetPlayers();
                             Task.Run(async () => {

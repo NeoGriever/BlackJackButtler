@@ -94,6 +94,20 @@ public partial class BlackJackButtlerWindow
             if (!canTell) ImGui.EndDisabled();
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                 ImGui.SetTooltip("Post bank/bet info for all active players to party chat");
+
+            if (CommandExecutor.IsRunning)
+            {
+                ImGui.SameLine();
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.7f, 0.0f, 0.0f, 1.0f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.9f, 0.1f, 0.1f, 1.0f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.5f, 0.0f, 0.0f, 1.0f));
+                ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f));
+                if (ImGui.Button("STOP##stop_commands"))
+                    CommandExecutor.CancelCurrentGroup();
+                ImGui.PopStyleColor(4);
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("Stop currently running commands");
+            }
         }
         {
             float checkboxSize = ImGui.GetFrameHeight();
@@ -359,7 +373,7 @@ public partial class BlackJackButtlerWindow
         if (autoDealerActive) ImGui.PopStyleColor();
 
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip($"Automatically draws cards for the dealer until {_config.DealerDrawsUntil}, then stands.");
+            ImGui.SetTooltip($"Dealer draws until {(_config.DealerSoftRule ? "soft" : "hard")} {_config.DealerDrawsUntil}, then stands.");
 
         ImGui.SameLine();
 
@@ -704,6 +718,7 @@ public partial class BlackJackButtlerWindow
                     if (p.Bank == 0) ActivityLogManager.LogPlayerLeave(p.DisplayName);
                     p.IsActivePlayer = false;
                     p.IsCurrentTurn = false;
+                    p.ReadySkip = false;
                 }
                 p.CurrentBet = 0;
                 SaveSessionFromUI();
@@ -785,6 +800,7 @@ public partial class BlackJackButtlerWindow
                     else
                     {
                         p.IsOnHold = !p.IsOnHold;
+                        if (p.IsOnHold) p.ReadySkip = false;
                     }
                 }
                 _save();
@@ -813,12 +829,33 @@ public partial class BlackJackButtlerWindow
         if (p.IsCurrentTurn)
             nameColor = new Vector4(1f, 1f, 0.2f, 1f);
         else if (p.IsActivePlayer && !p.IsOnHold
-                 && RegexEngine.HasPlayerVoted(p.Name)
+                 && (p.ReadySkip || RegexEngine.HasPlayerVoted(p.Name))
                  && (GameEngine.CurrentPhase == GamePhase.Waiting || GameEngine.CurrentPhase == GamePhase.Payout))
             nameColor = new Vector4(0.2f, 1f, 0.2f, 1f);
         else
             nameColor = new Vector4(1, 1, 1, 1);
         ImGui.TextColored(nameColor, p.DisplayName);
+        if (p.IsActivePlayer && !p.IsOnHold && !p.IsOnBench
+            && (GameEngine.CurrentPhase == GamePhase.Waiting || GameEngine.CurrentPhase == GamePhase.Payout))
+        {
+            int activeCount = _players.Count(pl => pl.IsActivePlayer && !pl.IsOnHold);
+            bool canToggle = activeCount >= 2;
+            ImGui.SameLine();
+            if (!canToggle) ImGui.BeginDisabled();
+            if (p.ReadySkip) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.8f, 0.2f, 1f));
+            if (BJBGui.SmallButton($"R##{p.UIID}_readyskip"))
+            {
+                p.ReadySkip = !p.ReadySkip;
+                _save();
+                if (p.ReadySkip) RegexEngine.CheckAutoReadyStart(_players, _config);
+            }
+            if (p.ReadySkip) ImGui.PopStyleColor();
+            if (!canToggle) ImGui.EndDisabled();
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                ImGui.SetTooltip(canToggle
+                    ? (p.ReadySkip ? "Ready-skip ON: Auto-counted as voted" : "Click to auto-count as voted for next round")
+                    : "Need 2+ active players to enable ready-skip");
+        }
 
         ImGui.TableNextColumn();
         {

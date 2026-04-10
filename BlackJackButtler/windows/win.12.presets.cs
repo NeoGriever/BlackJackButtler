@@ -18,7 +18,8 @@ public partial class BlackJackButtlerWindow
         "MultiplierDirtyBlackjackWin", "RefundFullDoubleDownOnPush", "BlackjackTieRule",
         "EnableCharlie", "CharlieCardCount", "EnableBankInput", "CommandSpeedMultiplier",
         "OpenDropboxInsteadOfTrade", "MinBet", "MaxBet", "ShortBetFormat",
-        "AutoInitialDeal", "AutoDealerDraw", "AutoRun", "DealerDrawsUntil",
+        "AutoInitialDeal", "AutoDealerDraw", "AutoRun", "DealerDrawsUntil", "DealerSoftRule",
+        "CharlieInstantWin",
         "SmallResult", "AutostartRoundOnlyOnMultiplePlayers", "HighlightColor",
         "HighlightTextColor", "ButtonColor", "ButtonTextColor", "NearbyAlertEnabled",
         "NearbyAlertSoundFiles", "NearbyAlertVolume", "NearbyAlertCooldown",
@@ -303,6 +304,8 @@ public partial class BlackJackButtlerWindow
             _config.AutoDealerDraw                     = snap.AutoDealerDraw;
             _config.AutoRun                            = snap.AutoRun;
             _config.DealerDrawsUntil                   = snap.DealerDrawsUntil;
+            _config.DealerSoftRule                     = snap.DealerSoftRule;
+            _config.CharlieInstantWin                  = snap.CharlieInstantWin;
             _config.SmallResult                        = snap.SmallResult;
             _config.AutostartRoundOnlyOnMultiplePlayers = snap.AutostartRoundOnlyOnMultiplePlayers;
             _config.HighlightColor                     = snap.HighlightColor;

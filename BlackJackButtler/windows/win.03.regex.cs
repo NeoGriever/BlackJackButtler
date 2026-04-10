@@ -212,7 +212,8 @@ public partial class BlackJackButtlerWindow
                         "Highlight DD\0" +
                         "Highlight Split\0" +
                         "NextRound\0" +
-                        "BankTell\0"
+                        "BankTell\0" +
+                        "Own Button\0"
                     ))
                     {
                         e.Action = (RegexAction)action;
@@ -226,6 +227,27 @@ public partial class BlackJackButtlerWindow
                         {
                             e.ActionParam = param;
                             _save();
+                        }
+                    }
+
+                    if (e.Action == RegexAction.ExecuteOwnButton)
+                    {
+                        var allGroups = _config.CustomCommandGroups;
+                        if (allGroups.Count == 0)
+                        {
+                            ImGui.TextDisabled("No Own Buttons defined.");
+                        }
+                        else
+                        {
+                            var groupNames = allGroups.Select(g => g.Name).ToArray();
+                            int selectedIdx = Array.FindIndex(groupNames, n => n.Equals(e.ActionParam, StringComparison.OrdinalIgnoreCase));
+                            if (selectedIdx < 0) selectedIdx = 0;
+                            ImGui.SetNextItemWidth(300f);
+                            if (BJBGui.Combo("Target Button##ownbtn_combo", ref selectedIdx, groupNames, groupNames.Length))
+                            {
+                                e.ActionParam = groupNames[selectedIdx];
+                                _save();
+                            }
                         }
                     }
                 }

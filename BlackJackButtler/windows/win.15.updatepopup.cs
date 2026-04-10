@@ -13,12 +13,12 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.7.0.1\n" +
+        "v1.7.0.3\n" +
         "\n" +
-        "- Added important notice popup\n" +
-        "  (one-time, 3 languages)\n" +
-        "- Added blacklist system with\n" +
-        "  remote check and grace period\n";
+        "- Dealer soft/hard stand rule\n" +
+        "  with configurable threshold\n" +
+        "- Charlie instant-win toggle\n" +
+        "  (beatable with bonus payout)\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",
