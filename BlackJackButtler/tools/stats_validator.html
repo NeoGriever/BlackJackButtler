@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BJB Stats Integrity Validator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;color:#e0e0e0;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;display:flex;justify-content:center;padding:40px 20px}
+.container{max-width:720px;width:100%}
+h1{font-size:1.4em;margin-bottom:6px;color:#c0c0ff}
+p{font-size:0.9em;color:#888;margin-bottom:16px}
+textarea{width:100%;height:320px;background:#0f0f23;color:#ccc;border:1px solid #333;border-radius:6px;padding:12px;font-family:'Cascadia Mono','Fira Code','Consolas',monospace;font-size:13px;resize:vertical}
+textarea:focus{outline:none;border-color:#555}
+button{margin-top:12px;padding:10px 28px;background:#2a2a4a;color:#e0e0e0;border:1px solid #444;border-radius:6px;font-size:14px;cursor:pointer;transition:background .2s}
+button:hover{background:#3a3a5a}
+#result{margin-top:20px;font-size:1.6em;font-weight:bold;text-align:center;padding:16px;border-radius:8px;display:none}
+#result.valid{display:block;background:#0a2e0a;color:#0f0;border:2px solid #0a0}
+#result.invalid{display:block;background:#2e0a0a;color:#f00;border:2px solid #a00}
+#result.error{display:block;background:#2e2e0a;color:#fa0;border:2px solid #a80;font-size:1em}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>BlackJack Buttler &mdash; Stats Integrity Validator</h1>
+<p>Paste the full stats output (including ``` markers) below and click Verify.</p>
+<textarea id="input" placeholder="Paste stats here..."></textarea>
+<button id="verify">Verify Integrity</button>
+<div id="result"></div>
+</div>
+<script>
+// obfuscated on purpose
+async function _c(t){const _k="BJB\x3a\x3av1\x3a\x3a7f3a9c2e\x2dd841\x2d4b6f\x2da5e3\x2d1c9d8f0b2a47\x3a\x3aintegrity";const d=new TextEncoder().encode(_k+"\n"+t);const h=new Uint8Array(await crypto.subtle.digest('SHA-256',d));const m=new Uint8Array(32);for(let i=0;i<32;i++){const r=h[(i+7)%32];m[i]=h[i]^((r<<3)|(r>>5))&0xFF;}const f=new Uint8Array(4);for(let j=0;j<4;j++){f[j]=m[j]^m[j+4]^m[j+8]^m[j+12]^m[j+16]^m[j+20]^m[j+24]^m[j+28];}return Array.from(f).map(b=>b.toString(16).padStart(2,'0')).join('').toUpperCase();}
+
+document.getElementById('verify').addEventListener('click', async () => {
+    const el = document.getElementById('result');
+    el.className = ''; el.style.display = 'none';
+    const raw = document.getElementById('input').value;
+    const allLines = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    const stripped = allLines.filter(l => !/^\s*```\s*$/.test(l));
+
+    let intIdx = -1;
+    for (let i = stripped.length - 1; i >= 0; i--) {
+        if (/Integrity:/.test(stripped[i])) { intIdx = i; break; }
+    }
+    if (intIdx < 0) {
+        el.className = 'error'; el.style.display = 'block';
+        el.textContent = 'No integrity hash found in input.';
+        return;
+    }
+
+    const hashMatch = stripped[intIdx].match(/([A-Fa-f0-9]{8})\s*$/);
+    if (!hashMatch) {
+        el.className = 'error'; el.style.display = 'block';
+        el.textContent = 'Could not parse integrity hash.';
+        return;
+    }
+    const expected = hashMatch[1].toUpperCase();
+
+    let dataLines = stripped.slice(0, intIdx);
+    while (dataLines.length > 0 && dataLines[dataLines.length - 1].trim() === '') dataLines.pop();
+
+    const computed = await _c(dataLines.join('\n'));
+    if (computed === expected) {
+        el.className = 'valid'; el.style.display = 'block';
+        el.textContent = 'VALID';
+    } else {
+        el.className = 'invalid'; el.style.display = 'block';
+        el.textContent = 'INVALID';
+    }
+});
+</script>
+</body>
+</html>
