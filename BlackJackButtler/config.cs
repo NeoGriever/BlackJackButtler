@@ -78,6 +78,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool UtcOffsetConfigured = false;
 
     public bool dismissDevWarning = false;
+    public bool HashedStats = true;
 
     public string LastSeenVersion = "";
     public bool DisableUpdatePopup = false;

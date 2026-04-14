@@ -375,6 +375,14 @@ public partial class BlackJackButtlerWindow
             lines.Add((Unsigned("  Total outcome", totalStr), totalOutcome >= 0 ? green : red));
         }
 
+        if (_config.HashedStats)
+        {
+            string hash = StatsHashManager.C(lines.Select(l => l.text));
+            lines.Add(("", null));
+            lines.Add(("", null));
+            lines.Add((Unsigned("  Integrity:", hash), null));
+        }
+
         ImGui.PushFont(UiBuilder.MonoFont);
         foreach (var (text, color) in lines)
         {

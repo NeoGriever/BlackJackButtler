@@ -304,9 +304,10 @@ public static class RoundLogManager
 
     public static string FormatTimestamp(string stored, int utcOffsetHours)
     {
-        if (DateTime.TryParse(stored, null, DateTimeStyles.RoundtripKind, out var parsed) && parsed.Kind == DateTimeKind.Utc)
+        if (DateTimeOffset.TryParse(stored, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed))
         {
-            var local = parsed.AddHours(utcOffsetHours);
+            var utc = parsed.UtcDateTime;
+            var local = utc.AddHours(utcOffsetHours);
             string suffix = utcOffsetHours == 0 ? " UTC" : utcOffsetHours > 0 ? $" UTC+{utcOffsetHours}" : $" UTC{utcOffsetHours}";
             return local.ToString("MM/dd/yyyy hh:mm tt") + suffix;
         }

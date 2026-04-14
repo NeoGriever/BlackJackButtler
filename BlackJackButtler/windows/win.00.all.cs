@@ -50,6 +50,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private int? _presetImportTargetIndex;
     private bool _openPresetImportConfirm = false;
     private bool _showPresetImportModal = false;
+    private bool _openHashedStatsConfirm = false;
+    private bool _showHashedStatsModal = false;
     private string? _presetImportJson;
     private bool _isSidebarVisible = true;
     private string? _pendingSettingsFocus;

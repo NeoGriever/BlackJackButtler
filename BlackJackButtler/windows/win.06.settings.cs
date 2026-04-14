@@ -19,6 +19,12 @@ public partial class BlackJackButtlerWindow
             _openImportConfirmPopup = false;
         }
 
+        if (_openHashedStatsConfirm) {
+            _showHashedStatsModal = true;
+            ImGui.OpenPopup("hashedstats_confirm_popup");
+            _openHashedStatsConfirm = false;
+        }
+
         int level = (int)_config.CurrentLevel;
 
         if (ImGui.BeginTabBar("##settings_tabs"))
@@ -67,6 +73,31 @@ public partial class BlackJackButtlerWindow
             if (BJBGui.Button("Merge (Keep custom items)")) {
                 DoMerge();
                 _showImportModal = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.EndPopup();
+        }
+
+        if (ImGui.BeginPopupModal("hashedstats_confirm_popup", ref _showHashedStatsModal, ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.TextColored(new Vector4(1, 0.6f, 0, 1), "WARNING");
+            ImGui.Spacing();
+            ImGui.TextWrapped("Disabling stats integrity hashing may cause credibility issues with venue operators and managers.");
+            ImGui.Spacing();
+            ImGui.TextWrapped("Please confirm that disabling this feature has been explicitly discussed with the relevant venue operator or manager.");
+            ImGui.Spacing();
+            ImGui.Spacing();
+            if (BJBGui.Button("Confirm Disable##hashedstats"))
+            {
+                _config.HashedStats = false;
+                _save();
+                _showHashedStatsModal = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.SameLine();
+            if (BJBGui.Button("Cancel##hashedstats"))
+            {
+                _showHashedStatsModal = false;
                 ImGui.CloseCurrentPopup();
             }
             ImGui.EndPopup();
@@ -847,6 +878,37 @@ public partial class BlackJackButtlerWindow
                 }
                 if (ImGui.IsItemHovered())
                     ImGui.SetTooltip("Erhöht die maximale Wait-Zeit auf 30 s.\nBeim Deaktivieren werden alle Einträge über 12 s auf 12 s gesetzt.");
+
+                ImGui.Spacing();
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Stats Integrity");
+                ImGui.Separator();
+
+                if (_config.HashedStats)
+                {
+                    if (!keysDown) ImGui.BeginDisabled();
+                    bool hashedVal = _config.HashedStats;
+                    if (ImGui.Checkbox("Hashed Stats##dev_hashed_stats", ref hashedVal))
+                    {
+                        _config.HashedStats = true;
+                        _openHashedStatsConfirm = true;
+                    }
+                    if (!keysDown)
+                    {
+                        ImGui.EndDisabled();
+                        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                            ImGui.SetTooltip("Hold CTRL + SHIFT to unlock this option.");
+                    }
+                }
+                else
+                {
+                    bool hashedVal = _config.HashedStats;
+                    if (ImGui.Checkbox("Hashed Stats##dev_hashed_stats", ref hashedVal))
+                    {
+                        _config.HashedStats = true;
+                        _save();
+                    }
+                }
 
                 ImGui.Spacing();
                 ImGui.Spacing();
