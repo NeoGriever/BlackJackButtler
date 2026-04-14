@@ -13,12 +13,10 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.7.0.5\n" +
+        "v1.7.0.6\n" +
         "\n" +
-        "- New: Hashed Stats - tamper-resistant\n" +
-        "  integrity hash on stats output\n" +
-        "- New: Offline HTML validator for\n" +
-        "  verifying stats integrity\n";
+        "- Fix: Stats validator no longer\n" +
+        "  requires backtick markers\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",
