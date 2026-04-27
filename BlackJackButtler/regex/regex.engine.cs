@@ -12,6 +12,9 @@ public static class RegexEngine
     private static readonly HashSet<string> _nextRoundVotes = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<(string pattern, bool caseSensitive), RRX.Regex> _regexCache = new();
 
+    private const char IconLetterStart = '\uE071';
+    private const char IconLetterEnd = '\uE08A';
+
     public static void InvalidateCache() => _regexCache.Clear();
 
     public static void ClearNextRoundVotes() => _nextRoundVotes.Clear();
@@ -62,13 +65,14 @@ public static class RegexEngine
             {
                 if (string.IsNullOrWhiteSpace(pattern)) continue;
 
-                var key = (pattern, entry.CaseSensitive);
+                var sanitizedPattern = SanitizePatternForRegex(pattern);
+                var key = (sanitizedPattern, entry.CaseSensitive);
                 if (!_regexCache.TryGetValue(key, out var rx))
                 {
                     var options = entry.CaseSensitive
                         ? RRX.RegexOptions.Compiled
                         : (RRX.RegexOptions.Compiled | RRX.RegexOptions.IgnoreCase);
-                    try { rx = new RRX.Regex(pattern, options); }
+                    try { rx = new RRX.Regex(sanitizedPattern, options); }
                     catch { continue; }
                     _regexCache[key] = rx;
                 }
@@ -77,7 +81,7 @@ public static class RegexEngine
                 {
                     if (entry.Mode == RegexEntryMode.Trigger)
                     {
-                        ExecuteAction(entry, pattern, msg, cleanMessage, players, dealer, cfg);
+                        ExecuteAction(entry, sanitizedPattern, msg, cleanMessage, players, dealer, cfg);
                     }
                     else if (entry.Mode == RegexEntryMode.SetVariable)
                     {
@@ -319,6 +323,14 @@ public static class RegexEngine
             {
                 if (string.IsNullOrWhiteSpace(entry.ActionParam)) break;
                 if (CommandExecutor.IsRunning) break;
+                var targetOwnGroup = cfg.CustomCommandGroups.FirstOrDefault(
+                    g => g.Name.Equals(entry.ActionParam, StringComparison.OrdinalIgnoreCase));
+                if (targetOwnGroup != null && !targetOwnGroup.IsActive)
+                {
+                    Plugin.Instance.GetMainWindow().AddDebugLog(
+                        $"[RegexEngine] ExecuteOwnButton '{entry.ActionParam}' skipped (inactive)");
+                    break;
+                }
                 var obWindow = Plugin.Instance.GetMainWindow();
                 var targetName = p?.DisplayName ?? msg.Name;
                 var groupName = entry.ActionParam;
@@ -388,11 +400,18 @@ public static class RegexEngine
         bool lastWasSpace = false;
         foreach (var ch in input)
         {
-            // FFXIV Private Use Area icons (U+E000–U+F8FF) entfernen
+            if (ch >= IconLetterStart && ch <= IconLetterEnd)
+            {
+                sb.Append('{');
+                sb.Append((char)('A' + (ch - IconLetterStart)));
+                sb.Append('}');
+                lastWasSpace = false;
+                continue;
+            }
+
             if (ch >= '\uE000' && ch <= '\uF8FF')
                 continue;
 
-            // Mehrfach-Leerzeichen zu einem zusammenfassen
             if (ch == ' ')
             {
                 if (lastWasSpace) continue;
@@ -405,6 +424,25 @@ public static class RegexEngine
             sb.Append(ch);
         }
         return sb.ToString().Trim();
+    }
+
+    private static string SanitizePatternForRegex(string pattern)
+    {
+        var sb = new System.Text.StringBuilder(pattern.Length);
+        foreach (var ch in pattern)
+        {
+            if (ch >= IconLetterStart && ch <= IconLetterEnd)
+            {
+                sb.Append(@"\{");
+                sb.Append((char)('A' + (ch - IconLetterStart)));
+                sb.Append(@"\}");
+                continue;
+            }
+            if (ch >= '\uE000' && ch <= '\uF8FF')
+                continue;
+            sb.Append(ch);
+        }
+        return sb.ToString();
     }
 
     private static int? MapValue(int rolled)

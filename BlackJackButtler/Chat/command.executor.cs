@@ -42,6 +42,22 @@ public static class CommandExecutor
     public static int PreActionSnapshotIndex => _preActionSnapshotIndex;
     public static bool IsCancelling => _cancel;
 
+    private static readonly HashSet<string> StateGroupNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "StateHSDS", "StateHSD", "StateHS",
+    };
+
+    public static string LastStateGroupName { get; private set; } = string.Empty;
+    public static string LastStateTargetName { get; private set; } = string.Empty;
+    public static DateTime LastStateFiredAt { get; private set; } = DateTime.MinValue;
+
+    public static void ClearLastState()
+    {
+        LastStateGroupName = string.Empty;
+        LastStateTargetName = string.Empty;
+        LastStateFiredAt = DateTime.MinValue;
+    }
+
     public static void NotifyDiceResult()
     {
         var window = Plugin.Instance.GetMainWindow();
@@ -216,12 +232,25 @@ public static class CommandExecutor
 
         if (group == null) return;
 
+        if (cfg.CustomCommandGroups.Contains(group) && !group.IsActive)
+        {
+            window.AddDebugLog($"[Executor] Group '{groupName}' is inactive, skipping");
+            return;
+        }
+
         _currentGroupName = groupName;
         _currentTargetPlayer = targetPlayerName;
         _currentGroupHasDice = group.Commands.Any(c =>
             c.Enabled && !string.IsNullOrWhiteSpace(c.Text) &&
             c.Text.TrimStart().StartsWith("/dice", StringComparison.OrdinalIgnoreCase));
         _delayCts = new CancellationTokenSource();
+
+        if (StateGroupNames.Contains(groupName))
+        {
+            LastStateGroupName = groupName;
+            LastStateTargetName = targetPlayerName;
+            LastStateFiredAt = DateTime.Now;
+        }
 
         _isRunning = true;
         _cancel = false;
@@ -501,6 +530,12 @@ public static class CommandExecutor
         if (group == null)
         {
             window.AddDebugLog($"[Executor-Internal] Group '{groupName}' not found");
+            return;
+        }
+
+        if (cfg.CustomCommandGroups.Contains(group) && !group.IsActive)
+        {
+            window.AddDebugLog($"[Executor-Internal] Group '{groupName}' is inactive, skipping");
             return;
         }
 

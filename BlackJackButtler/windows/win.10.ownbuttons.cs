@@ -102,54 +102,74 @@ public partial class BlackJackButtlerWindow
                     }
                 }
 
-                if (ImGui.Checkbox("Button Color##btn_col", ref group.UseCustomButtonColor)) _save();
-                if (group.UseCustomButtonColor)
-                {
-                    ImGui.SameLine();
-                    if (ImGui.ColorEdit4("##btn_col_pick", ref group.CustomButtonColor,
-                        ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.NoLabel)) _save();
-                }
+                if (ImGui.Checkbox("Active##active_toggle", ref group.IsActive)) _save();
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("When disabled, the button is hidden and the group cannot be executed.");
+                ImGui.SameLine();
+                if (!group.IsActive) ImGui.BeginDisabled();
+                if (ImGui.Checkbox("Visible##visible_toggle", ref group.IsVisible)) _save();
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    ImGui.SetTooltip("When hidden, the button won't show in the bar\nbut can still be called via Command Reference or Regex.");
+                if (!group.IsActive) ImGui.EndDisabled();
 
-                if (ImGui.Checkbox("Text Color##txt_col", ref group.UseCustomTextColor)) _save();
-                if (group.UseCustomTextColor)
-                {
-                    ImGui.SameLine();
-                    if (ImGui.ColorEdit4("##txt_col_pick", ref group.CustomTextColor,
-                        ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.NoLabel)) _save();
-                }
+                ImGui.SetNextItemWidth(300f);
+                if (ImGui.InputText("Button Label##btn_label", ref group.ButtonLabel, 64)) _save();
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("Custom text displayed on the button.\nLeave empty to use the group name.");
 
-                if (ImGui.Checkbox("Padding Override##pad_ovr", ref group.UseCustomPadding)) _save();
-                if (group.UseCustomPadding)
+                if (ImGui.TreeNode("Style Overrides##style_overrides"))
                 {
-                    ImGui.Indent(20f);
-                    DrawPaddingFields($"##btn_{i}", ref group.CustomPaddingH, ref group.CustomPaddingV);
-                    ImGui.Unindent(20f);
-                }
-
-                if (ImGui.Checkbox("Font Override##font_ovr", ref group.UseCustomFont)) _save();
-                if (group.UseCustomFont)
-                {
-                    ImGui.SameLine();
-                    ImGui.SetNextItemWidth(100f);
-                    int fIdx = group.CustomUseMono ? 1 : 0;
-                    if (BJBGui.Combo("##btn_font", ref fIdx, "Default\0Mono\0"))
+                    if (ImGui.Checkbox("Button Color##btn_col", ref group.UseCustomButtonColor)) _save();
+                    if (group.UseCustomButtonColor)
                     {
-                        group.CustomUseMono = fIdx == 1;
-                        _save();
+                        ImGui.SameLine();
+                        if (ImGui.ColorEdit4("##btn_col_pick", ref group.CustomButtonColor,
+                            ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.NoLabel)) _save();
                     }
-                }
 
-                if (ImGui.Checkbox("Font Size Override##fscale_ovr", ref group.UseCustomFontScale)) _save();
-                if (group.UseCustomFontScale)
-                {
-                    ImGui.SameLine();
-                    ImGui.SetNextItemWidth(150f);
-                    if (BJBGui.SliderFloat("##btn_fscale", ref group.CustomFontScale, 0.5f, 2.0f, "%.2fx"))
+                    if (ImGui.Checkbox("Text Color##txt_col", ref group.UseCustomTextColor)) _save();
+                    if (group.UseCustomTextColor)
                     {
-                        group.CustomFontScale = (float)(Math.Round(group.CustomFontScale / 0.05) * 0.05);
-                        group.CustomFontScale = Math.Clamp(group.CustomFontScale, 0.5f, 2.0f);
-                        _save();
+                        ImGui.SameLine();
+                        if (ImGui.ColorEdit4("##txt_col_pick", ref group.CustomTextColor,
+                            ImGuiColorEditFlags.NoInputs | ImGuiColorEditFlags.NoLabel)) _save();
                     }
+
+                    if (ImGui.Checkbox("Padding Override##pad_ovr", ref group.UseCustomPadding)) _save();
+                    if (group.UseCustomPadding)
+                    {
+                        ImGui.Indent(20f);
+                        DrawPaddingFields($"##btn_{i}", ref group.CustomPaddingH, ref group.CustomPaddingV);
+                        ImGui.Unindent(20f);
+                    }
+
+                    if (ImGui.Checkbox("Font Override##font_ovr", ref group.UseCustomFont)) _save();
+                    if (group.UseCustomFont)
+                    {
+                        ImGui.SameLine();
+                        ImGui.SetNextItemWidth(100f);
+                        int fIdx = group.CustomUseMono ? 1 : 0;
+                        if (BJBGui.Combo("##btn_font", ref fIdx, "Default\0Mono\0"))
+                        {
+                            group.CustomUseMono = fIdx == 1;
+                            _save();
+                        }
+                    }
+
+                    if (ImGui.Checkbox("Font Size Override##fscale_ovr", ref group.UseCustomFontScale)) _save();
+                    if (group.UseCustomFontScale)
+                    {
+                        ImGui.SameLine();
+                        ImGui.SetNextItemWidth(150f);
+                        if (BJBGui.SliderFloat("##btn_fscale", ref group.CustomFontScale, 0.5f, 2.0f, "%.2fx"))
+                        {
+                            group.CustomFontScale = (float)(Math.Round(group.CustomFontScale / 0.05) * 0.05);
+                            group.CustomFontScale = Math.Clamp(group.CustomFontScale, 0.5f, 2.0f);
+                            _save();
+                        }
+                    }
+
+                    ImGui.TreePop();
                 }
 
                 var io = ImGui.GetIO();
@@ -260,26 +280,39 @@ public partial class BlackJackButtlerWindow
                     var group = _config.CustomCommandGroups.FirstOrDefault(g => g.Name == entry);
                     if (group != null)
                     {
-                        int colorPushCount = 0;
-                        if (group.UseCustomButtonColor)
-                        {
-                            ImGui.PushStyleColor(ImGuiCol.Button, group.CustomButtonColor);
-                            colorPushCount++;
-                        }
-                        if (group.UseCustomTextColor)
-                        {
-                            ImGui.PushStyleColor(ImGuiCol.Text, group.CustomTextColor);
-                            colorPushCount++;
-                        }
+                        string previewLabel = !string.IsNullOrEmpty(group.ButtonLabel) ? group.ButtonLabel : entry;
 
-                        ImGui.BeginDisabled();
-                        if (colorPushCount > 0 && group.UseCustomTextColor)
-                            ImGui.SmallButton(entry);
+                        if (!group.IsActive)
+                        {
+                            ImGui.TextDisabled($"[inactive] {previewLabel}");
+                        }
+                        else if (!group.IsVisible)
+                        {
+                            ImGui.TextDisabled($"[hidden] {previewLabel}");
+                        }
                         else
-                            BJBGui.SmallButton(entry);
-                        ImGui.EndDisabled();
+                        {
+                            int colorPushCount = 0;
+                            if (group.UseCustomButtonColor)
+                            {
+                                ImGui.PushStyleColor(ImGuiCol.Button, group.CustomButtonColor);
+                                colorPushCount++;
+                            }
+                            if (group.UseCustomTextColor)
+                            {
+                                ImGui.PushStyleColor(ImGuiCol.Text, group.CustomTextColor);
+                                colorPushCount++;
+                            }
 
-                        if (colorPushCount > 0) ImGui.PopStyleColor(colorPushCount);
+                            ImGui.BeginDisabled();
+                            if (colorPushCount > 0 && group.UseCustomTextColor)
+                                ImGui.SmallButton(previewLabel);
+                            else
+                                BJBGui.SmallButton(previewLabel);
+                            ImGui.EndDisabled();
+
+                            if (colorPushCount > 0) ImGui.PopStyleColor(colorPushCount);
+                        }
                     }
                     else
                     {

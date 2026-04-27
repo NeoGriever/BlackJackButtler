@@ -14,6 +14,8 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow
 {
+    private DateTime? _groupDetectorActivatedAt;
+
     private void DrawMainPage()
     {
         DrawMainHeader();
@@ -330,6 +332,7 @@ public partial class BlackJackButtlerWindow
             {
                 SyncParty();
                 ViewDirectionManager.CaptureCurrentRotation(_config);
+                _groupDetectorActivatedAt = StatsManager.IsRunning ? null : DateTime.Now;
             }
 
             if (!IsRecognitionActive)
@@ -337,9 +340,35 @@ public partial class BlackJackButtlerWindow
                 SessionManager.ClearSession();
                 _players.RemoveAll(p => !p.IsActivePlayer && p.Bank == 0);
                 AddDebugLog("[SessionManager] Session cleared (Group Detector deactivated)", false);
+                _groupDetectorActivatedAt = null;
             }
 
             Plugin.Instance.UpdateEventHooks();
+        }
+
+        if (IsRecognitionActive && !StatsManager.IsRunning && _groupDetectorActivatedAt.HasValue)
+        {
+            double elapsed = (DateTime.Now - _groupDetectorActivatedAt.Value).TotalSeconds;
+            if (elapsed < 30)
+            {
+                ImGui.SameLine();
+                int secondsLeft = 30 - (int)elapsed;
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.1f, 0.5f, 0.1f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.15f, 0.65f, 0.15f, 1f));
+                if (BJBGui.Button($"Start Bank ({secondsLeft}s)##groupdetect_startbank", new Vector2(160, 0)))
+                {
+                    StatsManager.StartSession();
+                    _save();
+                    _groupDetectorActivatedAt = null;
+                }
+                ImGui.PopStyleColor(2);
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("Start the stats session with the current bank.\nAvailable for 30 seconds after activating Group Detector.");
+            }
+            else
+            {
+                _groupDetectorActivatedAt = null;
+            }
         }
 
         ImGui.SameLine();
@@ -529,6 +558,9 @@ public partial class BlackJackButtlerWindow
 
             var group = _config.CustomCommandGroups.FirstOrDefault(g => g.Name == entry);
             if (group == null) continue;
+            if (!group.IsActive || !group.IsVisible) continue;
+
+            string displayLabel = !string.IsNullOrEmpty(group.ButtonLabel) ? group.ButtonLabel : group.Name;
 
             if (prevWasButton)
             {
@@ -540,7 +572,7 @@ public partial class BlackJackButtlerWindow
                 if (estScale != 1.0f) ImGui.SetWindowFontScale(estScale);
 
                 float estPadH = group.UseCustomPadding ? group.CustomPaddingH : _config.CustomButtonPaddingH;
-                float textWidth = ImGui.CalcTextSize(group.Name).X;
+                float textWidth = ImGui.CalcTextSize(displayLabel).X;
                 float buttonWidth = textWidth + estPadH * 2 + ImGui.GetStyle().ItemSpacing.X;
 
                 if (estScale != 1.0f) ImGui.SetWindowFontScale(1.0f);
@@ -574,9 +606,9 @@ public partial class BlackJackButtlerWindow
 
             bool clicked;
             if (colorPushCount > 0 && group.UseCustomTextColor)
-                clicked = ImGui.Button($"{group.Name}##{idSuffix}_{i}");
+                clicked = ImGui.Button($"{displayLabel}##{idSuffix}_{i}");
             else
-                clicked = BJBGui.Button($"{group.Name}##{idSuffix}_{i}");
+                clicked = BJBGui.Button($"{displayLabel}##{idSuffix}_{i}");
 
             if (colorPushCount > 0) ImGui.PopStyleColor(colorPushCount);
 
@@ -1369,7 +1401,34 @@ public partial class BlackJackButtlerWindow
                 BlackJackButtler.Chat.GameLog.PushSnapshot(_players, _dealer, phase, $"PlayerStand:{p.Name}");
                 Task.Run(() => GameEngine.ActionStand(p, _config, _players));
             });
+            ImGui.SameLine();
+
+            DrawRecallButton(p);
         }
+    }
+
+    private void DrawRecallButton(PlayerState p)
+    {
+        bool hasState = !string.IsNullOrEmpty(CommandExecutor.LastStateGroupName);
+        double elapsed = hasState
+            ? (DateTime.Now - CommandExecutor.LastStateFiredAt).TotalSeconds
+            : 0;
+        float unlock = _config.RecallUnlockSeconds;
+        bool unlocked = hasState && elapsed >= unlock;
+
+        if (!unlocked) ImGui.BeginDisabled();
+        string label;
+        if (!hasState) label = "Recall";
+        else if (!unlocked) label = $"Recall ({Math.Max(0, (int)Math.Ceiling(unlock - elapsed))}s)";
+        else label = "Recall";
+
+        if (BJBGui.Button($"{label}##btn_recall_{p.UIID}"))
+        {
+            string grp = CommandExecutor.LastStateGroupName;
+            string tgt = CommandExecutor.LastStateTargetName;
+            Task.Run(() => CommandExecutor.ExecuteGroup(grp, tgt, _config));
+        }
+        if (!unlocked) ImGui.EndDisabled();
     }
 
     private void DrawDealerControls()
@@ -1486,6 +1545,15 @@ public partial class BlackJackButtlerWindow
             }
         }
 
+        foreach (var leaver in _players.Where(x => !x.IsInParty && !x.IsActivePlayer && x.Bank > 0).ToList())
+        {
+            if (StatsManager.IsRunning)
+            {
+                StatsManager.AddTip(leaver.Bank);
+                AddDebugLog($"[Party] {leaver.DisplayName} left with {leaver.Bank} gil — added as tip.", false);
+            }
+            leaver.Bank = 0;
+        }
         _players.RemoveAll(x => !x.IsInParty && !x.IsActivePlayer && x.Bank == 0);
     }
 

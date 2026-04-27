@@ -55,7 +55,9 @@ public static class TradeManager
         var p = ResolvePlayer(_currentPartner, players);
         if (p != null && p.IsActivePlayer)
         {
+            long before = p.Bank;
             p.Bank += _buffer;
+            RecordTradeLine(p, before, p.Bank);
             var window = Plugin.Instance.GetMainWindow();
             window.AddDebugLog($"[TradeManager] Committed: {_currentPartner} → {p.Name} bank += {_buffer}");
         }
@@ -115,7 +117,9 @@ public static class TradeManager
             var p = ResolvePlayer(_currentPartner, players);
             if (p != null && p.IsActivePlayer)
             {
+                long before = p.Bank;
                 p.Bank += _buffer;
+                RecordTradeLine(p, before, p.Bank);
                 window.AddDebugLog($"[TradeManager] Committed (fallback): {_currentPartner} bank += {_buffer}");
             }
         }
@@ -131,6 +135,16 @@ public static class TradeManager
         _isTradeActive = false;
         _committed = false;
         _closedAtUtc = null;
+    }
+
+    private static void RecordTradeLine(PlayerState p, long before, long after)
+    {
+        long delta = after - before;
+        if (delta == 0) return;
+        string line = delta > 0
+            ? RoundLogManager.BuildTradeLineOutbound(p.DisplayName, before, after)
+            : RoundLogManager.BuildTradeLineInbound(p.DisplayName, before, after);
+        RoundLogManager.AddTradeLine(p.DisplayName, line);
     }
 
     public static string StripWorldSuffix(string name)

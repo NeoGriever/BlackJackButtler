@@ -12,12 +12,16 @@ public sealed class PersistentRoundEntry
 {
     public string Timestamp { get; set; } = "";
     public List<string> Lines { get; set; } = new();
+    public List<string> TradeLines { get; set; } = new();
 }
 
 public static class RoundLogManager
 {
+    private const int NameWidth = 24;
+
     private static string _filePath = string.Empty;
     private static List<PersistentRoundEntry> _log = new();
+    private static readonly List<(string playerKey, string line)> _pendingTrades = new();
 
     public static void Init(string configDir)
     {
@@ -58,23 +62,50 @@ public static class RoundLogManager
         Save();
     }
 
+    public static void AddTradeLine(string playerKey, string line)
+    {
+        _pendingTrades.Add((playerKey ?? "", line ?? ""));
+    }
+
+    public static void ClearPendingTrades() => _pendingTrades.Clear();
+
     public static void AddRound(PlayerState dealer, List<PlayerState> players, Configuration cfg)
     {
         var activePlayers = players.Where(x => x.IsActivePlayer && !x.IsOnHold).ToList();
+        var pausedPlayers = players.Where(x => !x.IsActivePlayer || x.IsOnHold).ToList();
+
         if (activePlayers.Count == 0 && (dealer.Hands.Count == 0 || dealer.Hands[0].Cards.Count == 0))
+        {
+            _pendingTrades.Clear();
             return;
+        }
 
         var lines = new List<string>();
+        var tradeLinesForPersist = new List<string>();
 
-        var dealerLines = BuildDealerLines(dealer);
-        lines.AddRange(dealerLines);
-        lines.Add("");
+        lines.Add(BuildDealerLine(dealer));
 
         foreach (var p in activePlayers)
         {
-            var playerLines = BuildPlayerLines(p, cfg);
-            lines.AddRange(playerLines);
-            lines.Add("");
+            lines.Add(BuildActivePlayerLine(p));
+            var key = p.DisplayName;
+            foreach (var trade in _pendingTrades.Where(t => KeyMatches(t.playerKey, key)).ToList())
+            {
+                lines.Add(trade.line);
+                tradeLinesForPersist.Add(trade.line);
+            }
+
+            if (p.Hands.Count > 1)
+            {
+                for (int h = 0; h < p.Hands.Count; h++)
+                    lines.Add(BuildSplitHandLine(p, h));
+                lines.Add(BuildSplitFinalLine(p));
+            }
+        }
+
+        foreach (var p in pausedPlayers)
+        {
+            lines.Add(BuildPausedLine(p));
         }
 
         long totalPlayerGain = activePlayers.Sum(p => p.Bank - p.BankAtRoundStart);
@@ -86,7 +117,8 @@ public static class RoundLogManager
             var entry = new PersistentRoundEntry
             {
                 Timestamp = DateTime.UtcNow.ToString("o"),
-                Lines = lines
+                Lines = lines,
+                TradeLines = tradeLinesForPersist
             };
 
             _log.Add(entry);
@@ -96,209 +128,120 @@ public static class RoundLogManager
         {
             Plugin.Log.Error($"[RoundLog] AddRound failed: {ex.Message}");
         }
+
+        _pendingTrades.Clear();
     }
 
-    private static List<string> BuildDealerLines(PlayerState dealer)
+    private static bool KeyMatches(string tradeKey, string playerKey)
     {
-        var lines = new List<string>();
+        if (string.IsNullOrEmpty(tradeKey) || string.IsNullOrEmpty(playerKey)) return false;
+        if (string.Equals(tradeKey, playerKey, StringComparison.OrdinalIgnoreCase)) return true;
+        var tk = tradeKey.Split('@', 2)[0];
+        var pk = playerKey.Split('@', 2)[0];
+        return string.Equals(tk, pk, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildDealerLine(PlayerState dealer)
+    {
         if (dealer.Hands.Count == 0 || dealer.Hands[0].Cards.Count == 0)
-            return lines;
+            return "[ Dealer".PadRight(NameWidth + 2) + "| (no cards) ]";
 
         var hand = dealer.Hands[0];
         int score = dealer.GetBestScore(0);
         string scoreLabel = GetScoreLabel(hand, score);
+        string actionSeq = BuildActionSequence(hand);
 
-        lines.Add(BuildHeader("Dealer", scoreLabel));
+        return $"[ {"Dealer".PadRight(NameWidth)} | {actionSeq} {scoreLabel} ]";
+    }
 
-        var sb = new StringBuilder("  ");
+    private static string BuildActivePlayerLine(PlayerState p)
+    {
+        if (p.Hands.Count == 0)
+            return $"[ {p.DisplayName.PadRight(NameWidth)} | (no cards) ]";
+
+        var hand = p.Hands[0];
+        int score = p.GetBestScore(0);
+        string scoreLabel = p.Hands.Count > 1 ? "SPLIT" : GetScoreLabel(hand, score);
+
+        string actionSeq = BuildActionSequence(hand);
+        long baseBet = hand.Bet;
+        if (hand.IsDoubleDown) baseBet /= 2;
+
+        long bankStart = p.BankAtRoundStart;
+        long bankAfterBet = bankStart - baseBet;
+        long bankEnd = p.Bank;
+
+        string name = p.DisplayName.Length > NameWidth ? p.DisplayName.Substring(0, NameWidth) : p.DisplayName.PadRight(NameWidth);
+        string bankEndCell = p.Hands.Count > 1 ? new string('-', 11) : FormatGil(bankEnd);
+
+        return $"[ {name} | {FormatGil(bankStart)} | {FormatGil(bankAfterBet)} | {actionSeq} {scoreLabel} | {bankEndCell} ]";
+    }
+
+    private static string BuildSplitHandLine(PlayerState p, int handIndex)
+    {
+        var hand = p.Hands[handIndex];
+        int score = p.GetBestScore(handIndex);
+        string scoreLabel = GetScoreLabel(hand, score);
+        string actionSeq = BuildActionSequence(hand);
+        string result = HandResultLabel(hand);
+
+        return $"    [ HAND {handIndex + 1} | {actionSeq} {scoreLabel} | {result} ]";
+    }
+
+    private static string BuildSplitFinalLine(PlayerState p)
+    {
+        string name = p.DisplayName.Length > NameWidth ? p.DisplayName.Substring(0, NameWidth) : p.DisplayName.PadRight(NameWidth);
+        string empty = new string(' ', 11);
+        return $"[ {name} | {empty} | {empty} | {new string(' ', 40)} | {FormatGil(p.Bank)} ]";
+    }
+
+    private static string BuildPausedLine(PlayerState p)
+    {
+        string name = p.DisplayName.Length > NameWidth ? p.DisplayName.Substring(0, NameWidth) : p.DisplayName.PadRight(NameWidth);
+        return $"[ {name} | {new string('-', 28)} Paused {new string('-', 28)} ]";
+    }
+
+    private static string HandResultLabel(HandState hand)
+    {
+        if (hand.IsBust) return "BUST";
+        if (hand.IsCharlie) return "CH";
+        if (hand.IsNaturalBlackJack) return "nBJ";
+        return "";
+    }
+
+    private static string BuildActionSequence(HandState hand)
+    {
+        if (hand.Cards.Count == 0) return "(empty)";
+
+        var sb = new StringBuilder();
         sb.Append(FormatCard(hand.Cards[0]));
 
         int cardIdx = 1;
         foreach (var action in hand.ActionLog)
         {
             sb.Append(':').Append(action);
-            if ((action == "Hit" || action == "Bust") && cardIdx < hand.Cards.Count)
+            if ((action == "Hit" || action == "Bust" || action == "DD") && cardIdx < hand.Cards.Count)
             {
                 sb.Append(':').Append(FormatCard(hand.Cards[cardIdx]));
                 cardIdx++;
             }
         }
 
-        if (hand.ActionLog.Count > 0)
+        while (cardIdx < hand.Cards.Count)
         {
-            var lastAction = hand.ActionLog[^1];
-            if (lastAction == "Stand" || lastAction == "Bust")
-                sb.Append(';').Append(scoreLabel);
+            sb.Append(':').Append(FormatCard(hand.Cards[cardIdx]));
+            cardIdx++;
         }
 
-        lines.Add(sb.ToString());
-        return lines;
-    }
-
-    private static List<string> BuildPlayerLines(PlayerState player, Configuration cfg)
-    {
-        var lines = new List<string>();
-        if (player.Hands.Count == 0) return lines;
-
-        bool isSplit = player.Hands.Count > 1;
-
-        var scoreLabels = new List<string>();
-        for (int h = 0; h < player.Hands.Count; h++)
-        {
-            int score = player.GetBestScore(h);
-            scoreLabels.Add(GetScoreLabel(player.Hands[h], score));
-        }
-
-        string headerScore = isSplit
-            ? string.Join(",.", scoreLabels)
-            : scoreLabels[0];
-
-        lines.Add(BuildHeader(player.DisplayName, headerScore));
-        lines.Add($"  {FormatGil(player.BankAtRoundStart)}");
-
-        if (isSplit)
-        {
-            var firstHand = player.Hands[0];
-            long baseBet = player.CurrentBet;
-            lines.Add($"  {FormatGil(baseBet)}");
-
-            int splitActionIdx = firstHand.ActionLog.IndexOf("Split");
-            if (splitActionIdx >= 0)
-            {
-                for (int a = 0; a < splitActionIdx; a++)
-                {
-                    string action = firstHand.ActionLog[a];
-                    int cardsShown = 2 + a + 1;
-                    string cards = FormatCardsRange(firstHand.Cards, 0, Math.Min(cardsShown, firstHand.Cards.Count));
-                    lines.Add($"    {cards}:{action}");
-                }
-
-                DeckCard splitCard1 = default;
-                DeckCard splitCard2 = default;
-                if (firstHand.Cards.Count >= 1) splitCard1 = firstHand.Cards[0];
-                if (player.Hands.Count > 1 && player.Hands[1].Cards.Count >= 1)
-                    splitCard2 = player.Hands[1].Cards[0];
-
-                string splitCards = $"{FormatCard(splitCard1)},{FormatCard(splitCard2)}";
-                lines.Add($"  {splitCards}:Split");
-                lines.Add($"  {FormatGil(baseBet)}");
-            }
-
-            char letter = 'A';
-            for (int h = 0; h < player.Hands.Count; h++)
-            {
-                var hand = player.Hands[h];
-                string prefix = $"{letter} ";
-                letter++;
-
-                var handActions = hand.ActionLog.Where(a => a != "Split").ToList();
-                int initialCards = 1;
-                int hitsSoFar = 0;
-
-                for (int a = 0; a < handActions.Count; a++)
-                {
-                    string action = handActions[a];
-                    bool isLast = a == handActions.Count - 1;
-
-                    if (action == "Hit" || action == "Bust")
-                    {
-                        hitsSoFar++;
-                        int cardsToShow = initialCards + hitsSoFar;
-                        string cards = FormatCardsRange(hand.Cards, 0, Math.Min(cardsToShow, hand.Cards.Count));
-                        string suffix = isLast ? $":{action};{GetScoreLabel(hand, player.GetBestScore(h))}" : $":{action}";
-                        lines.Add($"{prefix}{cards}{suffix}");
-                    }
-                    else if (action == "DD")
-                    {
-                        int cardsToShow = initialCards + hitsSoFar;
-                        string cardsBefore = FormatCardsRange(hand.Cards, 0, Math.Min(cardsToShow, hand.Cards.Count));
-                        lines.Add($"{prefix}{cardsBefore}:DD");
-                        lines.Add($"  {FormatGil(baseBet)}");
-                        hitsSoFar++;
-                        string allCards = FormatCardsRange(hand.Cards, 0, hand.Cards.Count);
-                        lines.Add($"{prefix}{allCards}:Stand;{GetScoreLabel(hand, player.GetBestScore(h))}");
-                    }
-                    else if (action == "Stand")
-                    {
-                        string allCards = FormatCardsRange(hand.Cards, 0, hand.Cards.Count);
-                        lines.Add($"{prefix}{allCards}:Stand;{GetScoreLabel(hand, player.GetBestScore(h))}");
-                    }
-                }
-
-                if (handActions.Count == 0 && hand.Cards.Count > 0)
-                {
-                    string allCards = FormatCardsRange(hand.Cards, 0, hand.Cards.Count);
-                    string label = GetScoreLabel(hand, player.GetBestScore(h));
-                    lines.Add($"{prefix}{allCards}:{label}");
-                }
-            }
-        }
-        else
-        {
-            var hand = player.Hands[0];
-            long baseBet = hand.Bet;
-            if (hand.IsDoubleDown) baseBet /= 2;
-            lines.Add($"  {FormatGil(baseBet)}");
-
-            int initialCards = 2;
-            int hitsSoFar = 0;
-
-            for (int a = 0; a < hand.ActionLog.Count; a++)
-            {
-                string action = hand.ActionLog[a];
-                bool isLast = a == hand.ActionLog.Count - 1;
-
-                if (action == "Hit" || action == "Bust")
-                {
-                    hitsSoFar++;
-                    int cardsToShow = initialCards + hitsSoFar;
-                    string cards = FormatCardsRange(hand.Cards, 0, Math.Min(cardsToShow, hand.Cards.Count));
-                    string suffix = isLast ? $":{action};{GetScoreLabel(hand, player.GetBestScore(0))}" : $":{action}";
-                    lines.Add($"    {cards}{suffix}");
-                }
-                else if (action == "DD")
-                {
-                    int cardsToShow = initialCards + hitsSoFar;
-                    string cardsBefore = FormatCardsRange(hand.Cards, 0, Math.Min(cardsToShow, hand.Cards.Count));
-                    lines.Add($"    {cardsBefore}:DD");
-                    lines.Add($"  {FormatGil(baseBet)}");
-                    hitsSoFar++;
-                    string allCards = FormatCardsRange(hand.Cards, 0, hand.Cards.Count);
-                    lines.Add($"    {allCards}:Stand;{GetScoreLabel(hand, player.GetBestScore(0))}");
-                }
-                else if (action == "Stand")
-                {
-                    string allCards = FormatCardsRange(hand.Cards, 0, hand.Cards.Count);
-                    lines.Add($"    {allCards}:Stand;{GetScoreLabel(hand, player.GetBestScore(0))}");
-                }
-            }
-
-            if (hand.ActionLog.Count == 0 && hand.Cards.Count > 0)
-            {
-                string allCards = FormatCardsRange(hand.Cards, 0, hand.Cards.Count);
-                string label = GetScoreLabel(hand, player.GetBestScore(0));
-                lines.Add($"    {allCards}:{label}");
-            }
-        }
-
-        lines.Add($"  {FormatGil(player.Bank)}");
-        return lines;
-    }
-
-    private static string BuildHeader(string name, string score)
-    {
-        const int width = 50;
-        int dotsNeeded = width - name.Length - score.Length;
-        if (dotsNeeded < 1) dotsNeeded = 1;
-        return name + new string('.', dotsNeeded) + score;
+        return sb.ToString();
     }
 
     private static string GetScoreLabel(HandState hand, int score)
     {
-        if (hand.IsBust) return ">21";
-        if (hand.IsCharlie) return $"c{score}";
-        if (score == 21 && hand.IsNaturalBlackJack) return "n21";
-        if (score == 21) return "d21";
+        if (hand.IsBust) return "BUST";
+        if (hand.IsCharlie) return "CH";
+        if (score == 21 && hand.IsNaturalBlackJack) return "nBJ";
+        if (score == 21) return "dBJ";
         return score.ToString();
     }
 
@@ -316,30 +259,25 @@ public static class RoundLogManager
 
     public static string FormatGil(long value)
     {
-        string formatted = Math.Abs(value).ToString("000,000,000");
-        var chars = formatted.ToCharArray();
-        bool leadingZero = true;
-        for (int i = 0; i < chars.Length; i++)
-        {
-            if (chars[i] == ',') continue;
-            if (leadingZero && chars[i] == '0')
-                chars[i] = '-';
-            else
-                leadingZero = false;
-        }
-        return new string(chars);
+        long abs = Math.Abs(value);
+        string digits = abs.ToString(CultureInfo.InvariantCulture).PadLeft(9, ' ');
+        return $"{digits.Substring(0, 3)},{digits.Substring(3, 3)},{digits.Substring(6, 3)}";
+    }
+
+    public static string BuildTradeLineInbound(string playerDisplayName, long bankBefore, long bankAfter)
+    {
+        string name = playerDisplayName.Length > NameWidth ? playerDisplayName.Substring(0, NameWidth) : playerDisplayName.PadRight(NameWidth);
+        return $"[ {name} | <<<<TRADE<<<< | {FormatGil(bankBefore)} | {FormatGil(bankAfter)} ]";
+    }
+
+    public static string BuildTradeLineOutbound(string playerDisplayName, long bankBefore, long bankAfter)
+    {
+        string name = playerDisplayName.Length > NameWidth ? playerDisplayName.Substring(0, NameWidth) : playerDisplayName.PadRight(NameWidth);
+        return $"[ {name} | >>>>TRADE>>>> | {FormatGil(bankBefore)} | {FormatGil(bankAfter)} ]";
     }
 
     private static string FormatCard(DeckCard card)
     {
         return $"[{card.ValueLabel,2}]";
-    }
-
-    private static string FormatCardsRange(List<DeckCard> cards, int start, int count)
-    {
-        var parts = new List<string>();
-        for (int i = start; i < start + count && i < cards.Count; i++)
-            parts.Add(FormatCard(cards[i]));
-        return string.Join(",", parts);
     }
 }

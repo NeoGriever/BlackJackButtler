@@ -13,26 +13,61 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.7.0.6\n" +
+        "v1.8.0.0\n" +
         "\n" +
-        "- Fix: Stats validator no longer\n" +
-        "  requires backtick markers\n";
+        "- New: Own Buttons have Active/Visible\n" +
+        "  toggles plus a custom Button Label\n" +
+        "  (Style Overrides moved to subcategory)\n" +
+        "- New: Stats tab now hosts the optional\n" +
+        "  player-bank subtraction, the House\n" +
+        "  Bank input (refunded after payout),\n" +
+        "  and a manual Start Time override\n" +
+        "- New: Round Log - compact monospace\n" +
+        "  layout with aligned gil columns,\n" +
+        "  Trade / Split / Paused rows\n" +
+        "- New: DrawLogic shows empty hands in\n" +
+        "  Waiting phase (positions only)\n" +
+        "- New: Recall button (configurable\n" +
+        "  unlock delay) re-fires the last\n" +
+        "  state command group\n" +
+        "- New: Delay sliders - minimum 0.01 s,\n" +
+        "  finer drag, optional whole-second\n" +
+        "  snapping\n" +
+        "- New: Update popup is now resizable\n" +
+        "  (900 x 760 default)\n" +
+        "- New: Missing protected default\n" +
+        "  commands and message batches are\n" +
+        "  restored automatically on startup\n" +
+        "- New: Defaults V2 pack. Hard Reset now\n" +
+        "  lets you pick Old or New defaults\n" +
+        "- New: Group Detector shows a 30 s\n" +
+        "  Start Bank button when stats are\n" +
+        "  not yet running\n" +
+        "- New: Presets - stable internal ID,\n" +
+        "  active preset highlighted in green,\n" +
+        "  Commands split into Standard Commands\n" +
+        "  and Own Buttons checkboxes\n" +
+        "- Change: Remaining German UI strings\n" +
+        "  translated to English\n" +
+        "- Fix: Command editor chat/ref toggle\n" +
+        "  no longer crashes Dalamud (ImGui\n" +
+        "  style stack imbalance)\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",
-               ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse)
+               ImGuiWindowFlags.NoCollapse)
     {
         _config = config;
         _save = save;
-        Size = new Vector2(300, 380);
-        SizeCondition = ImGuiCond.Always;
+        Size = new Vector2(900, 760);
+        SizeCondition = ImGuiCond.FirstUseEver;
     }
 
     public override void PreDraw()
     {
         var viewport = ImGui.GetMainViewport();
         var center = viewport.GetCenter();
-        ImGui.SetNextWindowPos(new Vector2(center.X - 150, center.Y - 190), ImGuiCond.Appearing);
+        ImGui.SetNextWindowPos(new Vector2(center.X - 450, center.Y - 380), ImGuiCond.FirstUseEver);
     }
 
     public override void Draw()
