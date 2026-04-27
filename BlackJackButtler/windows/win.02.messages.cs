@@ -24,7 +24,7 @@ public partial class BlackJackButtlerWindow
         if (!keysDown) ImGui.BeginDisabled();
         if (keysDown) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
 
-        if (BJBGui.Button("Hard Reset Standard Batches##hard_reset"))
+        if (BJBGui.Button("Hard Reset…##hard_reset"))
         {
             _openForceDefaultsPopup = true;
             ImGui.OpenPopup("bjb.restore.confirm");
@@ -41,12 +41,21 @@ public partial class BlackJackButtlerWindow
         if (ImGui.BeginPopupModal("bjb.restore.confirm", ref _openForceDefaultsPopup, ImGuiWindowFlags.AlwaysAutoResize))
         {
             ImGui.TextColored(new Vector4(1, 0, 0, 1), "WARNING: HARD RESET");
-            ImGui.TextUnformatted("This will delete all standard batches and recreate them.");
+            ImGui.TextUnformatted("This will delete all standard messages and commands and recreate them.");
+            ImGui.TextUnformatted("Choose which defaults pack to restore:");
             ImGui.Spacing();
 
-            if (BJBGui.Button("Yes, do it", new Vector2(120, 0)))
+            if (BJBGui.Button("Use New Defaults (recommended)", new Vector2(260, 0)))
             {
-                _config.ForceResetStandardBatches();
+                DefaultsMigration.SeedAllDefaultsFromV2(_config);
+                _save();
+                _openForceDefaultsPopup = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.SameLine();
+            if (BJBGui.Button("Use Old Defaults", new Vector2(160, 0)))
+            {
+                DefaultsMigration.SeedAllDefaults(_config);
                 _save();
                 _openForceDefaultsPopup = false;
                 ImGui.CloseCurrentPopup();

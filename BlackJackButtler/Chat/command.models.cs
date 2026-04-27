@@ -52,6 +52,10 @@ public class CommandGroup
     public List<PluginCommand> Commands = new();
     public Dictionary<int, CommandLineGroup> LineGroups = new();
 
+    public bool IsActive = true;
+    public bool IsVisible = true;
+    public string ButtonLabel = string.Empty;
+
     public bool UseCustomButtonColor = false;
     public bool UseCustomTextColor = false;
     public Vector4 CustomButtonColor = new(0.26f, 0.26f, 0.26f, 1.0f);

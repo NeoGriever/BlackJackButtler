@@ -19,10 +19,10 @@ public partial class BlackJackButtlerWindow
 
         if (!keysDown) ImGui.BeginDisabled();
         if (keysDown) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
-        if (BJBGui.Button("Reset Commands to Default##res_cmds"))
+        if (BJBGui.Button("Hard Reset…##res_cmds"))
         {
-            _config.ForceResetCommandGroups();
-            _save();
+            _openCmdForceDefaultsPopup = true;
+            ImGui.OpenPopup("bjb.cmd.restore.confirm");
         }
         if (keysDown) ImGui.PopStyleColor();
         if (!keysDown)
@@ -30,6 +30,37 @@ public partial class BlackJackButtlerWindow
             ImGui.EndDisabled();
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                 ImGui.SetTooltip("Hold CTRL + SHIFT to reset all command chains.");
+        }
+
+        if (ImGui.BeginPopupModal("bjb.cmd.restore.confirm", ref _openCmdForceDefaultsPopup, ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.TextColored(new Vector4(1, 0, 0, 1), "WARNING: HARD RESET");
+            ImGui.TextUnformatted("This will delete all standard messages and commands and recreate them.");
+            ImGui.TextUnformatted("Choose which defaults pack to restore:");
+            ImGui.Spacing();
+
+            if (BJBGui.Button("Use New Defaults (recommended)", new Vector2(260, 0)))
+            {
+                DefaultsMigration.SeedAllDefaultsFromV2(_config);
+                _save();
+                _openCmdForceDefaultsPopup = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.SameLine();
+            if (BJBGui.Button("Use Old Defaults", new Vector2(160, 0)))
+            {
+                DefaultsMigration.SeedAllDefaults(_config);
+                _save();
+                _openCmdForceDefaultsPopup = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.SameLine();
+            if (BJBGui.Button("Cancel", new Vector2(120, 0)))
+            {
+                _openCmdForceDefaultsPopup = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.EndPopup();
         }
 
         ImGui.Separator();
@@ -124,9 +155,9 @@ public partial class BlackJackButtlerWindow
                         ImGui.GetColorU32(new Vector4(0.15f, 0.18f, 0.38f, 0.9f)));
 
                     ImGui.TableSetColumnIndex(2);
-                    ImGui.TextColored(new Vector4(0.65f, 0.82f, 1f, 1f), $"  Gruppe {cmd.GroupId}");
+                    ImGui.TextColored(new Vector4(0.65f, 0.82f, 1f, 1f), $"  Group {cmd.GroupId}");
                     ImGui.SameLine();
-                    string modeLabel = lg.Mode == SelectionMode.Iterative ? "Iterativ" : "Zufällig";
+                    string modeLabel = lg.Mode == SelectionMode.Iterative ? "Iterative" : "Random";
                     if (ImGui.SmallButton($"{modeLabel}##grphdr_{group.Name}_{cmd.GroupId}"))
                     {
                         lg.Mode = lg.Mode == SelectionMode.Iterative
@@ -160,20 +191,21 @@ public partial class BlackJackButtlerWindow
                     _save();
                 }
                 if (ImGui.IsItemHovered())
-                    ImGui.SetTooltip("Gruppe (0 = keine Gruppe).\nGleiche Nummer = ein Befehl pro Auslösung (iterativ/zufällig).");
+                    ImGui.SetTooltip("Group (0 = no group).\nSame number = one command per trigger (iterative/random).");
             }
 
             // Col 2 — command text or command reference
             ImGui.TableNextColumn();
             if (cmd.GroupId != 0) ImGui.Indent(10f);
-            if (cmd.IsCommandRef)
+            bool wasCmdRef = cmd.IsCommandRef;
+            if (wasCmdRef)
                 ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.8f, 1f));
             if (BJBGui.SmallButton($"C##cmdref_{group.Name}_{i}"))
             {
                 cmd.IsCommandRef = !cmd.IsCommandRef;
                 _save();
             }
-            if (cmd.IsCommandRef) ImGui.PopStyleColor();
+            if (wasCmdRef) ImGui.PopStyleColor();
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip(cmd.IsCommandRef ? "Command Reference (click for Message)" : "Message (click for Command Reference)");
             ImGui.SameLine();
@@ -210,9 +242,18 @@ public partial class BlackJackButtlerWindow
             ImGui.TableNextColumn();
             ImGui.SetNextItemWidth(-1);
             float maxDelay = _config.UnlockWaitTimer ? 30f : 12f;
-            if (BJBGui.SliderFloat("##delay", ref cmd.Delay, 0.5f, maxDelay, "%.1fs"))
+            float oldDelay = cmd.Delay;
+            if (BJBGui.DragFloat("##delay", ref cmd.Delay, 0.01f, 0.01f, maxDelay, "%.2fs"))
             {
-                cmd.Delay = Math.Clamp(cmd.Delay, 0.5f, maxDelay);
+                if (_config.DelaySecondSnapping)
+                {
+                    float nearestInt = MathF.Round(cmd.Delay);
+                    float oldDist = MathF.Abs(oldDelay - nearestInt);
+                    float newDist = MathF.Abs(cmd.Delay - nearestInt);
+                    if (newDist < 0.2f && oldDist > 0.2f)
+                        cmd.Delay = nearestInt;
+                }
+                cmd.Delay = Math.Clamp(cmd.Delay, 0.01f, maxDelay);
                 _save();
             }
 

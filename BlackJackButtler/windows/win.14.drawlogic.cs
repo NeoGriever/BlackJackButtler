@@ -263,6 +263,15 @@ public partial class BlackJackButtlerWindow
             players = vPlayers;
             dealer = vDealer;
         }
+        else if (GameEngine.CurrentPhase == GamePhase.Waiting)
+        {
+            players = players.Select(p => { var c = p.Clone(); c.Hands.Clear(); return c; }).ToList();
+            if (dealer != null)
+            {
+                dealer = dealer.Clone();
+                dealer.Hands.Clear();
+            }
+        }
 
         foreach (var e in _config.DrawLogicEntries)
         {

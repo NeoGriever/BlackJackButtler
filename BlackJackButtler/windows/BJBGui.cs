@@ -71,6 +71,14 @@ internal static class BJBGui
         return r;
     }
 
+    public static bool DragFloat(string label, ref float v, float v_speed, float v_min, float v_max, string format)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
+        var r = ImGui.DragFloat(label, ref v, v_speed, v_min, v_max, format);
+        ImGui.PopStyleColor();
+        return r;
+    }
+
     public static bool Combo(string label, ref int current_item, string items_separated_by_zeros)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);

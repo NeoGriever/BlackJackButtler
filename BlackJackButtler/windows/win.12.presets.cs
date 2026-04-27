@@ -26,7 +26,8 @@ public partial class BlackJackButtlerWindow
         "VipBetTiers", "NearbyAlwaysShowCircle", "AutoContinue", "AutoContinueDelay",
     };
 
-    private static readonly string[] CommandFields = { "CommandGroups", "CustomCommandGroups" };
+    private static readonly string[] StandardCommandFields = { "CommandGroups" };
+    private static readonly string[] OwnButtonFields = { "CustomCommandGroups", "CustomButtonOrder" };
     private static readonly string[] MessageFields = { "MessageBatches" };
     private static readonly string[] RegexFields = { "UserRegexes" };
     private static readonly string[] WebhookFields = { "Webhooks" };
@@ -48,7 +49,12 @@ public partial class BlackJackButtlerWindow
         {
             var obj = JObject.FromObject(_config);
             obj.Remove("Presets");
-            _config.Presets.Add(new PresetEntry { SnapshotJson = obj.ToString(Formatting.None) });
+            _config.Presets.Add(new PresetEntry
+            {
+                PresetId = Guid.NewGuid().ToString("N"),
+                CommandsCheckboxMigrated = true,
+                SnapshotJson = obj.ToString(Formatting.None),
+            });
             _save();
         }
 
@@ -79,14 +85,22 @@ public partial class BlackJackButtlerWindow
                             else
                                 ApplyDelta(cumulative!, snapshot);
 
+                            var importedId = entry["PresetId"]?.Value<string>();
+                            if (string.IsNullOrEmpty(importedId) || _config.Presets.Any(pp => pp.PresetId == importedId))
+                                importedId = Guid.NewGuid().ToString("N");
+                            var legacyApplyCommands = entry["ApplyCommands"]?.Value<bool>() ?? true;
                             _config.Presets.Add(new PresetEntry
                             {
                                 Name = entry["Name"]?.Value<string>() ?? "Imported Preset",
+                                PresetId = importedId,
                                 ApplySettings = entry["ApplySettings"]?.Value<bool>() ?? true,
-                                ApplyCommands = entry["ApplyCommands"]?.Value<bool>() ?? true,
+                                ApplyCommands = legacyApplyCommands,
+                                ApplyStandardCommands = entry["ApplyStandardCommands"]?.Value<bool>() ?? legacyApplyCommands,
+                                ApplyOwnButtons = entry["ApplyOwnButtons"]?.Value<bool>() ?? legacyApplyCommands,
                                 ApplyMessages = entry["ApplyMessages"]?.Value<bool>() ?? true,
                                 ApplyRegexes = entry["ApplyRegexes"]?.Value<bool>() ?? true,
                                 ApplyWebhooks = entry["ApplyWebhooks"]?.Value<bool>() ?? true,
+                                CommandsCheckboxMigrated = true,
                                 SnapshotJson = ((JObject)cumulative!.DeepClone()).ToString(Formatting.None),
                             });
                         }
@@ -108,13 +122,14 @@ public partial class BlackJackButtlerWindow
         for (int i = _config.Presets.Count - 1; i >= 0; i--)
         {
             var preset = _config.Presets[i];
-            bool isActive = preset.Name == _config.ActivePresetName;
+            bool isActive = !string.IsNullOrEmpty(preset.PresetId)
+                            && preset.PresetId == _config.ActivePresetId;
 
             if (isActive)
             {
-                ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.05f, 0.25f, 0.05f, 1f));
-                ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(0.08f, 0.35f, 0.08f, 1f));
-                ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Vector4(0.04f, 0.20f, 0.04f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.05f, 0.32f, 0.05f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.HeaderHovered, new Vector4(0.08f, 0.45f, 0.08f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Vector4(0.04f, 0.26f, 0.04f, 1f));
             }
 
             bool expanded = ImGui.TreeNodeEx($"##pn_{i}", ImGuiTreeNodeFlags.AllowItemOverlap, preset.Name);
@@ -135,8 +150,9 @@ public partial class BlackJackButtlerWindow
             ImGui.BeginDisabled(!ctrl);
             if (ImGui.SmallButton($"X##del_{i}") && ctrl)
             {
-                if (_config.ActivePresetName == preset.Name)
+                if (_config.ActivePresetId == preset.PresetId)
                 {
+                    _config.ActivePresetId = string.Empty;
                     _config.ActivePresetName = null;
                     _presetChangeCount = 0;
                 }
@@ -190,9 +206,9 @@ public partial class BlackJackButtlerWindow
                 ImGui.SetNextItemWidth(300);
                 if (ImGui.InputText($"Name##pname_{i}", ref nameBuf, 128))
                 {
+                    preset.Name = nameBuf;
                     if (isActive)
                         _config.ActivePresetName = nameBuf;
-                    preset.Name = nameBuf;
                     _save();
                 }
 
@@ -204,10 +220,16 @@ public partial class BlackJackButtlerWindow
                 if (ImGui.IsItemHovered()) ImGui.SetTooltip("Settings");
 
                 ImGui.SameLine();
-                bool applyCommands = preset.ApplyCommands;
-                if (ImGui.Checkbox($"##pcmd_{i}", ref applyCommands))
-                { preset.ApplyCommands = applyCommands; _save(); }
-                if (ImGui.IsItemHovered()) ImGui.SetTooltip("Commands & Own Buttons");
+                bool applyStdCmds = preset.ApplyStandardCommands;
+                if (ImGui.Checkbox($"##pstdcmd_{i}", ref applyStdCmds))
+                { preset.ApplyStandardCommands = applyStdCmds; _save(); }
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip("Standard Commands (Hit, Stand, DD, Split, ...)");
+
+                ImGui.SameLine();
+                bool applyOwnBtns = preset.ApplyOwnButtons;
+                if (ImGui.Checkbox($"##pownbtn_{i}", ref applyOwnBtns))
+                { preset.ApplyOwnButtons = applyOwnBtns; _save(); }
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip("Own Buttons (Custom Command Groups)");
 
                 ImGui.SameLine();
                 bool applyMessages = preset.ApplyMessages;
@@ -322,16 +344,24 @@ public partial class BlackJackButtlerWindow
             _config.AutoContinueDelay                  = snap.AutoContinueDelay;
         }
 
-        if (preset.ApplyCommands)
+        if (preset.ApplyStandardCommands)
         {
-            _config.CommandGroups       = snap.CommandGroups;
+            _config.CommandGroups = snap.CommandGroups;
+        }
+
+        if (preset.ApplyOwnButtons)
+        {
             _config.CustomCommandGroups = snap.CustomCommandGroups;
+            _config.CustomButtonOrder   = snap.CustomButtonOrder;
         }
 
         if (preset.ApplyMessages) _config.MessageBatches = snap.MessageBatches;
         if (preset.ApplyRegexes)  _config.UserRegexes    = snap.UserRegexes;
         if (preset.ApplyWebhooks) _config.Webhooks       = snap.Webhooks;
 
+        if (string.IsNullOrEmpty(preset.PresetId))
+            preset.PresetId = Guid.NewGuid().ToString("N");
+        _config.ActivePresetId = preset.PresetId;
         _config.ActivePresetName = preset.Name;
         _save();
         _presetChangeCount = 0;
@@ -341,7 +371,9 @@ public partial class BlackJackButtlerWindow
     private void RecomputePresetChangeCount()
     {
         _presetChangeCount = 0;
-        var preset = _config.Presets.FirstOrDefault(p => p.Name == _config.ActivePresetName);
+        PresetEntry? preset = null;
+        if (!string.IsNullOrEmpty(_config.ActivePresetId))
+            preset = _config.Presets.FirstOrDefault(p => p.PresetId == _config.ActivePresetId);
         if (preset == null) return;
 
         JObject current, snapshot;
@@ -350,17 +382,20 @@ public partial class BlackJackButtlerWindow
             current = JObject.FromObject(_config);
             current.Remove("Presets");
             current.Remove("ActivePresetName");
+            current.Remove("ActivePresetId");
             snapshot = JObject.Parse(preset.SnapshotJson);
             snapshot.Remove("ActivePresetName");
+            snapshot.Remove("ActivePresetId");
         }
         catch { return; }
 
         int count = 0;
-        if (preset.ApplySettings)  count += CountDiffs(current, snapshot, SettingsFields);
-        if (preset.ApplyCommands)  count += CountDiffs(current, snapshot, CommandFields);
-        if (preset.ApplyMessages)  count += CountDiffs(current, snapshot, MessageFields);
-        if (preset.ApplyRegexes)   count += CountDiffs(current, snapshot, RegexFields);
-        if (preset.ApplyWebhooks)  count += CountDiffs(current, snapshot, WebhookFields);
+        if (preset.ApplySettings)         count += CountDiffs(current, snapshot, SettingsFields);
+        if (preset.ApplyStandardCommands) count += CountDiffs(current, snapshot, StandardCommandFields);
+        if (preset.ApplyOwnButtons)       count += CountDiffs(current, snapshot, OwnButtonFields);
+        if (preset.ApplyMessages)         count += CountDiffs(current, snapshot, MessageFields);
+        if (preset.ApplyRegexes)          count += CountDiffs(current, snapshot, RegexFields);
+        if (preset.ApplyWebhooks)         count += CountDiffs(current, snapshot, WebhookFields);
         _presetChangeCount = count;
     }
 
@@ -385,8 +420,11 @@ public partial class BlackJackButtlerWindow
             new JObject
             {
                 ["Name"] = preset.Name,
+                ["PresetId"] = preset.PresetId,
                 ["ApplySettings"] = preset.ApplySettings,
                 ["ApplyCommands"] = preset.ApplyCommands,
+                ["ApplyStandardCommands"] = preset.ApplyStandardCommands,
+                ["ApplyOwnButtons"] = preset.ApplyOwnButtons,
                 ["ApplyMessages"] = preset.ApplyMessages,
                 ["ApplyRegexes"] = preset.ApplyRegexes,
                 ["ApplyWebhooks"] = preset.ApplyWebhooks,
@@ -419,8 +457,11 @@ public partial class BlackJackButtlerWindow
             var entry = new JObject
             {
                 ["Name"] = p.Name,
+                ["PresetId"] = p.PresetId,
                 ["ApplySettings"] = p.ApplySettings,
                 ["ApplyCommands"] = p.ApplyCommands,
+                ["ApplyStandardCommands"] = p.ApplyStandardCommands,
+                ["ApplyOwnButtons"] = p.ApplyOwnButtons,
                 ["ApplyMessages"] = p.ApplyMessages,
                 ["ApplyRegexes"] = p.ApplyRegexes,
                 ["ApplyWebhooks"] = p.ApplyWebhooks,
@@ -498,9 +539,14 @@ public partial class BlackJackButtlerWindow
                 if (lastEntry.ContainsKey("Name")) preset.Name = lastEntry["Name"]!.Value<string>() ?? preset.Name;
                 if (lastEntry.ContainsKey("ApplySettings")) preset.ApplySettings = lastEntry["ApplySettings"]!.Value<bool>();
                 if (lastEntry.ContainsKey("ApplyCommands")) preset.ApplyCommands = lastEntry["ApplyCommands"]!.Value<bool>();
+                if (lastEntry.ContainsKey("ApplyStandardCommands")) preset.ApplyStandardCommands = lastEntry["ApplyStandardCommands"]!.Value<bool>();
+                else if (lastEntry.ContainsKey("ApplyCommands")) preset.ApplyStandardCommands = lastEntry["ApplyCommands"]!.Value<bool>();
+                if (lastEntry.ContainsKey("ApplyOwnButtons")) preset.ApplyOwnButtons = lastEntry["ApplyOwnButtons"]!.Value<bool>();
+                else if (lastEntry.ContainsKey("ApplyCommands")) preset.ApplyOwnButtons = lastEntry["ApplyCommands"]!.Value<bool>();
                 if (lastEntry.ContainsKey("ApplyMessages")) preset.ApplyMessages = lastEntry["ApplyMessages"]!.Value<bool>();
                 if (lastEntry.ContainsKey("ApplyRegexes")) preset.ApplyRegexes = lastEntry["ApplyRegexes"]!.Value<bool>();
                 if (lastEntry.ContainsKey("ApplyWebhooks")) preset.ApplyWebhooks = lastEntry["ApplyWebhooks"]!.Value<bool>();
+                preset.CommandsCheckboxMigrated = true;
             }
 
             preset.SnapshotJson = cumulative!.ToString(Formatting.None);

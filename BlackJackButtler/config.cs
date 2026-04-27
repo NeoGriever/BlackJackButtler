@@ -33,6 +33,8 @@ public sealed class Configuration : IPluginConfiguration
     public float CommandSpeedMultiplier = 1.0f;
     public bool UnlockWaitTimer = false;
     public bool OpenDropboxInsteadOfTrade = true;
+    public bool DelaySecondSnapping = true;
+    public float RecallUnlockSeconds = 20f;
 
     public List<CommandGroup> CommandGroups = new();
     public List<CommandGroup> CustomCommandGroups = new();
@@ -43,6 +45,7 @@ public sealed class Configuration : IPluginConfiguration
 
     public List<PresetEntry> Presets = new();
     public string? ActivePresetName = null;   // null = "Default"
+    public string ActivePresetId = string.Empty;
 
     public long MinBet = 50000;
     public long MaxBet = 500000;
@@ -79,6 +82,8 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool dismissDevWarning = false;
     public bool HashedStats = true;
+    public bool StatsSubtractPlayerBanks = true;
+    public long StatsHouseBank = 0;
 
     public string LastSeenVersion = "";
     public bool DisableUpdatePopup = false;
@@ -180,6 +185,36 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool EnsureDefaultBatchesOnce() => EnsureDefaultsOnce();
 
+    public bool EnsurePresetMigrations()
+    {
+        bool changed = false;
+        foreach (var p in Presets)
+        {
+            if (string.IsNullOrEmpty(p.PresetId))
+            {
+                p.PresetId = Guid.NewGuid().ToString("N");
+                changed = true;
+            }
+            if (!p.CommandsCheckboxMigrated)
+            {
+                p.ApplyStandardCommands = p.ApplyCommands;
+                p.ApplyOwnButtons = p.ApplyCommands;
+                p.CommandsCheckboxMigrated = true;
+                changed = true;
+            }
+        }
+        if (string.IsNullOrEmpty(ActivePresetId) && !string.IsNullOrEmpty(ActivePresetName))
+        {
+            var match = Presets.FirstOrDefault(p => p.Name == ActivePresetName);
+            if (match != null)
+            {
+                ActivePresetId = match.PresetId;
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 }
 
@@ -253,15 +288,18 @@ public sealed class WebhookEntry
 public sealed class PresetEntry
 {
     public string Name = "New Preset";
+    public string PresetId = string.Empty;
 
-    // Welche Kategorien werden beim Anwenden überschrieben
     public bool ApplySettings = true;
-    public bool ApplyCommands = true;   // CommandGroups + CustomCommandGroups
+    public bool ApplyCommands = true;
+    public bool ApplyStandardCommands = true;
+    public bool ApplyOwnButtons = true;
     public bool ApplyMessages = true;
     public bool ApplyRegexes  = true;
     public bool ApplyWebhooks = true;
 
-    // Vollständiger Config-Snapshot als JSON-String
+    public bool CommandsCheckboxMigrated = false;
+
     public string SnapshotJson = "{}";
 }
 

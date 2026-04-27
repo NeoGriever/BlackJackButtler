@@ -32,6 +32,9 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _showRegexWarningPopup;
     private bool _openRegexResetPopup = false;
     private bool _openForceDefaultsPopup = false;
+    private bool _openCmdForceDefaultsPopup = false;
+    private string _startTimeInputBuffer = string.Empty;
+    private string? _startTimeInputError;
     private PlayerState _dealer = new() { Name = "Dealer", IsActivePlayer = true };
     private PlayerState? _editingAliasPlayer;
     private string _aliasInputBuffer = string.Empty;

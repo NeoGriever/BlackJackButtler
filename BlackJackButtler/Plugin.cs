@@ -96,6 +96,9 @@ public sealed class Plugin : IDalamudPlugin
         if (DefaultsMigration.MigrateTellDotToken(Configuration))
             Configuration.Save();
 
+        if (Configuration.EnsurePresetMigrations())
+            Configuration.Save();
+
         if (!Configuration.NotifyGroupsMigrated)
         {
             Configuration.NotifyGroupsMigrated = true;

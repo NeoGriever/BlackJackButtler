@@ -280,8 +280,27 @@ public partial class BlackJackButtlerWindow
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Defines AD-flagged entries will not get executed twice.");
 
             ImGui.Spacing();
+            if (ImGui.Checkbox("Second Snapping", ref _config.DelaySecondSnapping)) _save();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("When enabled, dragging a delay slider near a whole second value snaps to it.\n"
+                    + "E.g. 14.90 → 15.00 snaps; 15.00 → 14.80 stays free.");
+
+            ImGui.Spacing();
             if (ImGui.Checkbox("Small Result Message", ref _config.SmallResult)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: Collects all results and sends a single compressed message.\nInactive: Sends individual result messages for every player hand.");
+
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Recall Unlock");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            if (BJBGui.SliderFloat("##recall_unlock", ref _config.RecallUnlockSeconds, 5f, 120f, "%.0fs"))
+            {
+                _config.RecallUnlockSeconds = Math.Clamp(_config.RecallUnlockSeconds, 5f, 120f);
+                _save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Seconds after a State group fires before the Recall button\n"
+                    + "re-enables. Prevents accidentally double-prompting the active player.");
 
             ImGui.Spacing();
             ImGui.Spacing();
@@ -877,7 +896,7 @@ public partial class BlackJackButtlerWindow
                     _save();
                 }
                 if (ImGui.IsItemHovered())
-                    ImGui.SetTooltip("Erhöht die maximale Wait-Zeit auf 30 s.\nBeim Deaktivieren werden alle Einträge über 12 s auf 12 s gesetzt.");
+                    ImGui.SetTooltip("Increases the maximum wait time to 30 s.\nWhen disabled, all entries above 12 s are capped at 12 s.");
 
                 ImGui.Spacing();
                 ImGui.Spacing();
