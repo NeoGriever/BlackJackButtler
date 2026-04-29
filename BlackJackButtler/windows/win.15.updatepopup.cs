@@ -13,45 +13,9 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.8.0.0\n" +
+        "v1.8.1.0\n" +
         "\n" +
-        "- New: Own Buttons have Active/Visible\n" +
-        "  toggles plus a custom Button Label\n" +
-        "  (Style Overrides moved to subcategory)\n" +
-        "- New: Stats tab now hosts the optional\n" +
-        "  player-bank subtraction, the House\n" +
-        "  Bank input (refunded after payout),\n" +
-        "  and a manual Start Time override\n" +
-        "- New: Round Log - compact monospace\n" +
-        "  layout with aligned gil columns,\n" +
-        "  Trade / Split / Paused rows\n" +
-        "- New: DrawLogic shows empty hands in\n" +
-        "  Waiting phase (positions only)\n" +
-        "- New: Recall button (configurable\n" +
-        "  unlock delay) re-fires the last\n" +
-        "  state command group\n" +
-        "- New: Delay sliders - minimum 0.01 s,\n" +
-        "  finer drag, optional whole-second\n" +
-        "  snapping\n" +
-        "- New: Update popup is now resizable\n" +
-        "  (900 x 760 default)\n" +
-        "- New: Missing protected default\n" +
-        "  commands and message batches are\n" +
-        "  restored automatically on startup\n" +
-        "- New: Defaults V2 pack. Hard Reset now\n" +
-        "  lets you pick Old or New defaults\n" +
-        "- New: Group Detector shows a 30 s\n" +
-        "  Start Bank button when stats are\n" +
-        "  not yet running\n" +
-        "- New: Presets - stable internal ID,\n" +
-        "  active preset highlighted in green,\n" +
-        "  Commands split into Standard Commands\n" +
-        "  and Own Buttons checkboxes\n" +
-        "- Change: Remaining German UI strings\n" +
-        "  translated to English\n" +
-        "- Fix: Command editor chat/ref toggle\n" +
-        "  no longer crashes Dalamud (ImGui\n" +
-        "  style stack imbalance)\n";
+        "- Change: Updated to Dalamud API Level 15\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",
