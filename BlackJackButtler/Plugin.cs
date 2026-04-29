@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Dalamud.Game.Chat;
 using Dalamud.Game.Command;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
@@ -400,15 +401,15 @@ public sealed class Plugin : IDalamudPlugin
         mainWindow.OpenMain();
     }
 
-    private void OnChatMessage(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
+    private void OnChatMessage(IHandleableChatMessage message)
     {
-        var senderText = sender.TextValue ?? string.Empty;
-        var messageText = message.TextValue ?? string.Empty;
-        var pp = sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
+        var senderText = message.Sender.TextValue ?? string.Empty;
+        var messageText = message.Message.TextValue ?? string.Empty;
+        var pp = message.Sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
         var playerName = pp?.PlayerName ?? string.Empty;
         var worldId = pp?.World.RowId ?? 0u;
 
-        InjectChatMessage((int)type, worldId, playerName, senderText, messageText, sender, message);
+        InjectChatMessage((int)message.LogKind, worldId, playerName, senderText, messageText, message.Sender, message.Message);
     }
 
     public void InjectChatMessage(int type, uint worldId, string playerName, string senderText, string messageText, SeString? rawSender = null, SeString? rawMessage = null)
