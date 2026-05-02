@@ -44,7 +44,7 @@ public static class ChatMessageParser
     RxOpt.Compiled | RxOpt.IgnoreCase
   );
 
-  public static ParsedChatMessage Parse(DateTime timestamp, SeString sender, SeString message, string localPlayerName)
+  public static ParsedChatMessage Parse(DateTime timestamp, SeString sender, SeString message, string localPlayerName, int chatType)
   {
     var messageText = message.TextValue ?? string.Empty;
 
@@ -57,7 +57,8 @@ public static class ChatMessageParser
     var isSelf = !string.IsNullOrWhiteSpace(localPlayerName)
     && string.Equals(name, localPlayerName, StringComparison.Ordinal);
 
-    var isEvent = isSelf && IsDiceRoll(message, messageText);
+    var isDice = IsDiceRoll(message, messageText);
+    var isEvent = isSelf && isDice;
     var color = ColorFromIdentity(name, worldId);
 
     return new ParsedChatMessage(
@@ -67,7 +68,9 @@ public static class ChatMessageParser
       worldId,
       messageText,
       isEvent,
-      color
+      color,
+      chatType,
+      isDice
     );
   }
 

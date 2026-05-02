@@ -210,7 +210,7 @@ public static class JoinQueueManager
     {
         foreach (var obj in Plugin.ObjectTable)
         {
-            if (obj.ObjectKind != ObjectKind.Player) continue;
+            if (obj.ObjectKind != ObjectKind.Pc) continue;
             if (obj is not IPlayerCharacter pc) continue;
             if (pc.Name.TextValue == name && pc.HomeWorld.Value.Name.ToString() == world)
                 return pc;

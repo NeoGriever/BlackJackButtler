@@ -54,8 +54,9 @@ public sealed class Plugin : IDalamudPlugin
 
     private readonly WindowSystem windowSystem = new("BlackJackButtler");
     private readonly BlackJackButtlerWindow mainWindow;
-    private readonly ChatLogBuffer chatLog = new(20);
+    private readonly ChatLogBuffer chatLog = new(500);
     private readonly DebugLogWindow debugLogWindow;
+    private ChatBoxWindow chatBoxWindow = null!;
     private readonly DrawLogicDebugWindow drawLogicDebugWindow;
     private readonly NotepadWindow notepadWindow;
     private readonly CustomButtonBarWindow buttonBarWindow;
@@ -80,6 +81,7 @@ public sealed class Plugin : IDalamudPlugin
     public void OpenDrawLogicDebug() => drawLogicDebugWindow.IsOpen = true;
     public void OpenButtonBar() { buttonBarWindow.RequestRepositioning(); buttonBarWindow.IsOpen = true; }
     public void CloseButtonBar() => buttonBarWindow.IsOpen = false;
+    public void OpenChatBox() { chatBoxWindow.IsOpen = true; UpdateEventHooks(); }
     public BlackJackButtlerWindow GetMainWindow() => mainWindow;
     private string _cachedLocalName = string.Empty;
 
@@ -127,6 +129,9 @@ public sealed class Plugin : IDalamudPlugin
         debugLogWindow = new DebugLogWindow(mainWindow);
         windowSystem.AddWindow(debugLogWindow);
 
+        chatBoxWindow = new ChatBoxWindow(chatLog, Configuration);
+        windowSystem.AddWindow(chatBoxWindow);
+
         drawLogicDebugWindow = new DrawLogicDebugWindow();
         windowSystem.AddWindow(drawLogicDebugWindow);
 
@@ -153,7 +158,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Configuration.Save();
 
-        CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) {HelpMessage = "Open BlackJack Buttler."});
+        CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) {HelpMessage = "Open BlackJack Buttler. Use '/bjb chat' to open the BJB Messenger."});
 
         PluginInterface.UiBuilder.Draw += windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi += mainWindow.OpenMain;
@@ -348,7 +353,7 @@ public sealed class Plugin : IDalamudPlugin
     public void UpdateEventHooks()
     {
         bool needFramework = mainWindow.IsOpen || mainWindow.IsRecognitionActive;
-        bool needChat = mainWindow.IsRecognitionActive;
+        bool needChat = mainWindow.IsRecognitionActive || (chatBoxWindow != null && chatBoxWindow.IsOpen);
 
         if (needFramework && !_frameworkHooked)
         {
@@ -398,6 +403,12 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnCommand(string command, string args)
     {
+        var trimmed = (args ?? string.Empty).Trim();
+        if (string.Equals(trimmed, "chat", StringComparison.OrdinalIgnoreCase))
+        {
+            OpenChatBox();
+            return;
+        }
         mainWindow.OpenMain();
     }
 
@@ -425,7 +436,7 @@ public sealed class Plugin : IDalamudPlugin
         var s = rawSender ?? new SeString(new TextPayload(senderText));
         var m = rawMessage ?? new SeString(new TextPayload(messageText));
 
-        var parsed = ChatMessageParser.Parse(DateTime.Now, s, m, localName);
+        var parsed = ChatMessageParser.Parse(DateTime.Now, s, m, localName, type);
 
         chatLog.Add(parsed);
         RegexEngine.ProcessIncoming(parsed, Configuration, mainWindow.GetPlayers(), mainWindow.GetDealer());

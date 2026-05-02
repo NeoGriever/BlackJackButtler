@@ -218,7 +218,7 @@ public static class DrawLogicInterpreter
         {
             foreach (var obj in Plugin.ObjectTable)
             {
-                if (obj.ObjectKind != ObjectKind.Player) continue;
+                if (obj.ObjectKind != ObjectKind.Pc) continue;
                 if (obj is not IPlayerCharacter pc) continue;
                 if (pc.Name.TextValue == player.Name)
                 {

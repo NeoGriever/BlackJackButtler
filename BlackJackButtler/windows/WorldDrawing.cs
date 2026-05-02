@@ -221,7 +221,7 @@ public sealed class WorldDrawing
     {
         foreach (var obj in Plugin.ObjectTable)
         {
-            if (obj.ObjectKind != ObjectKind.Player) continue;
+            if (obj.ObjectKind != ObjectKind.Pc) continue;
             if (obj is not IPlayerCharacter pc) continue;
             if (pc.Name.TextValue == playerName)
                 return pc.Position;
@@ -233,7 +233,7 @@ public sealed class WorldDrawing
     {
         foreach (var obj in Plugin.ObjectTable)
         {
-            if (obj.ObjectKind != ObjectKind.Player) continue;
+            if (obj.ObjectKind != ObjectKind.Pc) continue;
             if (obj is not IPlayerCharacter pc) continue;
             if (pc.Name.TextValue == playerName && pc.HomeWorld.Value.Name.ToString() == worldName)
                 return pc.Position;
