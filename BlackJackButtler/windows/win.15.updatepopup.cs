@@ -13,9 +13,12 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.8.1.0\n" +
+        "v1.8.1.1\n" +
         "\n" +
-        "- Change: Updated to Dalamud API Level 15\n";
+        "- New: BJB Messenger — in-plugin party-chat box with dice-roll highlight\n" +
+        "- New: Title bar button (chat bubbles) opens the messenger\n" +
+        "- New: '/bjb chat' command opens the messenger directly\n" +
+        "- Change: Chat log buffer increased from 20 to 500 entries\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",

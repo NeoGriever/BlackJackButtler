@@ -46,7 +46,7 @@ public static class NearbyPlayersManager
             {
                 foreach (var obj in Plugin.ObjectTable)
                 {
-                    if (obj.ObjectKind != ObjectKind.Player) continue;
+                    if (obj.ObjectKind != ObjectKind.Pc) continue;
                     if (obj is not IPlayerCharacter pc) continue;
                     if (pc.Name.TextValue == info.Name && pc.HomeWorld.Value.Name.ToString() == info.World)
                     {
@@ -62,7 +62,7 @@ public static class NearbyPlayersManager
 
         foreach (var obj in Plugin.ObjectTable)
         {
-            if (obj.ObjectKind != ObjectKind.Player) continue;
+            if (obj.ObjectKind != ObjectKind.Pc) continue;
             if (obj is not IPlayerCharacter pc) continue;
 
             var name = pc.Name.TextValue;

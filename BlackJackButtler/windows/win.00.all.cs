@@ -88,6 +88,21 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
         TitleBarButtons.Add(new TitleBarButton
         {
+            Icon = FontAwesomeIcon.CommentDots,
+            Priority = 80,
+            Click = _ =>
+            {
+                Plugin.Instance.OpenChatBox();
+            },
+            ShowTooltip = () =>
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                ImGui.SetTooltip("Open BJB Messenger\n(party chat + dice rolls)");
+            }
+        });
+
+        TitleBarButtons.Add(new TitleBarButton
+        {
             Icon = FontAwesomeIcon.Comments,
             Priority = 90,
             Click = _ =>

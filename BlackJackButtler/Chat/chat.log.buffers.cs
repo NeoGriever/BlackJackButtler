@@ -47,5 +47,7 @@ public sealed record ParsedChatMessage(
   int WorldId,
   string Message,
   bool Event,
-  uint ColorU32
+  uint ColorU32,
+  int ChatType,
+  bool IsDice
 );
