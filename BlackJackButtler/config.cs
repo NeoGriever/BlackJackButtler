@@ -88,6 +88,8 @@ public sealed class Configuration : IPluginConfiguration
     public string LastSeenVersion = "";
     public bool DisableUpdatePopup = false;
 
+    public bool UseBurgerMenu = false;
+
     public bool ImportantNoticeAcknowledged = false;
 
     public string BlacklistDetectedAt = "";

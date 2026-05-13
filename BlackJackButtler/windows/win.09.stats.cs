@@ -284,7 +284,11 @@ public partial class BlackJackButtlerWindow
                 var entry = log[i];
                 sb.AppendLine(separator);
                 sb.AppendLine(RoundLogManager.FormatTimestamp(entry.Timestamp, _config.UtcOffsetHours));
+                foreach (var line in entry.PreRoundEvents)
+                    sb.AppendLine(line);
                 foreach (var line in entry.Lines)
+                    sb.AppendLine(line);
+                foreach (var line in entry.PostRoundEvents)
                     sb.AppendLine(line);
             }
             if (log.Count > 0)
@@ -308,7 +312,11 @@ public partial class BlackJackButtlerWindow
                 var entry = log[i];
                 ImGui.TextUnformatted(separator);
                 ImGui.TextUnformatted(RoundLogManager.FormatTimestamp(entry.Timestamp, _config.UtcOffsetHours));
+                foreach (var line in entry.PreRoundEvents)
+                    ImGui.TextUnformatted(line);
                 foreach (var line in entry.Lines)
+                    ImGui.TextUnformatted(line);
+                foreach (var line in entry.PostRoundEvents)
                     ImGui.TextUnformatted(line);
             }
 

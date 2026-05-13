@@ -153,6 +153,11 @@ public partial class BlackJackButtlerWindow
 
             ImGui.Separator();
             ImGui.Spacing();
+            if (ImGui.Checkbox("Use Burger Menu instead of Sidebar", ref _config.UseBurgerMenu)) _save();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Replace the left sidebar with a compact burger-menu button at the top.\nUseful when window space is tight.");
+
+            ImGui.Spacing();
             if (ImGui.Checkbox("Show Nearby Players", ref _config.ShowNearbyPlayers)) _save();
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Show a list of nearby players below the player table.");

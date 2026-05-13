@@ -199,6 +199,35 @@ public static partial class GameEngine
         int dealerScore = dealer.GetBestScore(0);
         bool dealerBust = dealer.Hands.Count > 0 && dealer.Hands[0].IsBust;
 
+        var payoutTraces = new Dictionary<string, PayoutTrace>();
+        PayoutTrace EnsureTrace(PlayerState pl)
+        {
+            if (!payoutTraces.TryGetValue(pl.DisplayName, out var t))
+            {
+                t = new PayoutTrace
+                {
+                    ReceiverDisplayName = pl.DisplayName,
+                    ReceiverBankBeforePayout = pl.Bank,
+                    ReceiverBankAfterPayout = pl.Bank,
+                };
+                payoutTraces[pl.DisplayName] = t;
+            }
+            return t;
+        }
+        void RecordLeg(PlayerState pl, long bankBefore, long bankAfter, long amount)
+        {
+            if (amount == 0) return;
+            var t = EnsureTrace(pl);
+            t.ReceiverBankAfterPayout = bankAfter;
+            t.Legs.Add(new PayoutLeg
+            {
+                PayerDisplayName = pl.DisplayName,
+                PayerBankBefore = bankBefore,
+                PayerBankAfter = bankAfter,
+                Amount = amount,
+            });
+        }
+
         if (cfg.SmallResult)
         {
             var winList = new List<string>();
@@ -240,14 +269,18 @@ public static partial class GameEngine
 
                         long winAmount = (long)(hand.Bet * mult);
                         hand.RoundResult = winAmount;
+                        long preBank = p.Bank;
                         p.Bank += (hand.Bet + winAmount);
                         p.LastRoundResult += winAmount;
+                        RecordLeg(p, preBank, p.Bank, p.Bank - preBank);
                     }
                     else if (pScore == dealerScore)
                     {
                         pushList.Add(shortName);
                         hand.RoundResult = 0;
+                        long preBank = p.Bank;
                         p.Bank += hand.Bet;
+                        RecordLeg(p, preBank, p.Bank, p.Bank - preBank);
                     }
                     else
                     {
@@ -308,14 +341,18 @@ public static partial class GameEngine
 
                         long winAmount = (long)(hand.Bet * mult);
                         hand.RoundResult = winAmount;
+                        long preBank = p.Bank;
                         p.Bank += (hand.Bet + winAmount);
                         p.LastRoundResult += winAmount;
+                        RecordLeg(p, preBank, p.Bank, p.Bank - preBank);
                         await CommandExecutor.ExecuteGroup("ResultPlayerWin", p.DisplayName, cfg);
                     }
                     else if (pScore == dealerScore)
                     {
                         hand.RoundResult = 0;
+                        long preBank = p.Bank;
                         p.Bank += hand.Bet;
+                        RecordLeg(p, preBank, p.Bank, p.Bank - preBank);
                         await CommandExecutor.ExecuteGroup("ResultPlayerPush", p.DisplayName, cfg);
                     }
                     else
@@ -327,6 +364,9 @@ public static partial class GameEngine
                 }
             }
         }
+
+        foreach (var trace in payoutTraces.Values)
+            RoundLogManager.RecordPayoutTrace(trace);
 
         ActivityLogManager.LogRoundEnd(dealer, players);
         RoundLogManager.AddRound(dealer, players, cfg);

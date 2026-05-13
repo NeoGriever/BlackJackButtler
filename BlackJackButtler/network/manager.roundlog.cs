@@ -13,15 +13,34 @@ public sealed class PersistentRoundEntry
     public string Timestamp { get; set; } = "";
     public List<string> Lines { get; set; } = new();
     public List<string> TradeLines { get; set; } = new();
+    public List<string> PreRoundEvents { get; set; } = new();
+    public List<string> PostRoundEvents { get; set; } = new();
+}
+
+public sealed class PayoutTrace
+{
+    public string ReceiverDisplayName { get; set; } = "";
+    public long ReceiverBankBeforePayout { get; set; }
+    public long ReceiverBankAfterPayout { get; set; }
+    public List<PayoutLeg> Legs { get; set; } = new();
+}
+
+public sealed class PayoutLeg
+{
+    public string PayerDisplayName { get; set; } = "";
+    public long PayerBankBefore { get; set; }
+    public long PayerBankAfter { get; set; }
+    public long Amount { get; set; }
 }
 
 public static class RoundLogManager
 {
-    private const int NameWidth = 24;
-
     private static string _filePath = string.Empty;
     private static List<PersistentRoundEntry> _log = new();
     private static readonly List<(string playerKey, string line)> _pendingTrades = new();
+    private static readonly List<string> _pendingJoins = new();
+    private static readonly List<string> _pendingLeaves = new();
+    private static readonly List<PayoutTrace> _pendingPayouts = new();
 
     public static void Init(string configDir)
     {
@@ -59,6 +78,10 @@ public static class RoundLogManager
     public static void ClearLog()
     {
         _log.Clear();
+        _pendingTrades.Clear();
+        _pendingJoins.Clear();
+        _pendingLeaves.Clear();
+        _pendingPayouts.Clear();
         Save();
     }
 
@@ -69,6 +92,24 @@ public static class RoundLogManager
 
     public static void ClearPendingTrades() => _pendingTrades.Clear();
 
+    public static void RecordPlayerJoin(string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName)) return;
+        _pendingJoins.Add($"{displayName} joins");
+    }
+
+    public static void RecordPlayerLeave(string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(displayName)) return;
+        _pendingLeaves.Add($"{displayName} leaves");
+    }
+
+    public static void RecordPayoutTrace(PayoutTrace trace)
+    {
+        if (trace == null) return;
+        _pendingPayouts.Add(trace);
+    }
+
     public static void AddRound(PlayerState dealer, List<PlayerState> players, Configuration cfg)
     {
         var activePlayers = players.Where(x => x.IsActivePlayer && !x.IsOnHold).ToList();
@@ -77,40 +118,54 @@ public static class RoundLogManager
         if (activePlayers.Count == 0 && (dealer.Hands.Count == 0 || dealer.Hands[0].Cards.Count == 0))
         {
             _pendingTrades.Clear();
+            _pendingJoins.Clear();
+            _pendingLeaves.Clear();
+            _pendingPayouts.Clear();
             return;
         }
 
-        var lines = new List<string>();
-        var tradeLinesForPersist = new List<string>();
+        int gilWidth = ComputeGilWidth(activePlayers, dealer);
 
-        lines.Add(BuildDealerLine(dealer));
+        var preEvents = new List<string>(_pendingJoins);
+
+        var lines = new List<string>();
+        lines.Add("--- Round Start ---");
 
         foreach (var p in activePlayers)
         {
-            lines.Add(BuildActivePlayerLine(p));
-            var key = p.DisplayName;
+            lines.Add(BuildActivePlayerLine(p, gilWidth));
+
+            string key = p.DisplayName;
             foreach (var trade in _pendingTrades.Where(t => KeyMatches(t.playerKey, key)).ToList())
-            {
                 lines.Add(trade.line);
-                tradeLinesForPersist.Add(trade.line);
-            }
 
             if (p.Hands.Count > 1)
             {
                 for (int h = 0; h < p.Hands.Count; h++)
                     lines.Add(BuildSplitHandLine(p, h));
-                lines.Add(BuildSplitFinalLine(p));
+                lines.Add(BuildSplitFinalLine(p, gilWidth));
             }
         }
 
+        lines.Add(BuildDealerLine(dealer));
+
         foreach (var p in pausedPlayers)
-        {
             lines.Add(BuildPausedLine(p));
+
+        lines.Add("--- Round End ---");
+
+        var postEvents = new List<string>();
+        foreach (var trace in _pendingPayouts)
+        {
+            postEvents.Add(BuildPayoutHeaderLine(trace, gilWidth));
+            foreach (var leg in trace.Legs)
+                postEvents.Add(BuildPayoutDetailLine(leg, gilWidth));
         }
+        postEvents.AddRange(_pendingLeaves);
 
         long totalPlayerGain = activePlayers.Sum(p => p.Bank - p.BankAtRoundStart);
         string sign = totalPlayerGain > 0 ? "(-)" : totalPlayerGain < 0 ? "(+)" : "(=)";
-        lines.Add($"Round outcome: {sign} {FormatGil(Math.Abs(totalPlayerGain))}");
+        lines.Add($"Round outcome: {sign} {FormatGilPadded(Math.Abs(totalPlayerGain), gilWidth)}");
 
         try
         {
@@ -118,9 +173,10 @@ public static class RoundLogManager
             {
                 Timestamp = DateTime.UtcNow.ToString("o"),
                 Lines = lines,
-                TradeLines = tradeLinesForPersist
+                TradeLines = _pendingTrades.Select(t => t.line).ToList(),
+                PreRoundEvents = preEvents,
+                PostRoundEvents = postEvents,
             };
-
             _log.Add(entry);
             Save();
         }
@@ -130,6 +186,9 @@ public static class RoundLogManager
         }
 
         _pendingTrades.Clear();
+        _pendingJoins.Clear();
+        _pendingLeaves.Clear();
+        _pendingPayouts.Clear();
     }
 
     private static bool KeyMatches(string tradeKey, string playerKey)
@@ -141,29 +200,41 @@ public static class RoundLogManager
         return string.Equals(tk, pk, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static int ComputeGilWidth(List<PlayerState> activePlayers, PlayerState dealer)
+    {
+        long max = 0;
+        foreach (var p in activePlayers)
+        {
+            max = Math.Max(max, Math.Abs(p.Bank));
+            max = Math.Max(max, Math.Abs(p.BankAtRoundStart));
+        }
+        int digits = max <= 0 ? 1 : (int)Math.Floor(Math.Log10(max)) + 1;
+        int padded = ((digits + 2) / 3) * 3;
+        return Math.Max(9, padded);
+    }
+
     private static string BuildDealerLine(PlayerState dealer)
     {
         if (dealer.Hands.Count == 0 || dealer.Hands[0].Cards.Count == 0)
-            return "[ Dealer".PadRight(NameWidth + 2) + "| (no cards) ]";
+            return "Dealer | (no cards)";
 
         var hand = dealer.Hands[0];
         int score = dealer.GetBestScore(0);
+        string actions = BuildActionString(hand);
         string scoreLabel = GetScoreLabel(hand, score);
-        string actionSeq = BuildActionSequence(hand);
-
-        return $"[ {"Dealer".PadRight(NameWidth)} | {actionSeq} {scoreLabel} ]";
+        return $"Dealer | {actions} | {scoreLabel}";
     }
 
-    private static string BuildActivePlayerLine(PlayerState p)
+    private static string BuildActivePlayerLine(PlayerState p, int gilWidth)
     {
         if (p.Hands.Count == 0)
-            return $"[ {p.DisplayName.PadRight(NameWidth)} | (no cards) ]";
+            return $"{p.DisplayName} | (no cards)";
 
         var hand = p.Hands[0];
         int score = p.GetBestScore(0);
         string scoreLabel = p.Hands.Count > 1 ? "SPLIT" : GetScoreLabel(hand, score);
+        string actions = BuildActionString(hand);
 
-        string actionSeq = BuildActionSequence(hand);
         long baseBet = hand.Bet;
         if (hand.IsDoubleDown) baseBet /= 2;
 
@@ -171,10 +242,11 @@ public static class RoundLogManager
         long bankAfterBet = bankStart - baseBet;
         long bankEnd = p.Bank;
 
-        string name = p.DisplayName.Length > NameWidth ? p.DisplayName.Substring(0, NameWidth) : p.DisplayName.PadRight(NameWidth);
-        string bankEndCell = p.Hands.Count > 1 ? new string('-', 11) : FormatGil(bankEnd);
+        string bankEndCell = p.Hands.Count > 1
+            ? new string('-', gilWidth + (gilWidth / 3) - 1)
+            : FormatGilPadded(bankEnd, gilWidth);
 
-        return $"[ {name} | {FormatGil(bankStart)} | {FormatGil(bankAfterBet)} | {actionSeq} {scoreLabel} | {bankEndCell} ]";
+        return $"{p.DisplayName} | {FormatGilPadded(bankStart, gilWidth)} | {FormatGilPadded(bankAfterBet, gilWidth)} | {actions} | {scoreLabel} | {bankEndCell}";
     }
 
     private static string BuildSplitHandLine(PlayerState p, int handIndex)
@@ -182,66 +254,85 @@ public static class RoundLogManager
         var hand = p.Hands[handIndex];
         int score = p.GetBestScore(handIndex);
         string scoreLabel = GetScoreLabel(hand, score);
-        string actionSeq = BuildActionSequence(hand);
+        string actions = BuildActionString(hand);
         string result = HandResultLabel(hand);
-
-        return $"    [ HAND {handIndex + 1} | {actionSeq} {scoreLabel} | {result} ]";
+        return $"  HAND {handIndex + 1} | {actions} | {scoreLabel}{(string.IsNullOrEmpty(result) ? "" : " | " + result)}";
     }
 
-    private static string BuildSplitFinalLine(PlayerState p)
+    private static string BuildSplitFinalLine(PlayerState p, int gilWidth)
     {
-        string name = p.DisplayName.Length > NameWidth ? p.DisplayName.Substring(0, NameWidth) : p.DisplayName.PadRight(NameWidth);
-        string empty = new string(' ', 11);
-        return $"[ {name} | {empty} | {empty} | {new string(' ', 40)} | {FormatGil(p.Bank)} ]";
+        return $"{p.DisplayName} | {FormatGilPadded(p.Bank, gilWidth)}";
     }
 
     private static string BuildPausedLine(PlayerState p)
     {
-        string name = p.DisplayName.Length > NameWidth ? p.DisplayName.Substring(0, NameWidth) : p.DisplayName.PadRight(NameWidth);
-        return $"[ {name} | {new string('-', 28)} Paused {new string('-', 28)} ]";
+        return $"{p.DisplayName} | -------- Paused --------";
+    }
+
+    public static string BuildPayoutHeaderLine(PayoutTrace trace, int gilWidth)
+    {
+        return $"{trace.ReceiverDisplayName} | {FormatGilPadded(trace.ReceiverBankBeforePayout, gilWidth)} | {FormatGilPadded(trace.ReceiverBankAfterPayout, gilWidth)} | PAYOUT";
+    }
+
+    public static string BuildPayoutDetailLine(PayoutLeg leg, int gilWidth)
+    {
+        return $"{leg.PayerDisplayName} | {FormatGilPadded(leg.PayerBankBefore, gilWidth)} - {FormatGilPadded(leg.Amount, gilWidth)} | {FormatGilPadded(leg.PayerBankAfter, gilWidth)}";
     }
 
     private static string HandResultLabel(HandState hand)
     {
-        if (hand.IsBust) return "BUST";
-        if (hand.IsCharlie) return "CH";
+        if (hand.IsBust) return "bust";
+        if (hand.IsCharlie) return "charlie";
         if (hand.IsNaturalBlackJack) return "nBJ";
         return "";
     }
 
-    private static string BuildActionSequence(HandState hand)
+    private static string BuildActionString(HandState hand)
     {
         if (hand.Cards.Count == 0) return "(empty)";
 
-        var sb = new StringBuilder();
-        sb.Append(FormatCard(hand.Cards[0]));
+        var parts = new List<string>();
+        parts.Add(FormatCard(hand.Cards[0]));
 
         int cardIdx = 1;
         foreach (var action in hand.ActionLog)
         {
-            sb.Append(':').Append(action);
-            if ((action == "Hit" || action == "Bust" || action == "DD") && cardIdx < hand.Cards.Count)
+            string a = action.ToLowerInvariant();
+            if (a == "stand") { parts.Add("stand"); continue; }
+            if (a == "split") { parts.Add("split"); continue; }
+            if (a == "hit")
             {
-                sb.Append(':').Append(FormatCard(hand.Cards[cardIdx]));
-                cardIdx++;
+                parts.Add("hit");
+                if (cardIdx < hand.Cards.Count) parts.Add(FormatCard(hand.Cards[cardIdx++]));
+                continue;
             }
+            if (a == "bust")
+            {
+                parts.Add("bust");
+                if (cardIdx < hand.Cards.Count) parts.Add(FormatCard(hand.Cards[cardIdx++]));
+                continue;
+            }
+            if (a == "dd")
+            {
+                parts.Add("dd");
+                if (cardIdx < hand.Cards.Count) parts.Add(FormatCard(hand.Cards[cardIdx++]));
+                continue;
+            }
+            parts.Add(a);
         }
 
         while (cardIdx < hand.Cards.Count)
-        {
-            sb.Append(':').Append(FormatCard(hand.Cards[cardIdx]));
-            cardIdx++;
-        }
+            parts.Add(FormatCard(hand.Cards[cardIdx++]));
 
-        return sb.ToString();
+        return string.Join(", ", parts);
     }
 
     private static string GetScoreLabel(HandState hand, int score)
     {
-        if (hand.IsBust) return "BUST";
+        if (hand.IsBust) return score.ToString();
         if (hand.IsCharlie) return "CH";
         if (score == 21 && hand.IsNaturalBlackJack) return "nBJ";
-        if (score == 21) return "dBJ";
+        if (score == 21) return "21";
         return score.ToString();
     }
 
@@ -264,20 +355,39 @@ public static class RoundLogManager
         return $"{digits.Substring(0, 3)},{digits.Substring(3, 3)},{digits.Substring(6, 3)}";
     }
 
+    public static string FormatGilPadded(long value, int width)
+    {
+        long abs = Math.Abs(value);
+        string raw = abs.ToString(CultureInfo.InvariantCulture);
+        int targetDigits = Math.Max(width, raw.Length);
+        targetDigits = ((targetDigits + 2) / 3) * 3;
+        string padded = raw.PadLeft(targetDigits, '_');
+
+        var sb = new StringBuilder();
+        for (int i = 0; i < padded.Length; i++)
+        {
+            if (i > 0 && (padded.Length - i) % 3 == 0) sb.Append(',');
+            sb.Append(padded[i]);
+        }
+        return sb.ToString();
+    }
+
     public static string BuildTradeLineInbound(string playerDisplayName, long bankBefore, long bankAfter)
     {
-        string name = playerDisplayName.Length > NameWidth ? playerDisplayName.Substring(0, NameWidth) : playerDisplayName.PadRight(NameWidth);
-        return $"[ {name} | <<<<TRADE<<<< | {FormatGil(bankBefore)} | {FormatGil(bankAfter)} ]";
+        long delta = Math.Abs(bankAfter - bankBefore);
+        return $"{playerDisplayName} | {FormatGilPadded(bankBefore, 9)} + {FormatGilPadded(delta, 9)} | {FormatGilPadded(bankAfter, 9)}";
     }
 
     public static string BuildTradeLineOutbound(string playerDisplayName, long bankBefore, long bankAfter)
     {
-        string name = playerDisplayName.Length > NameWidth ? playerDisplayName.Substring(0, NameWidth) : playerDisplayName.PadRight(NameWidth);
-        return $"[ {name} | >>>>TRADE>>>> | {FormatGil(bankBefore)} | {FormatGil(bankAfter)} ]";
+        long delta = Math.Abs(bankAfter - bankBefore);
+        return $"{playerDisplayName} | {FormatGilPadded(bankBefore, 9)} - {FormatGilPadded(delta, 9)} | {FormatGilPadded(bankAfter, 9)}";
     }
 
     private static string FormatCard(DeckCard card)
     {
-        return $"[{card.ValueLabel,2}]";
+        string label = card.ValueLabel.Trim();
+        if (label == "10") label = "X";
+        return $"<{label}>";
     }
 }

@@ -6,9 +6,13 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow
 {
-    private void DrawVarsPage()
+    internal void DrawVarsPage()
     {
         ImGui.TextUnformatted("Session Variables");
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("Pop out##bjb_vars_popup_btn"))
+            ToggleVariablesPopup();
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Open variables in floating window");
         ImGui.Separator();
         ImGui.TextDisabled("These variables are stored for the current session and can be used in messages via ${name}.");
         ImGui.Spacing();
@@ -22,9 +26,10 @@ public partial class BlackJackButtlerWindow
             ImGui.TableSetupColumn("Action", ImGuiTableColumnFlags.WidthFixed, 40);
             ImGui.TableHeadersRow();
 
-            for (int i = 0; i < VariableManager.Variables.Count; i++)
+            var snapshot = VariableManager.SnapshotForUi();
+            for (int i = 0; i < snapshot.Count; i++)
             {
-                var v = VariableManager.Variables[i];
+                var v = snapshot[i];
                 ImGui.TableNextRow();
 
                 ImGui.TableNextColumn();
@@ -57,7 +62,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.TableNextColumn();
                 if (BJBGui.Button($"X##del_{v.Name}", new Vector2(-1, 0)))
                 {
-                    VariableManager.Variables.RemoveAt(i);
+                    VariableManager.RemoveAt(i);
                     break;
                 }
             }
@@ -67,7 +72,7 @@ public partial class BlackJackButtlerWindow
         ImGui.Spacing();
         if (BJBGui.Button("+ Add Manual Variable"))
         {
-            VariableManager.Variables.Add(new SessionVariable { Name = "new_var", Value = "", IsManual = true });
+            VariableManager.AddManual(new SessionVariable { Name = "new_var", Value = "", IsManual = true });
         }
     }
 }

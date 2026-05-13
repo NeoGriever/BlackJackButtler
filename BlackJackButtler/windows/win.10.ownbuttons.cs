@@ -11,6 +11,7 @@ public partial class BlackJackButtlerWindow
     private string _newCustomGroupName = string.Empty;
     private string _renameBuffer = string.Empty;
     private int _renamingGroupIndex = -1;
+    private string _filterOwnButtons = string.Empty;
 
     private void EnsureButtonOrderMigration()
     {
@@ -56,6 +57,7 @@ public partial class BlackJackButtlerWindow
 
         ImGui.Spacing();
         ImGui.Separator();
+        BJBGui.DrawFilterBar("ownbtn", ref _filterOwnButtons, "Search button name or command...");
         ImGui.Spacing();
 
         int toRemoveIndex = -1;
@@ -63,9 +65,15 @@ public partial class BlackJackButtlerWindow
         for (int i = 0; i < _config.CustomCommandGroups.Count; i++)
         {
             var group = _config.CustomCommandGroups[i];
+
+            if (!BJBGui.MatchesFilter(_filterOwnButtons, group.Name, group.Commands.Select(c => c.Text))) continue;
+
             ImGui.PushID($"custom_group_{i}");
 
-            bool headerOpen = ImGui.CollapsingHeader($"{group.Name}###custom_grp_{i}", ImGuiTreeNodeFlags.DefaultOpen);
+            if (!string.IsNullOrEmpty(_filterOwnButtons))
+                ImGui.SetNextItemOpen(true, ImGuiCond.Always);
+
+            bool headerOpen = ImGui.CollapsingHeader($"{group.Name}###custom_grp_{i}");
 
             if (headerOpen)
             {

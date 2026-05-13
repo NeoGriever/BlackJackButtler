@@ -8,6 +8,8 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow
 {
+    private string _filterRegex = string.Empty;
+
     private void DrawRegexPage()
     {
         ImGui.TextUnformatted("Regular Expressions");
@@ -82,6 +84,9 @@ public partial class BlackJackButtlerWindow
             _save();
         }
 
+        ImGui.SameLine();
+        BJBGui.DrawFilterBar("regex", ref _filterRegex, "Search regex name or pattern...");
+
         ImGui.Spacing();
 
         for (var i = 0; i < _config.UserRegexes.Count; i++)
@@ -89,12 +94,17 @@ public partial class BlackJackButtlerWindow
             var e = _config.UserRegexes[i];
             bool isStd = IsStandardRegex(e.Name);
 
+            if (!BJBGui.MatchesFilter(_filterRegex, e.Name, e.Patterns)) continue;
+
             ImGui.PushID(i);
 
             if (isStd) ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.1f, 0.3f, 0.1f, 1f));
 
             var headerLabel = isStd ? $"● {e.Name}" : e.Name;
             if (string.IsNullOrWhiteSpace(e.Name)) headerLabel = $"Entry {i + 1}";
+
+            if (!string.IsNullOrEmpty(_filterRegex))
+                ImGui.SetNextItemOpen(true, ImGuiCond.Always);
 
             bool open = ImGui.CollapsingHeader($"{headerLabel}###regex_{i}");
 

@@ -221,7 +221,24 @@ public static class DiceResultHandler
                 !hand.IsBust && best < 21 && !hand.IsStand)
             {
                 string promptGroup = GameEngine.GetStatePromptGroup(target, cfg);
-                Task.Run(async () => await CommandExecutor.ExecuteGroup(promptGroup, target.DisplayName, cfg));
+                CommandExecutor.SignalFollowUpPending();
+
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await CommandExecutor.WaitForCurrentGroupToFinishAsync();
+                        await CommandExecutor.ExecuteGroup(promptGroup, target.DisplayName, cfg);
+                    }
+                    catch (Exception ex)
+                    {
+                        window.AddDebugLog($"[DiceHandler-Prompt] EXCEPTION: {ex.Message}");
+                    }
+                    finally
+                    {
+                        CommandExecutor.ClearFollowUpPending();
+                    }
+                });
             }
         }
     }
