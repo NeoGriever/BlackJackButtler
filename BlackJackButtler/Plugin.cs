@@ -63,6 +63,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly UpdatePopupWindow updatePopupWindow;
     private readonly ImportantNoticeWindow importantNoticeWindow;
     private readonly BlacklistBannerWindow blacklistBannerWindow;
+    private VariablesPopupWindow variablesPopupWindow = null!;
     private DateTime _lastSync = DateTime.MinValue;
     private DateTime _lastIdleTick = DateTime.MinValue;
     private volatile bool _autoActionInFlight = false;
@@ -144,6 +145,10 @@ public sealed class Plugin : IDalamudPlugin
         blacklistBannerWindow = new BlacklistBannerWindow();
         windowSystem.AddWindow(blacklistBannerWindow);
         blacklistBannerWindow.IsOpen = true;
+
+        variablesPopupWindow = new VariablesPopupWindow(mainWindow);
+        windowSystem.AddWindow(variablesPopupWindow);
+        mainWindow.SetVariablesPopupWindow(variablesPopupWindow);
 
         DebugCommandSink = mainWindow.AddDebugLog;
         windowSystem.AddWindow(mainWindow);
@@ -425,8 +430,6 @@ public sealed class Plugin : IDalamudPlugin
 
     public void InjectChatMessage(int type, uint worldId, string playerName, string senderText, string messageText, SeString? rawSender = null, SeString? rawMessage = null)
     {
-        _lastChatActivity = DateTime.Now;
-
         string logName = !string.IsNullOrEmpty(playerName) ? playerName : senderText;
         string logLine = string.IsNullOrEmpty(logName) ? messageText : $"{logName}: {messageText}";
 
@@ -437,6 +440,9 @@ public sealed class Plugin : IDalamudPlugin
         var m = rawMessage ?? new SeString(new TextPayload(messageText));
 
         var parsed = ChatMessageParser.Parse(DateTime.Now, s, m, localName, type);
+
+        if (ChatLogBuffer.IsPartyChatType(type) || parsed.IsDice)
+            _lastChatActivity = DateTime.Now;
 
         chatLog.Add(parsed);
         RegexEngine.ProcessIncoming(parsed, Configuration, mainWindow.GetPlayers(), mainWindow.GetDealer());

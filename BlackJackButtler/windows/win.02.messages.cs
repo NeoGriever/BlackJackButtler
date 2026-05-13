@@ -7,12 +7,16 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow
 {
+    private string _filterMessages = string.Empty;
+
     private void DrawMessagesPage()
     {
         ImGui.TextUnformatted("Message Batches");
         ImGui.SameLine();
         if (BJBGui.SmallButton("?##varref_msg")) _showVarRefPanel = !_showVarRefPanel;
         ImGui.Separator();
+
+        BJBGui.DrawFilterBar("messages", ref _filterMessages, "Search batch name or message...");
 
         var hideStd = _config.HideStandardBatches;
         if (ImGui.Checkbox("Hide standard batches", ref hideStd)) { _config.HideStandardBatches = hideStd; _save(); }
@@ -77,6 +81,8 @@ public partial class BlackJackButtlerWindow
             bool isStd = IsStandardBatch(batch.Name);
             if (isStd && _config.HideStandardBatches) continue;
 
+            if (!BJBGui.MatchesFilter(_filterMessages, batch.Name, batch.Messages)) continue;
+
             ImGui.PushID(i);
             if (isStd) ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.1f, 0.3f, 0.1f, 1f));
 
@@ -88,6 +94,9 @@ public partial class BlackJackButtlerWindow
                 SelectionMode.Iterative => "Iterative",
                 _ => "Unknown"
             };
+
+            if (!string.IsNullOrEmpty(_filterMessages))
+                ImGui.SetNextItemOpen(true, ImGuiCond.Always);
 
             // Draw header with mode text
             bool open = ImGui.CollapsingHeader($"{(isStd ? "● " : "")}{batch.Name} [{modeName}]###batch_{i}");

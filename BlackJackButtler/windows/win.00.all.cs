@@ -33,6 +33,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _openRegexResetPopup = false;
     private bool _openForceDefaultsPopup = false;
     private bool _openCmdForceDefaultsPopup = false;
+    private bool _openCleanDataPopup = false;
     private string _startTimeInputBuffer = string.Empty;
     private string? _startTimeInputError;
     private PlayerState _dealer = new() { Name = "Dealer", IsActivePlayer = true };
@@ -69,6 +70,14 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     private bool _notepadLoaded = false;
     private readonly NotepadWindow _notepadWindow;
+    private VariablesPopupWindow? _variablesPopupWindow;
+
+    public void SetVariablesPopupWindow(VariablesPopupWindow w) => _variablesPopupWindow = w;
+    public void ToggleVariablesPopup()
+    {
+        if (_variablesPopupWindow == null) return;
+        _variablesPopupWindow.IsOpen = !_variablesPopupWindow.IsOpen;
+    }
 
     private Vector2 _lastWindowPos;
     private Vector2 _lastWindowSize;
@@ -218,12 +227,13 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         }
 
         var avail = ImGui.GetContentRegionAvail();
-        var sidebarWidth = _isSidebarVisible ? 200f : 0f;
+        var burgerMode = _config.UseBurgerMenu;
+        var sidebarWidth = (_isSidebarVisible && !burgerMode) ? 200f : 0f;
 
         var level = _config.CurrentLevel;
         if (level == UserLevel.Custom) EnsureCustomVisiblePages();
 
-        if (_isSidebarVisible)
+        if (_isSidebarVisible && !burgerMode)
         {
             ImGui.BeginChild("bjb.sidebar", new Vector2(sidebarWidth, avail.Y), true);
             if (ImGui.SmallButton("<##hide_sidebar")) _isSidebarVisible = false;
@@ -281,7 +291,29 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         ImGui.PushStyleColor(ImGuiCol.ButtonActive,  btnActive);
         ImGui.BeginChild("bjb.content", new Vector2(0, avail.Y), true);
 
-        if (!_isSidebarVisible)
+        if (burgerMode)
+        {
+            ImGui.PushFont(UiBuilder.IconFont);
+            if (BJBGui.SmallButton(FontAwesomeIcon.Bars.ToIconString() + "##bjb_burger"))
+                ImGui.OpenPopup("bjb_burger_menu");
+            ImGui.PopFont();
+            ImGui.SameLine();
+            ImGui.TextDisabled($"Page: {_page}");
+            if (level == UserLevel.Custom)
+            {
+                ImGui.SameLine();
+                if (_customEditMode) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 0.9f));
+                if (ImGui.SmallButton("✏##custom_edit_burger")) _customEditMode = !_customEditMode;
+                if (_customEditMode) ImGui.PopStyleColor();
+            }
+            else
+            {
+                _customEditMode = false;
+            }
+            ImGui.Separator();
+            DrawBurgerMenuPopup(level);
+        }
+        else if (!_isSidebarVisible)
         {
             if (BJBGui.SmallButton(">##show_sidebar")) _isSidebarVisible = true;
             ImGui.SameLine();
@@ -426,6 +458,55 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         foreach (Page p in Enum.GetValues(typeof(Page)))
             if (p != Page.Main) _config.CustomVisiblePages.Add(p.ToString());
         _save();
+    }
+
+    private void DrawBurgerMenuPopup(UserLevel level)
+    {
+        if (!ImGui.BeginPopup("bjb_burger_menu", ImGuiWindowFlags.AlwaysAutoResize)) return;
+
+        NavButtonBurger(Page.Main, "Main");
+        ImGui.Separator();
+        if (ShouldShowPage(Page.Regexes, level))     NavButtonBurger(Page.Regexes, "Regex");
+        if (ShouldShowPage(Page.Messages, level))    NavButtonBurger(Page.Messages, "Messages");
+        if (ShouldShowPage(Page.Commands, level))    NavButtonBurger(Page.Commands, "Commands");
+        if (ShouldShowPage(Page.OwnButtons, level))  NavButtonBurger(Page.OwnButtons, "Own Buttons");
+        if (ShouldShowPage(Page.Webhooks, level))    NavButtonBurger(Page.Webhooks, "Webhooks");
+        if (ShouldShowPage(Page.Presets, level))     NavButtonBurger(Page.Presets, "Presets");
+        ImGui.Separator();
+        if (ShouldShowPage(Page.Settings, level))    NavButtonBurger(Page.Settings, "Settings");
+        if (ShouldShowPage(Page.Stats, level))       NavButtonBurger(Page.Stats, "Stats");
+        ImGui.Separator();
+        if (ShouldShowPage(Page.RoundLog, level))    NavButtonBurger(Page.RoundLog, "Round History");
+        if (ShouldShowPage(Page.Vars, level))        NavButtonBurger(Page.Vars, "Variables");
+        if (ShouldShowPage(Page.Debug, level))       NavButtonBurger(Page.Debug, "DEBUG");
+        if (ShouldShowPage(Page.DrawLogic, level))   NavButtonBurger(Page.DrawLogic, "Draw Logic");
+        ImGui.Separator();
+        if (ShouldShowPage(Page.Thanks, level))      NavButtonBurger(Page.Thanks, "Thanks to");
+
+        ImGui.EndPopup();
+    }
+
+    private void NavButtonBurger(Page page, string label)
+    {
+        var selected = _page == page;
+        if (selected) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.15f, 0.35f, 0.65f, 0.9f));
+
+        if (_customEditMode && _config.CurrentLevel == UserLevel.Custom && page != Page.Main)
+        {
+            var pageName = page.ToString();
+            bool visible = _config.CustomVisiblePages.Contains(pageName);
+            if (ImGui.Checkbox($"##bcv_{pageName}", ref visible))
+            {
+                if (visible) { if (!_config.CustomVisiblePages.Contains(pageName)) _config.CustomVisiblePages.Add(pageName); }
+                else _config.CustomVisiblePages.Remove(pageName);
+                _save();
+            }
+            ImGui.SameLine();
+        }
+
+        if (ImGui.Button(label, new Vector2(220, 28))) { _page = page; ImGui.CloseCurrentPopup(); }
+
+        if (selected) ImGui.PopStyleColor();
     }
 
 }

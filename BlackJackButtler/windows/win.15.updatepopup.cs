@@ -13,12 +13,13 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.8.1.1\n" +
+        "v1.8.1.3\n" +
         "\n" +
-        "- New: BJB Messenger — in-plugin party-chat box with dice-roll highlight\n" +
-        "- New: Title bar button (chat bubbles) opens the messenger\n" +
-        "- New: '/bjb chat' command opens the messenger directly\n" +
-        "- Change: Chat log buffer increased from 20 to 500 entries\n";
+        "- Fix: T-button (Tell shortcut) could corrupt ImGui render — all window text could vanish\n" +
+        "  Cause: race condition on VariableManager.Variables (writes from Task.Run thread\n" +
+        "  collided with UI-thread reads, throwing an exception mid-frame)\n" +
+        "- Fix: Bank /tell mass-button hardened against the same race\n" +
+        "- VariableManager is now fully thread-safe (lock + Snapshot API)\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",

@@ -52,7 +52,7 @@ public class ChatBoxWindow : Window
         if (ImGui.BeginChild("bjb_chat_scroll", new Vector2(-1, -inputBarHeight), true))
         {
             var snapshot = _chatLog.Snapshot();
-            var visible = snapshot.Where(m => IsPartyChatType(m.ChatType) || m.IsDice).ToList();
+            var visible = snapshot.Where(m => ChatLogBuffer.IsPartyChatType(m.ChatType) || m.IsDice).ToList();
 
             foreach (var m in visible)
             {
@@ -112,17 +112,10 @@ public class ChatBoxWindow : Window
         }
     }
 
-    private static bool IsPartyChatType(int t)
-    {
-        return t == (int)XivChatType.Party
-            || t == (int)XivChatType.CrossParty
-            || t == 64;
-    }
-
     private void CopyVisibleToClipboard()
     {
         var snapshot = _chatLog.Snapshot();
-        var visible = snapshot.Where(m => IsPartyChatType(m.ChatType) || m.IsDice).ToList();
+        var visible = snapshot.Where(m => ChatLogBuffer.IsPartyChatType(m.ChatType) || m.IsDice).ToList();
         if (visible.Count == 0)
         {
             ImGui.SetClipboardText("(BJB Messenger: no messages)");

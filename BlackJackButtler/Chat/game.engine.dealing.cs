@@ -26,8 +26,9 @@ public static partial class GameEngine
             return;
         }
 
-        var activePlayers = players.Where(p => p.IsActivePlayer).ToList();
-        if (activePlayers.Count == 0)
+        var heldPlayers = players.Where(p => p.IsActivePlayer && p.IsOnHold).ToList();
+        var activePlayers = players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
+        if (activePlayers.Count == 0 && heldPlayers.Count == 0)
         {
             CurrentPhase = GamePhase.Waiting;
             return;
@@ -44,7 +45,29 @@ public static partial class GameEngine
             p.HasInitialHandDealt = false;
             p.BankAtRoundStart = p.Bank;
         }
+
+        var benchSeed = DateTime.UtcNow;
+        foreach (var p in heldPlayers)
+        {
+            p.IsOnBench = true;
+            p.BenchedAt = benchSeed;
+            p.WasOnHoldThisRound = true;
+            p.HasInitialHandDealt = false;
+            p.IsCurrentTurn = false;
+            p.Hands.Clear();
+            p.Hands.Add(new HandState(p.CurrentBet));
+            p.CurrentHandIndex = 0;
+            p.LastRoundResult = 0;
+            p.JoinedMidRound = false;
+            p.BankAtRoundStart = p.Bank;
+        }
         dealer.BankAtRoundStart = 0;
+
+        if (activePlayers.Count == 0)
+        {
+            CurrentPhase = GamePhase.Waiting;
+            return;
+        }
 
         Interlocked.Exchange(ref _payoutGuard, 0);
         CurrentPhase = GamePhase.InitialDeal;
@@ -214,13 +237,14 @@ public static partial class GameEngine
         {
             if (benchPlayers.Count > 0)
             {
-                ActivateAllBenchPlayers(players);
-                var newActive = GetActivePlayers(players);
-                var firstFromBench = newActive.FirstOrDefault(p => p.WasOnHoldThisRound);
+                var firstFromBench = ActivateFirstBenchPlayer(players);
 
                 if (firstFromBench != null)
                 {
-                    Plugin.Instance.GetMainWindow().AddDebugLog($"[Bench] Starting with bench player: {firstFromBench.DisplayName}", false);
+                    if (firstFromBench.Hands.Count == 0)
+                        firstFromBench.ResetForNewRound();
+
+                    var newActive = GetActivePlayers(players);
                     foreach (var pl in newActive) pl.IsCurrentTurn = false;
                     firstFromBench.IsCurrentTurn = true;
 
@@ -228,6 +252,7 @@ public static partial class GameEngine
                     {
                         CurrentPhase = GamePhase.InitialDeal;
                         firstFromBench.CurrentHandIndex = 0;
+                        firstFromBench.BankAtRoundStart = firstFromBench.Bank;
                         TargetPlayer(firstFromBench.Name);
                         VariableManager.SetPlayerVariables(firstFromBench);
                     }
@@ -561,6 +586,7 @@ public static partial class GameEngine
         if (!CanMovePlayerToBench(player, allPlayers)) return;
 
         player.IsOnBench = true;
+        player.BenchedAt = DateTime.UtcNow;
         player.WasOnHoldThisRound = true;
         if (player.IsCurrentTurn)
             player.IsCurrentTurn = false;
@@ -570,24 +596,27 @@ public static partial class GameEngine
 
     public static void MovePlayerFromBench(PlayerState player)
     {
-        if (!player.IsOnBench) return;
+        if (!player.IsOnBench && !player.IsOnHold) return;
 
         player.IsOnBench = false;
+        player.IsOnHold = false;
+        player.BenchedAt = DateTime.MinValue;
 
         Plugin.Instance.GetMainWindow().AddDebugLog($"[Bench] {player.DisplayName} returned from bench.", false);
     }
 
-    private static void ActivateAllBenchPlayers(List<PlayerState> players)
+    private static PlayerState? ActivateFirstBenchPlayer(List<PlayerState> players)
     {
         var benchPlayers = GetBenchPlayers(players);
-        if (benchPlayers.Count == 0) return;
+        if (benchPlayers.Count == 0) return null;
 
-        Plugin.Instance.GetMainWindow().AddDebugLog($"[Bench] Activating all {benchPlayers.Count} bench players.", false);
+        var first = benchPlayers
+            .OrderBy(p => p.BenchedAt == DateTime.MinValue ? DateTime.MaxValue : p.BenchedAt)
+            .First();
 
-        foreach (var p in benchPlayers)
-        {
-            MovePlayerFromBench(p);
-        }
+        Plugin.Instance.GetMainWindow().AddDebugLog($"[Bench] Activating first FIFO bench player: {first.DisplayName}.", false);
+        MovePlayerFromBench(first);
+        return first;
     }
 
     public static void DeactivatePlayerMidRound(PlayerState player, List<PlayerState> allPlayers, Configuration cfg)
@@ -599,6 +628,8 @@ public static partial class GameEngine
             foreach (var hand in player.Hands)
                 player.Bank += hand.Bet;
         }
+
+        RoundLogManager.RecordPlayerLeave(player.DisplayName);
 
         player.Hands.Clear();
         player.Hands.Add(new HandState(player.CurrentBet));

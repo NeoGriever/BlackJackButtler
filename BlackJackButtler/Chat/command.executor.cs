@@ -13,7 +13,7 @@ public static class CommandExecutor
 {
     private static readonly RRX.Regex StackTokenRegex = new(@"#\{([^}]+)\}", RRX.RegexOptions.Compiled);
     private static readonly RRX.Regex DicePartyRegex = new(@"^/dice\s+party\s+(\d+)\s*$", RRX.RegexOptions.Compiled | RRX.RegexOptions.IgnoreCase);
-    private const float MinCommandDelay = 0.3f;
+    private const float MinCommandDelay = 0.05f;
     private const int MaxInternalDepth = 5;
     private static int _internalDepth = 0;
     private static bool _isRunning = false;
@@ -660,5 +660,27 @@ public static class CommandExecutor
 
         _internalDepth--;
         window.AddDebugLog($"[Executor-Internal] Chain End: {groupName}");
+    }
+
+    public static async Task WaitForCurrentGroupToFinishAsync()
+    {
+        if (!IsRunning)
+            return;
+
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        void Handler() => tcs.TrySetResult(true);
+
+        OnGroupCompleted += Handler;
+        try
+        {
+            if (!IsRunning)
+                return;
+
+            await tcs.Task;
+        }
+        finally
+        {
+            OnGroupCompleted -= Handler;
+        }
     }
 }

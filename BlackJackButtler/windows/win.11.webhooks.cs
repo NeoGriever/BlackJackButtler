@@ -15,6 +15,17 @@ public partial class BlackJackButtlerWindow
         ImGui.TextWrapped("Configure Discord webhooks to automatically post round results to a channel.");
         ImGui.Spacing();
 
+        ImGui.PushStyleColor(ImGuiCol.ChildBg, new Vector4(0.30f, 0.18f, 0.02f, 0.55f));
+        ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(1.0f, 0.65f, 0.10f, 0.85f));
+        ImGui.PushStyleVar(ImGuiStyleVar.ChildBorderSize, 1.5f);
+        ImGui.BeginChild("wh_wip_banner", new Vector2(-1, 56f), true);
+        ImGui.TextColored(new Vector4(1f, 0.85f, 0.30f, 1f), "[WORK IN PROGRESS]");
+        ImGui.TextWrapped("Discord webhook integration is under active development. Format and features may change between versions.");
+        ImGui.EndChild();
+        ImGui.PopStyleVar();
+        ImGui.PopStyleColor(2);
+        ImGui.Spacing();
+
         // --- Add Webhook Section ---
         ImGui.TextColored(new Vector4(1f, 0.8f, 0.2f, 1f), "Add Webhook");
 

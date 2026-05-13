@@ -7,6 +7,8 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow
 {
+    private string _filterCommands = string.Empty;
+
     private void DrawCommandsPage()
     {
         ImGui.TextUnformatted("Command Chains");
@@ -65,12 +67,12 @@ public partial class BlackJackButtlerWindow
 
         ImGui.Separator();
         ImGui.TextDisabled("Define what happens when an action is triggered. Use <t> for the player name.");
+
+        BJBGui.DrawFilterBar("commands", ref _filterCommands, "Search command name or text...");
         ImGui.Spacing();
 
         foreach (var group in _config.CommandGroups)
         {
-            ImGui.PushID($"group_{group.Name}");
-
             string displayName = group.Name switch {
                 "Initial" => "Player Start",
                 "Hit" => "Player Hit",
@@ -86,6 +88,15 @@ public partial class BlackJackButtlerWindow
                 "BankTell" => "Bank Tell (Individual)",
                 _ => group.Name
             };
+
+            if (!BJBGui.MatchesFilter(_filterCommands, displayName, group.Commands.Select(c => (string?)c.Text))
+                && !BJBGui.MatchesFilter(_filterCommands, group.Name))
+                continue;
+
+            ImGui.PushID($"group_{group.Name}");
+
+            if (!string.IsNullOrEmpty(_filterCommands))
+                ImGui.SetNextItemOpen(true, ImGuiCond.Always);
 
             if (ImGui.CollapsingHeader($"{displayName} (Internal: {group.Name})"))
             {

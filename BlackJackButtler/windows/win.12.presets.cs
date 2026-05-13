@@ -132,7 +132,9 @@ public partial class BlackJackButtlerWindow
                 ImGui.PushStyleColor(ImGuiCol.HeaderActive, new Vector4(0.04f, 0.26f, 0.04f, 1f));
             }
 
+            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(6f, 8f));
             bool expanded = ImGui.TreeNodeEx($"##pn_{i}", ImGuiTreeNodeFlags.AllowItemOverlap, preset.Name);
+            ImGui.PopStyleVar();
 
             if (isActive)
                 ImGui.PopStyleColor(3);

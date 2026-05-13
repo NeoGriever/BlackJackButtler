@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Dalamud.Game.Text;
 
 namespace BlackJackButtler.Chat;
 
@@ -37,6 +38,13 @@ public sealed class ChatLogBuffer
   {
     lock (_gate)
     return _items.ToList();
+  }
+
+  public static bool IsPartyChatType(int t)
+  {
+    return t == (int)XivChatType.Party
+        || t == (int)XivChatType.CrossParty
+        || t == 64;
   }
 }
 

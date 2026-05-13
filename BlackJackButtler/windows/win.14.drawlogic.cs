@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
@@ -11,6 +12,9 @@ public partial class BlackJackButtlerWindow
     private bool _showDrawLogicDoc = false;
     private string _newDrawLogicName = "";
     private string _lastDlScriptHash = "";
+    private readonly Dictionary<int, bool> _dlEditOpen = new();
+    private readonly Dictionary<int, string> _dlEditBuffer = new();
+    private readonly Dictionary<int, string> _dlEditStatus = new();
 
     private void EnsureDrawLogicSeed()
     {
@@ -199,6 +203,96 @@ public partial class BlackJackButtlerWindow
                         ImGui.CloseCurrentPopup();
                     }
                     ImGui.EndPopup();
+                }
+
+                bool editOpen = ImGui.CollapsingHeader($"Edit##dl_edit_hdr_{i}");
+                bool wasEditOpen = _dlEditOpen.GetValueOrDefault(i, false);
+                if (editOpen && !wasEditOpen)
+                {
+                    var loaded = string.IsNullOrEmpty(entry.ScriptPath)
+                        ? entry.Script ?? string.Empty
+                        : DrawLogicScriptManager.ReadScript(entry.ScriptPath) ?? string.Empty;
+                    _dlEditBuffer[i] = loaded;
+                    _dlEditStatus[i] = string.Empty;
+                }
+                else if (!editOpen && wasEditOpen)
+                {
+                    _dlEditBuffer.Remove(i);
+                    _dlEditStatus.Remove(i);
+                }
+                _dlEditOpen[i] = editOpen;
+
+                if (editOpen)
+                {
+                    var buf = _dlEditBuffer.GetValueOrDefault(i, string.Empty);
+                    if (ImGui.InputTextMultiline($"##dl_edit_text_{i}", ref buf, 65536, new Vector2(-1, 280)))
+                        _dlEditBuffer[i] = buf;
+
+                    bool hasPath = !string.IsNullOrEmpty(entry.ScriptPath);
+                    string saveLabel = hasPath ? $"Save to file##dl_save_{i}" : $"Save As...##dl_save_{i}";
+                    if (BJBGui.Button(saveLabel))
+                    {
+                        if (hasPath)
+                        {
+                            try
+                            {
+                                DrawLogicScriptManager.WriteScript(entry.ScriptPath, _dlEditBuffer.GetValueOrDefault(i, string.Empty));
+                                entry.Script = _dlEditBuffer.GetValueOrDefault(i, string.Empty);
+                                _dlEditStatus[i] = $"Saved to {entry.ScriptPath} at {DateTime.Now:HH:mm:ss}";
+                                _save();
+                            }
+                            catch (Exception ex)
+                            {
+                                _dlEditStatus[i] = $"Save failed: {ex.Message}";
+                            }
+                        }
+                        else
+                        {
+                            int captured = i;
+                            var baseDir = DrawLogicScriptManager.GetBaseDir();
+                            _fileDialogManager.SaveFileDialog(
+                                "Save DrawLogic Script",
+                                "Text Files{.txt}",
+                                $"new_script_{captured}.txt",
+                                ".txt",
+                                (success, fullPath) =>
+                                {
+                                    if (!success || string.IsNullOrEmpty(fullPath)) return;
+                                    try
+                                    {
+                                        string relPath;
+                                        if (!string.IsNullOrEmpty(baseDir) && fullPath.StartsWith(baseDir, StringComparison.OrdinalIgnoreCase))
+                                            relPath = Path.GetRelativePath(baseDir, fullPath).Replace('\\', '/');
+                                        else
+                                            relPath = fullPath;
+
+                                        File.WriteAllText(fullPath, _dlEditBuffer.GetValueOrDefault(captured, string.Empty));
+                                        entry.ScriptPath = relPath;
+                                        entry.Script = _dlEditBuffer.GetValueOrDefault(captured, string.Empty);
+                                        _dlEditStatus[captured] = $"Saved as {relPath}";
+                                        _save();
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _dlEditStatus[captured] = $"Save failed: {ex.Message}";
+                                    }
+                                },
+                                baseDir);
+                        }
+                    }
+                    ImGui.SameLine();
+                    if (BJBGui.SmallButton($"Reload from file##dl_edit_reload_{i}"))
+                    {
+                        if (!string.IsNullOrEmpty(entry.ScriptPath))
+                            _dlEditBuffer[i] = DrawLogicScriptManager.ReloadScript(entry.ScriptPath) ?? string.Empty;
+                    }
+
+                    var status = _dlEditStatus.GetValueOrDefault(i, string.Empty);
+                    if (!string.IsNullOrEmpty(status))
+                    {
+                        ImGui.SameLine();
+                        ImGui.TextColored(new Vector4(0.6f, 0.9f, 0.6f, 1f), status);
+                    }
                 }
 
                 bool isFirst = i == 0;

@@ -83,6 +83,7 @@ public partial class BlackJackButtlerWindow
             if (BJBGui.SmallButton("Bank /tell"))
             {
                 var snapshot = _players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
+                var dealerName = _dealer.Name;
                 Task.Run(async () => {
                     foreach (var p in snapshot)
                     {
@@ -90,7 +91,7 @@ public partial class BlackJackButtlerWindow
                         VariableManager.SetPlayerVariables(p);
                         await CommandExecutor.ExecuteGroup("BankTell", p.DisplayName, _config);
                     }
-                    GameEngine.TargetPlayer(_dealer.Name);
+                    GameEngine.TargetPlayer(dealerName);
                 });
             }
             if (!canTell) ImGui.EndDisabled();
@@ -344,6 +345,57 @@ public partial class BlackJackButtlerWindow
             }
 
             Plugin.Instance.UpdateEventHooks();
+        }
+
+        if (!IsRecognitionActive)
+        {
+            bool hasResidualData =
+                _players.Any(p => !p.IsDebugPlayer)
+                || _dealer.Hands.Any(h => h.Cards.Count > 0)
+                || DrawLogicDebugManager.DebugHands.Any(h => h.Cards.Count > 0)
+                || DrawLogicDebugManager.ValidScriptCache.Count > 0;
+            if (hasResidualData)
+            {
+                ImGui.SameLine();
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.55f, 0.30f, 0.05f, 1f));
+                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.75f, 0.40f, 0.10f, 1f));
+                if (BJBGui.Button("Clean Data##clean_residual", new Vector2(140, 0)))
+                {
+                    _openCleanDataPopup = true;
+                    ImGui.OpenPopup("bjb.clean_data.confirm");
+                }
+                ImGui.PopStyleColor(2);
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("Group Detector is off but session data remains. Click to clean players and DrawLogic debug data.");
+            }
+        }
+
+        if (ImGui.BeginPopupModal("bjb.clean_data.confirm", ref _openCleanDataPopup, ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.TextColored(new Vector4(1f, 0.7f, 0.2f, 1f), "Clean residual session data?");
+            ImGui.TextUnformatted("This will clear:");
+            ImGui.BulletText("All recognized players (non-debug)");
+            ImGui.BulletText("Dealer hand");
+            ImGui.BulletText("DrawLogic debug hands and script cache");
+            ImGui.Spacing();
+            if (BJBGui.Button("Yes, clean", new Vector2(160, 0)))
+            {
+                Chat.GameLog.PushSnapshot(_players, _dealer, GameEngine.CurrentPhase, "CleanData");
+                _players.RemoveAll(p => !p.IsDebugPlayer);
+                _dealer.Hands.Clear();
+                DrawLogicDebugManager.Reset();
+                Regex.RegexEngine.ClearNextRoundVotes();
+                _save();
+                _openCleanDataPopup = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.SameLine();
+            if (BJBGui.Button("Cancel", new Vector2(120, 0)))
+            {
+                _openCleanDataPopup = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.EndPopup();
         }
 
         if (IsRecognitionActive && !StatsManager.IsRunning && _groupDetectorActivatedAt.HasValue)
@@ -727,6 +779,7 @@ public partial class BlackJackButtlerWindow
                 if (joinPhase == GamePhase.InitialDeal || joinPhase == GamePhase.PlayersTurn || joinPhase == GamePhase.DealerTurn)
                     p.JoinedMidRound = true;
                 ActivityLogManager.LogPlayerJoin(p.DisplayName);
+                RoundLogManager.RecordPlayerJoin(p.DisplayName);
                 SaveSessionFromUI();
             }
             if (hlJoin) ImGui.PopStyleColor(2);
@@ -748,6 +801,7 @@ public partial class BlackJackButtlerWindow
                 else
                 {
                     if (p.Bank == 0) ActivityLogManager.LogPlayerLeave(p.DisplayName);
+                    RoundLogManager.RecordPlayerLeave(p.DisplayName);
                     p.IsActivePlayer = false;
                     p.IsCurrentTurn = false;
                     p.ReadySkip = false;
@@ -813,6 +867,7 @@ public partial class BlackJackButtlerWindow
                     {
                         p.IsOnHold = false;
                         p.IsOnBench = true;
+                        p.BenchedAt = DateTime.UtcNow;
                         p.WasOnHoldThisRound = true;
                     }
                     else
@@ -874,14 +929,15 @@ public partial class BlackJackButtlerWindow
             bool canToggle = activeCount >= 2;
             ImGui.SameLine();
             if (!canToggle) ImGui.BeginDisabled();
-            if (p.ReadySkip) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.8f, 0.2f, 1f));
+            bool wasReady = p.ReadySkip;
+            if (wasReady) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.8f, 0.2f, 1f));
             if (BJBGui.SmallButton($"R##{p.UIID}_readyskip"))
             {
                 p.ReadySkip = !p.ReadySkip;
                 _save();
                 if (p.ReadySkip) RegexEngine.CheckAutoReadyStart(_players, _config);
             }
-            if (p.ReadySkip) ImGui.PopStyleColor();
+            if (wasReady) ImGui.PopStyleColor();
             if (!canToggle) ImGui.EndDisabled();
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                 ImGui.SetTooltip(canToggle
@@ -925,11 +981,13 @@ public partial class BlackJackButtlerWindow
             if (BJBGui.SmallButton($"T##tell_{p.UIID}"))
             {
                 p.HighlightTell = false;
+                GameEngine.TargetPlayer(p.Name);
+                VariableManager.SetPlayerVariables(p);
+                var displayName = p.DisplayName;
+                var dealerName = _dealer.Name;
                 Task.Run(async () => {
-                    GameEngine.TargetPlayer(p.Name);
-                    VariableManager.SetPlayerVariables(p);
-                    await CommandExecutor.ExecuteGroup("BankTell", p.DisplayName, _config);
-                    GameEngine.TargetPlayer(_dealer.Name);
+                    await CommandExecutor.ExecuteGroup("BankTell", displayName, _config);
+                    GameEngine.TargetPlayer(dealerName);
                 });
             }
             if (hlTell) ImGui.PopStyleColor(2);

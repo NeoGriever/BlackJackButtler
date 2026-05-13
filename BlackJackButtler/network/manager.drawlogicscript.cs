@@ -223,4 +223,6 @@ public static class DrawLogicScriptManager
     }
 
     public static string GetBaseDirDisplay() => _baseDir;
+
+    public static string GetBaseDir() => _baseDir;
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,6 +16,7 @@ public class PlayerState
     public bool IsOnHold = false;
     public bool WasOnHoldThisRound = false;
     public bool IsOnBench = false;
+    public DateTime BenchedAt = DateTime.MinValue;
     public bool JoinedMidRound = false;
     public bool ReadySkip = false;
 
@@ -102,6 +104,7 @@ public class PlayerState
         HasInitialHandDealt = false;
         WasOnHoldThisRound = false;
         IsOnBench = false;
+        BenchedAt = DateTime.MinValue;
         LastRoundResult = 0;
         JoinedMidRound = false;
         ResetHighlightsAll();
@@ -153,6 +156,7 @@ public class PlayerState
             IsOnHold = IsOnHold,
             WasOnHoldThisRound = WasOnHoldThisRound,
             IsOnBench = IsOnBench,
+            BenchedAt = BenchedAt,
             JoinedMidRound = JoinedMidRound,
             ReadySkip = ReadySkip,
 
