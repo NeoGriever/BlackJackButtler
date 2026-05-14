@@ -2,9 +2,9 @@
 
 # BlackJack Buttler
 
-BlackJack Buttler (BJB) is a Dalamud plugin for FFXIV that turns you into a fully automated Blackjack dealer. It tracks cards via `/dice party 13` rolls, manages player bankrolls through trade detection, and sends customizable chat messages and emotes on your behalf. The plugin handles the entire flow from initial deal through payout, including splits, double downs, and multi-hand play.
+BlackJack Buttler (BJB) is a Dalamud plugin for FFXIV that turns you into a fully automated Blackjack dealer. It tracks cards via `/dice party 13` rolls, manages player bankrolls through trade detection, sends customizable chat messages and emotes on your behalf, and can visualize the table directly in-world through Draw Logic scripts. The plugin handles the entire flow from initial deal through payout, including splits, double downs, Charlie hands, multi-hand play, nearby player queueing, and payout assistance.
 
-Whether you run a casual table for friends or a high-stakes venue for dozens of rounds per night, BJB removes the mental overhead of tracking points, calculating payouts, and remembering whose turn it is. Three user levels (Beginner, Advanced, Dev) progressively reveal more configuration so you can start simple and grow into full customization.
+Whether you run a casual table for friends or a high-stakes venue for dozens of rounds per night, BJB removes the mental overhead of tracking points, calculating payouts, and remembering whose turn it is. Four user levels (Beginner, Advanced, Dev, Custom) progressively reveal more configuration so you can start simple and grow into full customization.
 
 ## Table of Contents
 
@@ -12,17 +12,21 @@ Whether you run a casual table for friends or a high-stakes venue for dozens of 
   - [1.1 Installation](#11-installation)
   - [1.2 Opening the Plugin](#12-opening-the-plugin)
   - [1.3 User Levels](#13-user-levels)
+  - [1.4 Title Bar Tools](#14-title-bar-tools)
 - [2 Main Game Page](#2-main-game-page)
   - [2.1 Group Detector](#21-group-detector)
   - [2.2 Auto Toggles](#22-auto-toggles)
   - [2.3 Dealer Section](#23-dealer-section)
   - [2.4 Player Table](#24-player-table)
   - [2.5 Game Phases](#25-game-phases)
+  - [2.6 Nearby Players](#26-nearby-players)
+  - [2.7 Emergency and Utility Controls](#27-emergency-and-utility-controls)
 - [3 Player Actions](#3-player-actions)
   - [3.1 Hit](#31-hit)
   - [3.2 Stand](#32-stand)
   - [3.3 Double Down](#33-double-down)
   - [3.4 Split](#34-split)
+  - [3.5 Charlie](#35-charlie)
 - [4 Betting and Bank](#4-betting-and-bank)
   - [4.1 Bet Limits](#41-bet-limits)
   - [4.2 Bank Input and Trade Detection](#42-bank-input-and-trade-detection)
@@ -30,25 +34,28 @@ Whether you run a casual table for friends or a high-stakes venue for dozens of 
   - [5.1 Pay Out Button](#51-pay-out-button)
   - [5.2 Dropbox Integration](#52-dropbox-integration)
   - [5.3 Manual Trade (Payout Helper)](#53-manual-trade-payout-helper)
+  - [5.4 Bank to Tips](#54-bank-to-tips)
 - [6 Round History](#6-round-history)
   - [6.1 Timeline and Snapshots](#61-timeline-and-snapshots)
   - [6.2 Rewinding](#62-rewinding)
 - [7 Backup Viewer](#7-backup-viewer)
 - [8 Statistics](#8-statistics)
-  - [8.1 Session Stats](#81-session-stats)
-  - [8.2 Overall Stats](#82-overall-stats)
+  - [8.1 Bank Session](#81-bank-session)
+  - [8.2 Round Log](#82-round-log)
 - [9 Notepad](#9-notepad)
 - [10 Settings (Beginner)](#10-settings-beginner)
   - [10.1 User Level](#101-user-level)
-  - [10.2 Command Speed](#102-command-speed)
-  - [10.3 Bet Limits](#103-bet-limits)
-  - [10.4 Button Style](#104-button-style)
+  - [10.2 Main View and Navigation](#102-main-view-and-navigation)
+  - [10.3 Command Speed and Recall Unlock](#103-command-speed-and-recall-unlock)
+  - [10.4 Bet Limits](#104-bet-limits)
+  - [10.5 Button Style](#105-button-style)
 - [11 Settings (Advanced)](#11-settings-advanced)
   - [11.1 Gameplay Rules](#111-gameplay-rules)
-  - [11.2 Max Hands per Player](#112-max-hands-per-player)
-  - [11.3 UI Colors](#113-ui-colors)
-  - [11.4 Multipliers](#114-multipliers)
-  - [11.5 Defaults Reset](#115-defaults-reset)
+  - [11.2 Automation](#112-automation)
+  - [11.3 Betting and VIP Limits](#113-betting-and-vip-limits)
+  - [11.4 Nearby Players](#114-nearby-players)
+  - [11.5 Visual Settings](#115-visual-settings)
+  - [11.6 System Settings](#116-system-settings)
 - [12 Messages](#12-messages)
   - [12.1 Message Batches](#121-message-batches)
   - [12.2 Selection Modes](#122-selection-modes)
@@ -62,6 +69,10 @@ Whether you run a casual table for friends or a high-stakes venue for dozens of 
   - [13.5 Built-in Command Groups](#135-built-in-command-groups)
   - [13.6 Command Line Groups](#136-command-line-groups)
 - [14 Own Buttons](#14-own-buttons)
+- [15 Draw Logic](#15-draw-logic)
+  - [15.1 Entries and Start Entry](#151-entries-and-start-entry)
+  - [15.2 Script Files and Auto-Reload](#152-script-files-and-auto-reload)
+  - [15.3 Debug Mode](#153-debug-mode)
 - [16 Presets](#16-presets)
 - [17 Regex](#17-regex)
   - [17.1 Regex Entries](#171-regex-entries)
@@ -103,21 +114,34 @@ This opens the main window. The sidebar on the left provides navigation to all p
 
 ### 1.3 User Levels
 
-BJB uses a three-tier user level system that controls which sidebar pages and settings are visible.
+BJB uses a user level system that controls which sidebar pages and settings are visible.
 
 | Level | Sidebar Pages | Settings Shown |
 |---|---|---|
 | **Beginner** | Main, Settings, Stats, Round History | User Level, Command Speed, Bet Limits, Button Style, Natural BJ Multiplier |
 | **Advanced** | + Messages, Commands, Own Buttons, Presets | + All Gameplay Rules, UI Colors, All Multipliers, Defaults Reset |
-| **Dev** | + Regex, Variables, Debug, Macro Import | + Clipboard Export/Import, Unlock Wait Timer |
+| **Dev** | + Regex, Variables, Debug, Draw Logic, Macro Import | + Clipboard Export/Import, Unlock Wait Timer, Draw Logic tooling |
+| **Custom** | User-selected page set | Same settings as the selected visible pages allow |
 
-Change the level in **Settings > User Level**. Lowering the level resets any advanced settings to their defaults.
+Change the level in **Settings > General > User-Level**. In Custom mode, an edit button appears in the navigation area; enable it to choose exactly which pages are shown.
+
+### 1.4 Title Bar Tools
+
+The main window title bar contains quick-access buttons:
+
+| Button | Purpose |
+|---|---|
+| Messenger | Opens the **BJB Messenger**, a focused party-chat and dice-roll window with copy and auto-scroll controls. Messages sent there are posted to party chat. |
+| Discord | Opens the project Discord invite for support, bug reports, ideas, and FAQ. |
+| Buy Me a Coffee | Opens the support page. |
 
 ---
 
 ## 2 Main Game Page
 
-The main page header includes a **Bank /tell** button that posts bank/bet info to party chat for all active players.
+The main page can run in **Version 1** or **Version 2**, selected in **Settings > General > Main View**. Version 2 keeps the same game logic but reorganizes controls into clearer header groups, adds the Auto Continue bar, and displays nearby-player numbers in-world.
+
+The header includes a **Bank /tell** button that posts bank/bet info to party chat for all active players.
 
 ### 2.1 Group Detector
 
@@ -125,38 +149,46 @@ The **Group Detector** button syncs your FFXIV party list into the plugin. The p
 
 When deactivated, the session is cleared and non-active players with zero bank are removed.
 
+In Main View V2, the detector area also supports:
+
+- **Look direction capture**: stores the dealer's current facing direction for Draw Logic card visualization.
+- **Start Bank**: starts the stats/bank session from the main page.
+- **Clean Data**: clears residual player and Draw Logic debug state while Group Detector is off.
+
 ### 2.2 Auto Toggles
 
-Three toggle buttons appear at the top of the main page:
+Automation buttons appear at the top of the main page. Their visibility can be controlled in **Settings > Automation**.
 
 | Toggle | Effect |
 |---|---|
 | **Auto Player Hand** | Automatically deals the initial hand to each player during the InitialDeal phase. |
-| **Auto Dealer Draw** | Automatically draws cards for the dealer until 17, then stands. |
+| **Auto Dealer Draw** | Automatically draws cards for the dealer until the configured stand rule is reached. Default: soft 17. |
+| **Auto Continue** | Starts the next round automatically after the configured delay once the table is ready. Main View V2 shows a progress bar and can show remaining seconds. |
 | **Auto Run** | Executes player action triggers (Hit/Stand/DD/Split) automatically when detected. Only appears when regex triggers for player actions exist (see [17 Regex](#17-regex)). When OFF, detected actions highlight the corresponding button instead. |
 
 ### 2.3 Dealer Section
 
-A 4-column table showing the dealer's name, cards, points, and controls. Above the dealer row, **Custom Buttons** from the Own Buttons page appear as a button bar (see [14 Own Buttons](#14-own-buttons)).
+A 4-column table showing the dealer's name, cards, points, and controls. Above the dealer row, **Custom Buttons** from the Own Buttons page appear as a button bar (see [14 Own Buttons](#14-own-buttons)). The button bar can be horizontal or vertical, can be popped out, and supports custom styling.
 
 - **Waiting/Payout phase**: Shows the "Start New Round" button.
 - **DealerTurn phase**: Shows "Hit" and "Stand" buttons (or "Auto..." if Auto Dealer Draw is on).
 
 ### 2.4 Player Table
 
-A 9-column table for all players:
+A 10-column table for all players:
 
 | Column | Description |
 |---|---|
+| **V** | VIP tier button. Cycles VIP tier for the player when VIP bet limits are configured. Tier affects the player's effective max bet. |
 | **A** | Alias button. Opens a popup to set a short display name. The alias replaces the character name in `<t>` token replacements and in the Name column. Clear the alias by saving an empty value or matching the original name. |
 | **J** | Join/Leave toggle. `>` to add inactive player, `X` to deactivate. |
 | **P** | Hold/Bench button. Toggles hold (skip next round), bench (pause mid-round), or return. |
 | **Name** | Player display name (alias if set, otherwise character name). Yellow when it is their turn. |
-| **Bank** | Gil balance. Editable when the Bank Input checkbox is enabled. Includes a **"T" button** that executes the `BankTell` command group for this individual player, posting their bank/bet info to party chat. |
-| **Bet** | Current bet amount. Red `!` indicator appears when outside the configured min/max range. |
+| **Bank** | Gil balance. Editable when the Bank Input checkbox is enabled. Includes a **"T" button** that executes the `BankTell` command group for this individual player, posting their bank/bet info to party chat. Ctrl-actions can move a leaving player's bank into tips. |
+| **Bet** | Current bet amount. Red `!` indicator appears when outside the configured min/max range. The effective max can come from global max bet or VIP tier. |
 | **Cards** | Visual card display with suit colors (red for Hearts/Diamonds, white for Spades/Clubs). |
 | **Points** | Calculated score. Shows "BJ" (green for natural, yellow for dirty), red strikethrough for busts, or min/max for soft hands. |
-| **Controls** | Action buttons during PlayersTurn, "Pay Out" during Payout, or "Deal Hand" during InitialDeal. |
+| **Controls** | Action buttons during PlayersTurn, "Pay Out" during Payout, "Deal Hand" during InitialDeal, hand editing where available, or Recall after recent state changes. |
 
 ### 2.5 Game Phases
 
@@ -174,6 +206,31 @@ Waiting --> InitialDeal --> PlayersTurn --> DealerTurn --> Payout --> Waiting
 | **DealerTurn** | Dealer draws until standing or busting (triggers `DealHit`, `DealStand`, `DealerBJ`, `DealerBust`). |
 | **Payout** | Results evaluated, banks updated, result commands triggered. Returns to Waiting. |
 
+### 2.6 Nearby Players
+
+When enabled, the **Nearby Players** section appears below the main table. It scans nearby player characters and lists name, world, and distance.
+
+| Control | Effect |
+|---|---|
+| Distance slider | Sets the nearby range cap from 2 to 100 yalms. Hovering the slider draws a range circle in-world; the circle can also be forced on while Group Detector is active. |
+| Sticky | Pauses resorting while you inspect or interact with the list. |
+| Star | Marks a player as favorite. Favorites stay visually distinct. |
+| Name click | Sends a `/tell` prompt to that player. |
+| **J** | Adds the player to the join queue. The queue targets and invites players with `/pcmd add <t>` as space becomes available. |
+| **?** | Runs the configured nearby custom command against that player, then restores the previous target when possible. Main View V2 only. |
+
+Main View V2 also draws stable numbers near nearby players' feet so the list can be matched to characters in the world. Sound alerts can play when new players enter range (see [11.4 Nearby Players](#114-nearby-players)).
+
+### 2.7 Emergency and Utility Controls
+
+| Control | Effect |
+|---|---|
+| **STOP** | Stops the currently running command chain. |
+| **PANIC** | Two-step confirmation that aborts the active round, clears transient turn state, and returns to Waiting. |
+| **Bank input** | Allows direct editing of player banks. |
+| Sticky-note icon | Opens or closes the Notepad window. |
+| Restore Previous Session | Appears on launch when a saved session exists; restores players, dealer, game phase, and round-history snapshots. |
+
 ---
 
 ## 3 Player Actions
@@ -182,7 +239,7 @@ All action buttons are disabled while a command chain is executing. Each action 
 
 ### 3.1 Hit
 
-Draws one additional card for the current hand. Triggers the `Hit` command group (see [13.5 Built-in Command Groups](#135-built-in-command-groups)). If the hand busts, triggers `PlayerBust`. If the hand reaches exactly 21, triggers `PlayerDirtyBJ`.
+Draws one additional card for the current hand. Triggers the `Hit` command group (see [13.5 Built-in Command Groups](#135-built-in-command-groups)). If the hand busts, triggers `PlayerBust`. If the hand reaches exactly 21, triggers either `Natural BlackJack Notify` or `Dirty BlackJack Notify` depending on hand type and settings.
 
 ### 3.2 Stand
 
@@ -199,8 +256,13 @@ Availability is controlled by the **Allow Double Down after Split** setting (see
 Splits a two-card hand into two separate hands, each starting with one of the original cards. Requires an additional bet equal to the original. Triggers the `Split` command group, then `SplitDraw` for the new hand's second card.
 
 Split availability is controlled by:
+- **Enable Split** (see [11.1 Gameplay Rules](#111-gameplay-rules)): can disable splitting entirely.
 - **Identical Split Only** (see [11.1 Gameplay Rules](#111-gameplay-rules)): when on, only identical card values (e.g., J+J) can split; when off, same-score cards (e.g., J+K) can split.
-- **Max Hands per Player**: limits total hand count (see [11.2 Max Hands per Player](#112-max-hands-per-player)).
+- **Max Hands per Player**: limits total hand count (see [11.1 Gameplay Rules](#111-gameplay-rules)).
+
+### 3.5 Charlie
+
+When **Enable Charlie** is on, a player hand that reaches the configured card count without busting becomes a Charlie hand. Charlie can be configured as an instant win and uses the blackjack-style payout multiplier in the current implementation. The `Charlie Notify` command group announces it.
 
 ---
 
@@ -208,7 +270,15 @@ Split availability is controlled by:
 
 ### 4.1 Bet Limits
 
-Each player's bet is validated against the configured minimum and maximum. A red `!` indicator appears next to out-of-range bets, and clicking it navigates to the corresponding setting.
+Each player's bet is validated against the configured minimum and effective maximum. A red `!` indicator appears next to out-of-range bets, and clicking it navigates to the corresponding setting.
+
+The effective maximum is resolved in this order:
+
+1. Matching active VIP entry for the player's VIP tier.
+2. Active VIP tier 0 fallback entry.
+3. Global max bet.
+
+The `<betrange>` token formats the minimum, maximum, and active VIP limits for chat messages.
 
 ### 4.2 Bank Input and Trade Detection
 
@@ -237,6 +307,10 @@ When Dropbox is unavailable or disabled, the plugin opens a floating **Payout He
 - Automatically re-opens trade if the bank has remaining balance.
 - Shows a progress bar tracking payout completion.
 - Auto-closes 4 seconds after the bank reaches zero.
+
+### 5.4 Bank to Tips
+
+When clearing or removing a player, Ctrl-modified actions can transfer the remaining bank into the stats tip counter instead of simply clearing it. A short undo window is shown after Bank to Tips so accidental transfers can be reversed.
 
 ---
 
@@ -270,15 +344,33 @@ Download the latest release from [GitHub](https://github.com/NeoGriever/BlackJac
 
 ## 8 Statistics
 
-### 8.1 Session Stats
+### 8.1 Bank Session
 
-Tracks rounds played, total income, total expense, and net profit/loss for the current session. Resets when the plugin is unloaded.
+The **Stats** tab tracks a working bank session for venue accounting.
 
-### 8.2 Overall Stats
+| Field / Control | Description |
+|---|---|
+| **Start Bank / Stop Bank** | Starts or stops the bank session. Start bank and start time are persisted with the session backup. |
+| **Start Bank edit** | Pencil button for correcting the captured starting bank. |
+| **Start Time edit** | Accepts `M/D/YYYY HH:MMam|pm` style input for correcting the session start time. |
+| **Tips** | Quick-add buttons for 50k, 100k, and 500k. Hold Shift to subtract instead. |
+| **Payout %** | Percentage of profit to pay out. Losses never create a positive payout. |
+| **Fixed Wage / Gil per Hour** | Either subtract a fixed wage or a time-based wage. |
+| **Clip hours** | Rounds elapsed time Up, Down, or Even for hourly wage calculation. |
+| **Subtract player banks from profit** | Subtracts active player bank balances before calculating profit. |
+| **House Bank** | Tracks reserved house float and adds it back into the final "Return to mngr" line. |
+| **Hashed Stats** | Adds an integrity hash to copied calculation output. |
 
-Persisted across sessions. Shows the same metrics as session stats but accumulated over all time. Can be reset via the "Reset Stats" button (requires Ctrl+Shift, no active game, detector off, all banks at zero).
+The **Copy** button copies the visible calculation as a formatted code block.
 
-Both tabs include a "Copy" button that copies a formatted summary string to clipboard.
+### 8.2 Round Log
+
+The **Round Log** tab is a persistent log of completed rounds. It records timestamps, pending joins, player results, and post-round events. Set **UTC Offset** once so copied timestamps match your local venue time.
+
+Controls:
+
+- **Copy All** copies the full persistent round log as a formatted code block.
+- **Clear** requires Ctrl and clears the persistent log.
 
 ---
 
@@ -294,9 +386,16 @@ These settings are visible at all user levels.
 
 ### 10.1 User Level
 
-Switch between Beginner, Advanced, and Dev. Lowering the level resets affected settings to defaults.
+Switch between Beginner, Advanced, Dev, and Custom. Custom mode lets you choose visible pages from the navigation edit controls.
 
-### 10.2 Command Speed
+### 10.2 Main View and Navigation
+
+| Setting | Description |
+|---|---|
+| **Main View** | Switches between Main View Version 1 and Version 2. Version 2 adds reorganized header controls, auto-continue bar support, and in-world nearby numbering. |
+| **Burger Menu / Sidebar** | Chooses between compact burger navigation and the full left sidebar. |
+
+### 10.3 Command Speed and Recall Unlock
 
 A multiplier applied to all command step delays at execution time. Slider range: 0.1x to 4.0x (rounded to 0.05 increments).
 
@@ -305,11 +404,13 @@ A multiplier applied to all command step delays at execution time. Slider range:
 - `2.00x` = twice as slow
 - Minimum effective delay is always 0.3 seconds.
 
-### 10.3 Bet Limits
+In Settings V2, Command Speed is under **Time & Delay** and ranges from 0.1x to 2.0x. **Recall Unlock** controls how long the Recall button remains locked after a state change before it can restore a previous snapshot.
 
-Configure the minimum and maximum allowed bet. Out-of-range bets show a red indicator on the player table.
+### 10.4 Bet Limits
 
-### 10.4 Button Style
+Configure the minimum and maximum allowed bet. Out-of-range bets show a red indicator on the player table. Advanced Settings V2 can replace the simple max with multiple VIP entries (see [11.3 Betting and VIP Limits](#113-betting-and-vip-limits)).
+
+### 10.5 Button Style
 
 Two color pickers for customizing the appearance of interactive UI elements:
 
@@ -327,36 +428,90 @@ These settings require **Advanced** user level or higher.
 | Setting | Default | Description |
 |---|---|---|
 | First Deal, then Play | On | Deals hands to all players first, then starts turns. Off: deal and play per player. |
+| Dealer Stands on | Soft 17 | Controls whether dealer auto-draw stands on soft/hard value and which score threshold is used. |
+| Hide Card Suits | Off | Hides suit display in card strings/UI. |
+| Enable Split | On | Enables or disables split actions. |
 | Identical Split Only | On | Only identical cards can split (e.g., J+J). Off: same-score cards can split (e.g., J+K). |
+| Enable Double Down | On | Enables or disables double down actions. |
 | Allow Double Down after Split | Off | Permits DD on hands created by a split. |
 | Refund DD on push | Off | On: full doubled bet is returned on push. Off: only original bet is returned. |
-| Player BJ wins on tie | Off | On: player with 21 beats dealer with 21. Off: results in a push. |
+| Blackjack Tie Rule | Always Push | Other modes let player natural BJ win, dealer natural BJ win, or natural BJ beat dirty BJ. |
+| Enable Dirty Blackjack | On | Allows 21 with 3+ cards to be treated as dirty blackjack instead of normal 21 behavior. |
+| Enable Charlie | Off | Enables configured-card-count Charlie hands. |
+| Charlie Instant Win | On | Charlie wins immediately against the dealer result when enabled. |
 | Autostart round only on multiple players | On | NextRound trigger only auto-starts with 2+ active player votes. With 1 player, highlights the button instead. |
 | Open Dropbox instead of trade | On | Uses the Dropbox plugin for payouts when available. |
-| Small Result Message | On | Sends one compressed result message instead of individual messages per player hand. |
+| Small Result Message | Off | Sends one compressed result message instead of individual messages per player hand. |
+| Result Template | `${results}` | Template used for compressed results. Supports `<results>` and result variables. |
 
-### 11.2 Max Hands per Player
-
-Controls the maximum number of hands a player can have through splits. Range: 2-10. Default: 2.
-
-### 11.3 UI Colors
-
-- **Highlight Color**: Background color for highlighted action buttons (default: yellow).
-- **Highlight Text Color**: Text color on highlighted buttons (default: black).
-
-### 11.4 Multipliers
+Split hands are limited by **Max Hands** (range: 2-10). Charlie card count is configurable from 3-9.
 
 | Multiplier | Default | Description |
 |---|---|---|
 | Normal Win | 1.00x | Payout multiplier for standard wins. |
 | Natural BJ (2 cards) | 1.50x | Payout for a natural blackjack (Ace + 10-value in 2 cards). |
 | Dirty BJ (3+ cards) | 1.00x | Payout for reaching 21 with 3+ cards. |
+| Charlie | Uses BJ multiplier | Payout used when Charlie wins. |
 
 Payout formula: `bank += bet + (bet * multiplier)`.
 
-### 11.5 Defaults Reset
+### 11.2 Automation
+
+| Setting | Description |
+|---|---|
+| Enable Automation | Master toggle. Disabling it also clears active automation states. |
+| Enable Auto Dealer Draw | Shows/hides the Auto Dealer Draw button. |
+| Enable Auto Player Hand | Shows/hides the Auto Player Hand button. |
+| Enable Auto Continue | Shows/hides the Auto Continue button. |
+| Auto-Continue Delay | Delay before automatically starting the next round. Range: 10-180 seconds. |
+| Show remaining seconds | Shows countdown text on the Auto Continue bar in Main View V2. |
+| Enable Auto Run | Shows/hides Auto Run for regex-driven player actions. |
+
+### 11.3 Betting and VIP Limits
+
+Settings V2 uses editable bet entries. Changes are staged and only become active after **Save Betting Changes**.
+
+| Entry Kind | Description |
+|---|---|
+| **Min-Bet** | Active minimum bet entries. The main player table validates below this value. |
+| **VIP** | Max bet entry for a VIP level. VIP level `0` acts as fallback when no exact tier entry applies. |
+
+The player table's **V** button cycles player VIP tiers. A tier can be resolved by player name/world and changes the player's effective maximum bet.
+
+### 11.4 Nearby Players
+
+| Setting | Description |
+|---|---|
+| Enable nearby Players Feature | Shows or hides the Nearby Players section on the main page. |
+| Nearby Player Columns | Number of columns in Main View V1. Main View V2 uses one list with stable in-world numbers. |
+| No auto dequeue | Keeps queued players in the join queue even after they stay out of range for 90 seconds. |
+| Always show range circle | Draws the distance circle while Group Detector is active. |
+| Nearby Player Custom Command Button | Selects an Own Button/command group for the `?` button in Main View V2. |
+| Enable Sound on player enter range | Plays an audio file when a new player enters range. |
+| Volume / Cooldown / Mode | Controls sound volume, minimum time between alerts, and Iterative/Random/First-only file selection. |
+| Files | List of sound files used by nearby alerts. |
+
+### 11.5 Visual Settings
+
+| Area | Description |
+|---|---|
+| Font | Selects Default or Mono for custom-button presentation. |
+| Popout-Bar | Locks button-bar position, chooses horizontal/vertical layout, fixed width, and background color. |
+| General Buttons | Edits default, active, and highlight button styles. Highlight style is used for regex/action hints. |
+| Custom Buttons | Edits the default custom-button style. |
+| Ingame Drawer | Controls Draw Logic world scale, X/Y/Z offsets, and rotation offset. |
+| Suits | Controls Draw Logic suit colors for spades, clubs, hearts, and diamonds. |
+
+### 11.6 System Settings
 
 **Reset Default Config File** (Ctrl+Shift to unlock): Resets the defaults snapshot file. This affects what "Reset to Default" uses as its baseline for messages, regex, and commands.
+
+Additional system controls:
+
+- **Disable Update Popup** suppresses the version/update popup.
+- **Wait-Range expanded** increases command step delay range beyond the default limit.
+- **Hashed Stats** controls whether stats copies include an integrity hash.
+- **Export/Import Config File as JSON** writes or reads the full plugin config through a file dialog.
 
 ---
 
@@ -399,9 +554,10 @@ The following batches are included by default:
 | Player DD Messages Stand | `DD` | Confirmation after DD card is drawn. |
 | Player Split Messages | `Split` | Messages when a player splits. |
 | Player Split Draw Messages | `SplitDraw` | Messages when drawing for a split hand. |
-| Player BlackJack Messages | `PlayerBJ` | Natural blackjack announcement (party chat). |
-| Player BlackJack Messages Shout | `PlayerBJ` | Natural blackjack announcement (shout). |
-| Player Dirty BlackJack Messages | `PlayerDirtyBJ` | Dirty blackjack announcement. |
+| Player BlackJack Messages | `Natural BlackJack Notify` | Natural blackjack announcement (party chat). |
+| Player BlackJack Messages Shout | `Natural BlackJack Notify` | Natural blackjack announcement (shout). |
+| Player Dirty BlackJack Messages | `Dirty BlackJack Notify` | Dirty blackjack announcement. |
+| Player Charlie Messages | `Charlie Notify` | Charlie hand announcement. |
 | Player Busts Messages | `PlayerBust` | Bust announcement. |
 | Dealer Draw Messages | `DealStart` | Round-start dealer draw announcement. |
 | Dealer Hit Messages | `DealHit` | Dealer hit announcement. |
@@ -454,6 +610,9 @@ These tokens are replaced with live game data during command execution:
 | `<t>` | Target player's alias (if set) or name. |
 | `<points>` | Current hand's point total (e.g., `15` or `11/21` for soft hands). |
 | `<cards>` | Card string (e.g., `Spades A, Hearts 5 and Clubs K`). |
+| `<minbet>` | Configured minimum bet formatted as Gil. |
+| `<maxbet>` | Configured global maximum bet formatted as Gil. |
+| `<betrange>` | Bet range summary including active VIP limits. |
 | `<winners>` | Formatted winner list from round results. |
 | `<pushed>` | Formatted push list. |
 | `<loosers>` | Formatted loss list. |
@@ -462,6 +621,8 @@ These tokens are replaced with live game data during command execution:
 | `+{PlayerScore}` | Best score of the current target player. |
 
 Context tokens also support variable syntax (`${...}`) for session variables (see [18 Variables](#18-variables)).
+
+For `/tell <t>` and `/t <t>` commands, the first `<t>` must remain the actual FFXIV target token. Use `<.>` when a tell command needs to literally preserve that first target token while still allowing later `<t>` occurrences to become the player's alias/name.
 
 ### 13.4 Processing Pipeline
 
@@ -484,8 +645,9 @@ See [Appendix A](#a---processing-pipeline-summary) for a visual summary.
 | `DD` | Player Double Down | Player chooses to double down. |
 | `Split` | Player Split | Player chooses to split. |
 | `SplitDraw` | *(internal)* | Drawing second card for a split hand. |
-| `PlayerBJ` | Player has Natural Blackjack | Player gets 21 with 2 cards during initial deal. |
-| `PlayerDirtyBJ` | Player has Dirty Blackjack | Player gets 21 with 3+ cards. |
+| `Natural BlackJack Notify` | Player has Natural Blackjack | Player gets 21 with 2 cards during initial deal. |
+| `Dirty BlackJack Notify` | Player has Dirty Blackjack | Player gets 21 with 3+ cards. |
+| `Charlie Notify` | Player has Charlie | Player reaches the configured Charlie card count without busting. |
 | `PlayerBust` | Player Busted | Player's hand exceeds 21. |
 | `PlayerDDForcedStand` | *(internal)* | DD hand auto-stands after card draw. |
 | `DealStart` | Dealer Start | Dealer draws the opening card for a new round. |
@@ -537,6 +699,47 @@ Custom command groups that appear as buttons above the dealer row on the main pa
 
 ---
 
+## 15 Draw Logic
+
+*Requires Dev user level.*
+
+Draw Logic is a scriptable in-world drawing system. It can render cards, text, shapes, and debug visualizations around the dealer and players. The default entry, **Visualize Cards**, draws each active hand near the related character using the captured dealer direction.
+
+### 15.1 Entries and Start Entry
+
+Each Draw Logic entry has:
+
+- **Name**: unique display name used in the entry list and Start Entry selector.
+- **Iterate**: when enabled, the script runs once per active player plus the dealer.
+- **Active**: enables or disables the entry.
+- **Script Path**: relative path to the script file in the plugin config `drawlogic` directory.
+
+The **Start Entry** selector chooses which entry is executed every frame. `(None)` disables world drawing without deleting entries.
+
+### 15.2 Script Files and Auto-Reload
+
+Draw Logic scripts are stored as text files in the plugin config directory, normally under `drawlogic/`. Inline scripts from older config versions are migrated to files automatically.
+
+Controls:
+
+| Control | Effect |
+|---|---|
+| **Reload** | Reloads the current script file into the plugin. |
+| **Create Default** | Ctrl-protected action that creates or overwrites the default `visualize cards.txt` script. |
+| **Edit** | Opens an inline editor for the script text and can save back to the file. |
+| **Auto-Reload** | Available in Debug Mode; watches one selected script and reloads it when the file changes. |
+| **Delete** | Soft-deletes the script file by renaming it with a `.del.DATE.TIME.txt` suffix where possible. |
+
+Visual offset, scale, rotation, and suit colors are configured in **Settings > Visual > Ingame Drawer** and **Suits**.
+
+### 15.3 Debug Mode
+
+Debug Mode opens a debug hand panel and enables Auto-Reload. The separate Draw Logic Debug window helps test script output without relying on a live table state.
+
+The Draw Logic documentation button (`?`) opens the built-in syntax reference. The full external docs are also kept in [DrawCodeDocs.en.md](/home/mind/Schreibtisch/Projects/Dalamud/plugins/BlackJackButtler/DrawCodeDocs.en.md) and [DrawCodeDocs.de.md](/home/mind/Schreibtisch/Projects/Dalamud/plugins/BlackJackButtler/DrawCodeDocs.de.md).
+
+---
+
 ## 16 Presets
 
 *Requires Advanced user level.*
@@ -556,12 +759,13 @@ Presets are configuration snapshots that save and restore your plugin setup. Use
 
 | Category | Includes |
 |---|---|
-| **Settings** | Multipliers, gameplay rules, UI colors, bet limits. |
-| **Commands** | Built-in command groups and custom command groups (Own Buttons). |
+| **Settings** | Multipliers, gameplay rules, UI colors, bet limits, automation, nearby, visual, and system settings stored in the config. |
+| **Standard Commands** | Built-in command groups. |
+| **Own Buttons** | Custom command groups and custom button order. |
 | **Messages** | All message batches. |
 | **Regexes** | All user regex entries. |
 
-The currently active preset name is displayed in the Presets page. Selecting "Default" restores the base configuration.
+The currently active preset name is displayed in the window title. A `*` indicates the active config differs from the applied preset. Presets can be imported/exported individually or as one combined JSON file.
 
 ---
 
@@ -619,6 +823,7 @@ When mode is `Trigger`, the matched pattern executes one of these actions:
 | `HighlightSplit` | Highlights the Split button (once-consistent). | |
 | `NextRound` | Counts as a "vote" for a new round. When all active players have voted, auto-starts (if Auto Run and 2+ players) or highlights the Start New Round button. | |
 | `BankTell` | If Auto Run is on, sends bank/bet info to party chat. If off, highlights the Tell button. | |
+| `ExecuteOwnButton` | Executes the Own Button command group named in ActionParam. | [14 Own Buttons](#14-own-buttons) |
 
 ### 17.4 Default Patterns
 
@@ -775,9 +980,11 @@ Command Step Text
 | [2.3 Custom Buttons](#23-dealer-section) | [14 Own Buttons](#14-own-buttons) (button bar above dealer row) |
 | [2.4 Bank Tell](#24-player-table) | [13.5 BankTell](#135-built-in-command-groups) (executes BankTell command group) |
 | [2.5 Game Phases](#25-game-phases) | [13.5 Built-in Command Groups](#135-built-in-command-groups) (triggers command groups) |
+| [2.6 Nearby Players](#26-nearby-players) | [11.4 Nearby Players](#114-nearby-players), [14 Own Buttons](#14-own-buttons) (custom nearby command) |
 | [3.1-3.4 Actions](#3-player-actions) | [13.5 Built-in Command Groups](#135-built-in-command-groups) (triggers the corresponding command group) |
 | [3.3 Double Down](#33-double-down) | [11.1 Gameplay Rules](#111-gameplay-rules) (controlled by Allow DD after Split) |
 | [3.4 Split](#34-split) | [11.1 Gameplay Rules](#111-gameplay-rules) (controlled by Identical Split Only, Max Hands) |
+| [3.5 Charlie](#35-charlie) | [11.1 Gameplay Rules](#111-gameplay-rules), [13.5 Built-in Command Groups](#135-built-in-command-groups) |
 | [4.2 Bank Input](#42-bank-input-and-trade-detection) | [17.3 Trigger Actions](#173-trigger-actions) (auto-updates via Trade regex actions) |
 | [5.2 Dropbox](#52-dropbox-integration) | [11.1 Gameplay Rules](#111-gameplay-rules) (Open Dropbox setting) |
 | [12.4 Default Batches](#124-default-batch-list) | [13.2 Message References](#132-message-references) (consumed via `#{...}`) |
@@ -787,7 +994,8 @@ Command Step Text
 | [13.4 Processing Pipeline](#134-processing-pipeline) | [12 Messages](#12-messages) + [18 Variables](#18-variables) (full processing order) |
 | [13.6 Command Line Groups](#136-command-line-groups) | [13 Commands](#13-commands), [14 Own Buttons](#14-own-buttons) (shared GroupId system) |
 | [14 Own Buttons](#14-own-buttons) | [13 Commands](#13-commands) (same syntax and pipeline) |
-| [16 Presets](#16-presets) | Settings, Commands, Messages, Regexes (selective restore) |
+| [15 Draw Logic](#15-draw-logic) | [11.5 Visual Settings](#115-visual-settings) (world drawing scale/colors) |
+| [16 Presets](#16-presets) | Settings, Standard Commands, Own Buttons, Messages, Regexes (selective restore) |
 | [17.2 SetVariable](#172-setvariable-mode) | [18 Variables](#18-variables) (creates variables) |
 | [17.3 TakeBatch](#173-trigger-actions) | [12 Messages](#12-messages) (executes batch) |
 | [17.3 Trade actions](#173-trigger-actions) | [4 Betting and Bank](#4-betting-and-bank) (updates banks) |
@@ -801,6 +1009,10 @@ Command Step Text
 - **Deck**: 12-deck shoe (624 cards). Cards are pulled by value and removed from the shoe. When a requested value is exhausted, the shoe reshuffles.
 - **Persistence**: Game state is saved after every action (players, dealer, phase, deck). On next launch, a "Restore Previous Session" button appears if a saved session exists. The session file is cleared when the Group Detector is deactivated.
 - **Activity Log**: Player joins, leaves, bank changes, bet changes, and round results are logged internally for debugging purposes.
+- **Round Log**: Completed round summaries are persisted separately from the rewind timeline and can be copied from the Stats page.
+- **Nearby Queue**: Queued nearby players are invited when party size drops. Out-of-range queued entries are automatically removed after 90 seconds unless No auto dequeue is enabled.
+- **Blacklist**: The plugin checks a remote blacklist file and disables itself when the local user is blocked.
+- **Chat Buffer**: The BJB Messenger filters party chat and dice rolls into a dedicated copyable window.
 - **Dependencies**: Requires ECommons. Optional: Dropbox plugin for streamlined payouts.
 - **Defaults Migration**: On plugin updates, a smart merge process compares the previous defaults snapshot with the new code defaults. New entries are added automatically. Existing entries are only updated if the user has not modified them from the previous defaults — user customizations are preserved.
 
