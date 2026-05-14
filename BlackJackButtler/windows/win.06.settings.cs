@@ -27,6 +27,11 @@ public partial class BlackJackButtlerWindow
 
         int level = (int)_config.CurrentLevel;
 
+        if (_config.MainViewVersion == 2)
+        {
+            DrawSettingsPageV2(level);
+        }
+        else
         if (ImGui.BeginTabBar("##settings_tabs"))
         {
             DrawSettingsTab_General(level);
@@ -153,6 +158,19 @@ public partial class BlackJackButtlerWindow
 
             ImGui.Separator();
             ImGui.Spacing();
+            ImGui.TextUnformatted("Main View");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            int mainViewIdx = _config.MainViewVersion == 2 ? 1 : 0;
+            if (BJBGui.Combo("##main_view_version", ref mainViewIdx, "Classic\0Version 2\0"))
+            {
+                _config.MainViewVersion = mainViewIdx == 1 ? 2 : 1;
+                _save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Classic keeps the current main page layout.\nVersion 2 uses the reorganized main page.");
+
+            ImGui.Spacing();
             if (ImGui.Checkbox("Use Burger Menu instead of Sidebar", ref _config.UseBurgerMenu)) _save();
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Replace the left sidebar with a compact burger-menu button at the top.\nUseful when window space is tight.");
@@ -178,6 +196,32 @@ public partial class BlackJackButtlerWindow
                 if (ImGui.Checkbox("Always show distance circle", ref _config.NearbyAlwaysShowCircle)) _save();
                 if (ImGui.IsItemHovered())
                     ImGui.SetTooltip("Show the distance circle permanently when Group Detector is active.\nOtherwise only visible when hovering the distance slider.");
+
+                ImGui.Spacing();
+                ImGui.TextUnformatted("Nearby ? Command");
+                ImGui.SameLine(300f);
+                var commandNames = _config.CommandGroups
+                    .Select(g => g.Name)
+                    .Concat(_config.CustomCommandGroups.Select(g => g.Name))
+                    .Where(n => !string.IsNullOrWhiteSpace(n))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                var labels = new[] { "None" }.Concat(commandNames).ToArray();
+                int selected = 0;
+                if (!string.IsNullOrWhiteSpace(_config.NearbyQuestionCommandName))
+                {
+                    int found = commandNames.FindIndex(n => n.Equals(_config.NearbyQuestionCommandName, StringComparison.OrdinalIgnoreCase));
+                    selected = found >= 0 ? found + 1 : 0;
+                }
+                ImGui.SetNextItemWidth(200f);
+                if (BJBGui.Combo("##nearby_question_command", ref selected, labels, labels.Length))
+                {
+                    _config.NearbyQuestionCommandName = selected <= 0 ? string.Empty : commandNames[selected - 1];
+                    _save();
+                }
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("When set, Version 2 shows a ? button for nearby players.\nThe selected command group runs with the clicked player targeted.");
             }
 
             ImGui.EndTabItem();
@@ -1002,6 +1046,9 @@ public partial class BlackJackButtlerWindow
     {
         TryApply<bool>  (j, "FirstDealThenPlay",                      v => _config.FirstDealThenPlay = v);
         TryApply<bool>  (j, "IdenticalSplitOnly",                     v => _config.IdenticalSplitOnly = v);
+        TryApply<bool>  (j, "EnableSplit",                            v => _config.EnableSplit = v);
+        TryApply<bool>  (j, "EnableDoubleDown",                       v => _config.EnableDoubleDown = v);
+        TryApply<bool>  (j, "EnableDirtyBlackjack",                   v => _config.EnableDirtyBlackjack = v);
         TryApply<bool>  (j, "AllowDoubleDownAfterSplit",               v => _config.AllowDoubleDownAfterSplit = v);
         TryApply<int>   (j, "MaxHandsPerPlayer",                      v => _config.MaxHandsPerPlayer = v);
         TryApply<float> (j, "MultiplierNormalWin",                    v => _config.MultiplierNormalWin = v);
@@ -1021,9 +1068,15 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "AutoInitialDeal",                        v => _config.AutoInitialDeal = v);
         TryApply<bool>  (j, "AutoDealerDraw",                         v => _config.AutoDealerDraw = v);
         TryApply<bool>  (j, "AutoRun",                                v => _config.AutoRun = v);
+        TryApply<bool>  (j, "EnableAutomation",                       v => _config.EnableAutomation = v);
+        TryApply<bool>  (j, "ShowAutoDealerDrawButton",               v => _config.ShowAutoDealerDrawButton = v);
+        TryApply<bool>  (j, "ShowAutoPlayerHandButton",               v => _config.ShowAutoPlayerHandButton = v);
+        TryApply<bool>  (j, "ShowAutoContinueButton",                 v => _config.ShowAutoContinueButton = v);
+        TryApply<bool>  (j, "ShowAutoRunButton",                      v => _config.ShowAutoRunButton = v);
         TryApply<int>   (j, "DealerDrawsUntil",                       v => _config.DealerDrawsUntil = v);
         TryApply<bool>  (j, "DealerSoftRule",                         v => _config.DealerSoftRule = v);
         TryApply<bool>  (j, "SmallResult",                            v => _config.SmallResult = v);
+        TryApply<string>(j, "ResultTemplate",                         v => _config.ResultTemplate = v);
         TryApply<bool>  (j, "AutostartRoundOnlyOnMultiplePlayers",     v => _config.AutostartRoundOnlyOnMultiplePlayers = v);
         TryApply<float> (j, "CommandSpeedMultiplier",                  v => _config.CommandSpeedMultiplier = v);
         TryApply<Vector4>(j, "HighlightColor",                        v => _config.HighlightColor = v);
@@ -1037,11 +1090,17 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "ShowNearbyPlayers",                      v => _config.ShowNearbyPlayers = v);
         TryApply<bool>  (j, "NearbySticky",                           v => _config.NearbySticky = v);
         TryApply<int>   (j, "NearbyColumns",                          v => _config.NearbyColumns = v);
+        TryApply<string>(j, "NearbyQuestionCommandName",              v => _config.NearbyQuestionCommandName = v);
         TryApply<bool>  (j, "NoAutoDequeue",                          v => _config.NoAutoDequeue = v);
         TryApply<float> (j, "CustomButtonPaddingH",                   v => _config.CustomButtonPaddingH = v);
         TryApply<float> (j, "CustomButtonPaddingV",                   v => _config.CustomButtonPaddingV = v);
         TryApply<float> (j, "CustomButtonFontScale",                  v => _config.CustomButtonFontScale = v);
         TryApply<bool>  (j, "CustomButtonUseMono",                    v => _config.CustomButtonUseMono = v);
+        TryApply<string>(j, "SelectedFontName",                       v => _config.SelectedFontName = v);
+        TryApply<ButtonBarLayout>(j, "ButtonBarLayout",               v => _config.ButtonBarLayout = v);
+        TryApply<bool>  (j, "ButtonBarFixedWidth",                    v => _config.ButtonBarFixedWidth = v);
+        TryApply<float> (j, "ButtonBarFixedWidthValue",               v => _config.ButtonBarFixedWidthValue = v);
+        TryApply<Vector4>(j, "ButtonBarBackgroundColor",              v => _config.ButtonBarBackgroundColor = v);
         TryApply<bool>  (j, "OpenDropboxInsteadOfTrade",              v => _config.OpenDropboxInsteadOfTrade = v);
         TryApply<float> (j, "InitialViewDirection",                   v => _config.InitialViewDirection = v);
         TryApply<bool>  (j, "LookEveryTime",                         v => _config.LookEveryTime = v);
@@ -1052,6 +1111,7 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "NearbyAlertEnabled",                    v => _config.NearbyAlertEnabled = v);
         TryApply<float> (j, "NearbyAlertVolume",                     v => _config.NearbyAlertVolume = v);
         TryApply<float> (j, "NearbyAlertCooldown",                   v => _config.NearbyAlertCooldown = v);
+        TryApply<NearbyAlertSoundMode>(j, "NearbyAlertSoundMode",     v => _config.NearbyAlertSoundMode = v);
         TryApply<bool>  (j, "NearbyAlwaysShowCircle",                v => _config.NearbyAlwaysShowCircle = v);
         TryApply<bool>  (j, "AutoContinue",                          v => _config.AutoContinue = v);
         TryApply<float> (j, "AutoContinueDelay",                     v => _config.AutoContinueDelay = v);
@@ -1084,10 +1144,10 @@ public partial class BlackJackButtlerWindow
             _config.MessageBatches = _tempImportJson["MessageBatches"]!.ToObject<List<MessageBatch>>()!;
         if (_tempImportJson.ContainsKey("UserRegexes"))
             _config.UserRegexes = _tempImportJson["UserRegexes"]!.ToObject<List<UserRegexEntry>>()!;
-        if (_tempImportJson.ContainsKey("Webhooks"))
-            _config.Webhooks = _tempImportJson["Webhooks"]!.ToObject<List<WebhookEntry>>()!;
         if (_tempImportJson.ContainsKey("VipBetTiers"))
             _config.VipBetTiers = _tempImportJson["VipBetTiers"]!.ToObject<List<VipBetTier>>()!;
+        if (_tempImportJson.ContainsKey("BetLimitEntries"))
+            _config.BetLimitEntries = _tempImportJson["BetLimitEntries"]!.ToObject<List<BetLimitEntry>>()!;
         if (_tempImportJson.ContainsKey("CustomButtonOrder"))
             _config.CustomButtonOrder = _tempImportJson["CustomButtonOrder"]!.ToObject<List<string>>()!;
         if (_tempImportJson.ContainsKey("NearbyAlertSoundFiles"))
@@ -1117,8 +1177,9 @@ public partial class BlackJackButtlerWindow
         MergeNamedList(_tempImportJson, "CustomCommandGroups", _config.CustomCommandGroups, x => x.Name);
         MergeNamedList(_tempImportJson, "MessageBatches",      _config.MessageBatches,      x => x.Name);
         MergeNamedList(_tempImportJson, "UserRegexes",         _config.UserRegexes,         x => x.Name);
-        MergeNamedList(_tempImportJson, "Webhooks",            _config.Webhooks,            x => x.Name);
         MergeNamedList(_tempImportJson, "VipBetTiers",         _config.VipBetTiers,         x => x.Name);
+        if (_tempImportJson.ContainsKey("BetLimitEntries"))
+            _config.BetLimitEntries = _tempImportJson["BetLimitEntries"]!.ToObject<List<BetLimitEntry>>()!;
 
         if (_tempImportJson.ContainsKey("CustomButtonOrder"))
             _config.CustomButtonOrder = _tempImportJson["CustomButtonOrder"]!.ToObject<List<string>>()!;

@@ -31,7 +31,7 @@ public static class RegexEngine
         if (!activePlayers.All(pl => pl.ReadySkip || _nextRoundVotes.Contains(pl.Name))) return;
 
         _nextRoundVotes.Clear();
-        if (cfg.AutoRun)
+        if (cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun)
             Task.Run(() => GameEngine.StartInitialDeal(players, cfg));
         else
             Plugin.Instance.GetMainWindow().SetHighlightNewRound();
@@ -160,7 +160,7 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantHit:
-                if (!cfg.AutoRun)
+                if (!cfg.EnableAutomation || !cfg.ShowAutoRunButton || !cfg.AutoRun)
                 {
                     if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
                         p.HighlightHit = true;
@@ -181,7 +181,7 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantStand:
-                if (!cfg.AutoRun)
+                if (!cfg.EnableAutomation || !cfg.ShowAutoRunButton || !cfg.AutoRun)
                 {
                     if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
                         p.HighlightStand = true;
@@ -201,7 +201,7 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantDD:
-                if (!cfg.AutoRun)
+                if (!cfg.EnableAutomation || !cfg.ShowAutoRunButton || !cfg.AutoRun)
                 {
                     if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
                         p.HighlightDD = true;
@@ -215,6 +215,7 @@ public static class RegexEngine
                     var (min, _) = p.CalculatePoints(p.CurrentHandIndex);
                     if (min < 21 && !hand.IsDoubleDown && !hand.IsStand
                         && hand.Cards.Count == 2
+                        && cfg.EnableDoubleDown
                         && !(p.Hands.Count > 1 && !cfg.AllowDoubleDownAfterSplit))
                     {
                         GameLog.PushSnapshot(players, dealer, GameEngine.CurrentPhase, $"RegexDD:{p.Name}");
@@ -224,7 +225,7 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantSplit:
-                if (!cfg.AutoRun)
+                if (!cfg.EnableAutomation || !cfg.ShowAutoRunButton || !cfg.AutoRun)
                 {
                     if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
                         p.HighlightSplit = true;
@@ -237,6 +238,7 @@ public static class RegexEngine
                     var hand = p.Hands[p.CurrentHandIndex];
                     var (min, _) = p.CalculatePoints(p.CurrentHandIndex);
                     if (min < 21 && !hand.IsDoubleDown && !hand.IsStand
+                        && cfg.EnableSplit
                         && hand.Cards.Count == 2 && p.Hands.Count < cfg.MaxHandsPerPlayer)
                     {
                         bool canSplit = cfg.IdenticalSplitOnly
@@ -307,7 +309,7 @@ public static class RegexEngine
                     {
                         Plugin.Instance.GetMainWindow().SetHighlightNewRound();
                     }
-                    else if (cfg.AutoRun)
+                    else if (cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun)
                     {
                         Task.Run(() => GameEngine.StartInitialDeal(players, cfg));
                     }
@@ -372,7 +374,7 @@ public static class RegexEngine
                     break;
                 }
 
-                if (!cfg.AutoRun)
+                if (!cfg.EnableAutomation || !cfg.ShowAutoRunButton || !cfg.AutoRun)
                 {
                     p.HighlightTell = true;
                     btWindow.AddDebugLog($"[RegexEngine] BankTell highlight set for {p.DisplayName} (AutoRun off)");

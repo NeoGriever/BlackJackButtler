@@ -1,4 +1,4 @@
-`v1.8.1.3`
+`v1.8.2.0`
 
 # BlackJack Buttler
 
@@ -62,7 +62,6 @@ Whether you run a casual table for friends or a high-stakes venue for dozens of 
   - [13.5 Built-in Command Groups](#135-built-in-command-groups)
   - [13.6 Command Line Groups](#136-command-line-groups)
 - [14 Own Buttons](#14-own-buttons)
-- [15 Webhooks](#15-webhooks)
 - [16 Presets](#16-presets)
 - [17 Regex](#17-regex)
   - [17.1 Regex Entries](#171-regex-entries)
@@ -109,7 +108,7 @@ BJB uses a three-tier user level system that controls which sidebar pages and se
 | Level | Sidebar Pages | Settings Shown |
 |---|---|---|
 | **Beginner** | Main, Settings, Stats, Round History | User Level, Command Speed, Bet Limits, Button Style, Natural BJ Multiplier |
-| **Advanced** | + Messages, Commands, Own Buttons, Webhooks, Presets | + All Gameplay Rules, UI Colors, All Multipliers, Defaults Reset |
+| **Advanced** | + Messages, Commands, Own Buttons, Presets | + All Gameplay Rules, UI Colors, All Multipliers, Defaults Reset |
 | **Dev** | + Regex, Variables, Debug, Macro Import | + Clipboard Export/Import, Unlock Wait Timer |
 
 Change the level in **Settings > User Level**. Lowering the level resets any advanced settings to their defaults.
@@ -118,7 +117,7 @@ Change the level in **Settings > User Level**. Lowering the level resets any adv
 
 ## 2 Main Game Page
 
-The main page header includes a **Webhook dropdown** (top-right, see [15 Webhooks](#15-webhooks)) for selecting which webhook receives round results, and a **Bank /tell** button that posts bank/bet info to party chat for all active players.
+The main page header includes a **Bank /tell** button that posts bank/bet info to party chat for all active players.
 
 ### 2.1 Group Detector
 
@@ -538,27 +537,6 @@ Custom command groups that appear as buttons above the dealer row on the main pa
 
 ---
 
-## 15 Webhooks
-
-*Requires Advanced user level.*
-
-Webhooks send round results as Discord embeds to a configured Discord channel. Each webhook posts a formatted message containing the dealer's hand and points, all player hands with their results (WIN, BUST, PUSH, LOST, BLACKJACK), and optionally the bet amounts.
-
-**Configuration** (Webhooks page):
-
-| Field | Description |
-|---|---|
-| **Name** | Display name for the webhook (shown in the main window dropdown). |
-| **URL** | Discord webhook URL (must start with `https://discord.com/api/webhooks/`). |
-| **Enabled** | Toggle the webhook on/off. |
-| **Show bet amounts** | When on, win/loss Gil amounts are included in the embed. |
-
-**Usage**: On the main game page, a **Webhook dropdown** appears in the top-right header area (only visible when at least one enabled webhook exists). Select a webhook to receive round results, or "None" to disable posting. The dropdown is locked during active rounds and can only be changed during the Waiting or Payout phase.
-
-Results are posted automatically at the end of each round when a webhook is selected.
-
----
-
 ## 16 Presets
 
 *Requires Advanced user level.*
@@ -582,7 +560,6 @@ Presets are configuration snapshots that save and restore your plugin setup. Use
 | **Commands** | Built-in command groups and custom command groups (Own Buttons). |
 | **Messages** | All message batches. |
 | **Regexes** | All user regex entries. |
-| **Webhooks** | All webhook configurations. |
 
 The currently active preset name is displayed in the Presets page. Selecting "Default" restores the base configuration.
 
@@ -810,8 +787,7 @@ Command Step Text
 | [13.4 Processing Pipeline](#134-processing-pipeline) | [12 Messages](#12-messages) + [18 Variables](#18-variables) (full processing order) |
 | [13.6 Command Line Groups](#136-command-line-groups) | [13 Commands](#13-commands), [14 Own Buttons](#14-own-buttons) (shared GroupId system) |
 | [14 Own Buttons](#14-own-buttons) | [13 Commands](#13-commands) (same syntax and pipeline) |
-| [15 Webhooks](#15-webhooks) | [2 Main Game Page](#2-main-game-page) (dropdown in header) |
-| [16 Presets](#16-presets) | Settings, Commands, Messages, Regexes, Webhooks (selective restore) |
+| [16 Presets](#16-presets) | Settings, Commands, Messages, Regexes (selective restore) |
 | [17.2 SetVariable](#172-setvariable-mode) | [18 Variables](#18-variables) (creates variables) |
 | [17.3 TakeBatch](#173-trigger-actions) | [12 Messages](#12-messages) (executes batch) |
 | [17.3 Trade actions](#173-trigger-actions) | [4 Betting and Bank](#4-betting-and-bank) (updates banks) |

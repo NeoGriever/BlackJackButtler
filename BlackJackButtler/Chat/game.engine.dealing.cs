@@ -534,7 +534,7 @@ public static partial class GameEngine
         var hand = p.Hands[p.CurrentHandIndex];
 
         bool canSplit = false;
-        if (hand.Cards.Count == 2 && p.Hands.Count < cfg.MaxHandsPerPlayer)
+        if (cfg.EnableSplit && hand.Cards.Count == 2 && p.Hands.Count < cfg.MaxHandsPerPlayer)
         {
             if (cfg.IdenticalSplitOnly)
                 canSplit = hand.Cards[0].Value == hand.Cards[1].Value;
@@ -543,7 +543,7 @@ public static partial class GameEngine
         }
 
         bool isSplitHand = p.Hands.Count > 1;
-        bool canDD = hand.Cards.Count == 2;
+        bool canDD = cfg.EnableDoubleDown && hand.Cards.Count == 2;
         if (isSplitHand && !cfg.AllowDoubleDownAfterSplit)
             canDD = false;
 

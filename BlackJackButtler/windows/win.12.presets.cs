@@ -14,6 +14,8 @@ public partial class BlackJackButtlerWindow
     private static readonly string[] SettingsFields =
     {
         "FirstDealThenPlay", "IdenticalSplitOnly", "AllowDoubleDownAfterSplit",
+        "EnableSplit", "EnableDoubleDown", "EnableDirtyBlackjack", "EnableAutomation",
+        "ShowAutoDealerDrawButton", "ShowAutoPlayerHandButton", "ShowAutoContinueButton", "ShowAutoRunButton",
         "MaxHandsPerPlayer", "MultiplierNormalWin", "MultiplierBlackjackWin",
         "MultiplierDirtyBlackjackWin", "RefundFullDoubleDownOnPush", "BlackjackTieRule",
         "EnableCharlie", "CharlieCardCount", "EnableBankInput", "CommandSpeedMultiplier",
@@ -23,14 +25,14 @@ public partial class BlackJackButtlerWindow
         "SmallResult", "AutostartRoundOnlyOnMultiplePlayers", "HighlightColor",
         "HighlightTextColor", "ButtonColor", "ButtonTextColor", "NearbyAlertEnabled",
         "NearbyAlertSoundFiles", "NearbyAlertVolume", "NearbyAlertCooldown",
-        "VipBetTiers", "NearbyAlwaysShowCircle", "AutoContinue", "AutoContinueDelay",
+        "VipBetTiers", "BetLimitEntries", "NearbyAlwaysShowCircle", "AutoContinue", "AutoContinueDelay",
+        "ResultTemplate", "NearbyQuestionCommandName", "NearbyAlertSoundMode",
     };
 
     private static readonly string[] StandardCommandFields = { "CommandGroups" };
     private static readonly string[] OwnButtonFields = { "CustomCommandGroups", "CustomButtonOrder" };
     private static readonly string[] MessageFields = { "MessageBatches" };
     private static readonly string[] RegexFields = { "UserRegexes" };
-    private static readonly string[] WebhookFields = { "Webhooks" };
 
     private void DrawPresetsPage()
     {
@@ -99,7 +101,6 @@ public partial class BlackJackButtlerWindow
                                 ApplyOwnButtons = entry["ApplyOwnButtons"]?.Value<bool>() ?? legacyApplyCommands,
                                 ApplyMessages = entry["ApplyMessages"]?.Value<bool>() ?? true,
                                 ApplyRegexes = entry["ApplyRegexes"]?.Value<bool>() ?? true,
-                                ApplyWebhooks = entry["ApplyWebhooks"]?.Value<bool>() ?? true,
                                 CommandsCheckboxMigrated = true,
                                 SnapshotJson = ((JObject)cumulative!.DeepClone()).ToString(Formatting.None),
                             });
@@ -245,12 +246,6 @@ public partial class BlackJackButtlerWindow
                 { preset.ApplyRegexes = applyRegexes; _save(); }
                 if (ImGui.IsItemHovered()) ImGui.SetTooltip("Regexes");
 
-                ImGui.SameLine();
-                bool applyWebhooks = preset.ApplyWebhooks;
-                if (ImGui.Checkbox($"##pwh_{i}", ref applyWebhooks))
-                { preset.ApplyWebhooks = applyWebhooks; _save(); }
-                if (ImGui.IsItemHovered()) ImGui.SetTooltip("Webhooks");
-
                 ImGui.Spacing();
 
                 if (!isActive || _presetChangeCount > 0)
@@ -309,6 +304,9 @@ public partial class BlackJackButtlerWindow
         {
             _config.FirstDealThenPlay                  = snap.FirstDealThenPlay;
             _config.IdenticalSplitOnly                 = snap.IdenticalSplitOnly;
+            _config.EnableSplit                        = snap.EnableSplit;
+            _config.EnableDoubleDown                   = snap.EnableDoubleDown;
+            _config.EnableDirtyBlackjack               = snap.EnableDirtyBlackjack;
             _config.AllowDoubleDownAfterSplit           = snap.AllowDoubleDownAfterSplit;
             _config.MaxHandsPerPlayer                  = snap.MaxHandsPerPlayer;
             _config.MultiplierNormalWin                = snap.MultiplierNormalWin;
@@ -327,10 +325,16 @@ public partial class BlackJackButtlerWindow
             _config.AutoInitialDeal                    = snap.AutoInitialDeal;
             _config.AutoDealerDraw                     = snap.AutoDealerDraw;
             _config.AutoRun                            = snap.AutoRun;
+            _config.EnableAutomation                   = snap.EnableAutomation;
+            _config.ShowAutoDealerDrawButton           = snap.ShowAutoDealerDrawButton;
+            _config.ShowAutoPlayerHandButton           = snap.ShowAutoPlayerHandButton;
+            _config.ShowAutoContinueButton             = snap.ShowAutoContinueButton;
+            _config.ShowAutoRunButton                  = snap.ShowAutoRunButton;
             _config.DealerDrawsUntil                   = snap.DealerDrawsUntil;
             _config.DealerSoftRule                     = snap.DealerSoftRule;
             _config.CharlieInstantWin                  = snap.CharlieInstantWin;
             _config.SmallResult                        = snap.SmallResult;
+            _config.ResultTemplate                     = snap.ResultTemplate;
             _config.AutostartRoundOnlyOnMultiplePlayers = snap.AutostartRoundOnlyOnMultiplePlayers;
             _config.HighlightColor                     = snap.HighlightColor;
             _config.HighlightTextColor                 = snap.HighlightTextColor;
@@ -340,8 +344,11 @@ public partial class BlackJackButtlerWindow
             _config.NearbyAlertSoundFiles              = snap.NearbyAlertSoundFiles;
             _config.NearbyAlertVolume                  = snap.NearbyAlertVolume;
             _config.NearbyAlertCooldown                = snap.NearbyAlertCooldown;
+            _config.NearbyAlertSoundMode               = snap.NearbyAlertSoundMode;
             _config.VipBetTiers                        = snap.VipBetTiers;
+            _config.BetLimitEntries                    = snap.BetLimitEntries;
             _config.NearbyAlwaysShowCircle              = snap.NearbyAlwaysShowCircle;
+            _config.NearbyQuestionCommandName          = snap.NearbyQuestionCommandName;
             _config.AutoContinue                       = snap.AutoContinue;
             _config.AutoContinueDelay                  = snap.AutoContinueDelay;
         }
@@ -359,7 +366,6 @@ public partial class BlackJackButtlerWindow
 
         if (preset.ApplyMessages) _config.MessageBatches = snap.MessageBatches;
         if (preset.ApplyRegexes)  _config.UserRegexes    = snap.UserRegexes;
-        if (preset.ApplyWebhooks) _config.Webhooks       = snap.Webhooks;
 
         if (string.IsNullOrEmpty(preset.PresetId))
             preset.PresetId = Guid.NewGuid().ToString("N");
@@ -397,7 +403,6 @@ public partial class BlackJackButtlerWindow
         if (preset.ApplyOwnButtons)       count += CountDiffs(current, snapshot, OwnButtonFields);
         if (preset.ApplyMessages)         count += CountDiffs(current, snapshot, MessageFields);
         if (preset.ApplyRegexes)          count += CountDiffs(current, snapshot, RegexFields);
-        if (preset.ApplyWebhooks)         count += CountDiffs(current, snapshot, WebhookFields);
         _presetChangeCount = count;
     }
 
@@ -429,7 +434,6 @@ public partial class BlackJackButtlerWindow
                 ["ApplyOwnButtons"] = preset.ApplyOwnButtons,
                 ["ApplyMessages"] = preset.ApplyMessages,
                 ["ApplyRegexes"] = preset.ApplyRegexes,
-                ["ApplyWebhooks"] = preset.ApplyWebhooks,
                 ["Snapshot"] = JObject.Parse(preset.SnapshotJson),
                 ["IsDelta"] = false,
             }
@@ -466,7 +470,6 @@ public partial class BlackJackButtlerWindow
                 ["ApplyOwnButtons"] = p.ApplyOwnButtons,
                 ["ApplyMessages"] = p.ApplyMessages,
                 ["ApplyRegexes"] = p.ApplyRegexes,
-                ["ApplyWebhooks"] = p.ApplyWebhooks,
             };
 
             if (cumulative == null)
@@ -547,7 +550,6 @@ public partial class BlackJackButtlerWindow
                 else if (lastEntry.ContainsKey("ApplyCommands")) preset.ApplyOwnButtons = lastEntry["ApplyCommands"]!.Value<bool>();
                 if (lastEntry.ContainsKey("ApplyMessages")) preset.ApplyMessages = lastEntry["ApplyMessages"]!.Value<bool>();
                 if (lastEntry.ContainsKey("ApplyRegexes")) preset.ApplyRegexes = lastEntry["ApplyRegexes"]!.Value<bool>();
-                if (lastEntry.ContainsKey("ApplyWebhooks")) preset.ApplyWebhooks = lastEntry["ApplyWebhooks"]!.Value<bool>();
                 preset.CommandsCheckboxMigrated = true;
             }
 

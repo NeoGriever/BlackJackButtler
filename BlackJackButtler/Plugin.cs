@@ -216,7 +216,8 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         // Auto Initial Deal
-        if (Configuration.AutoInitialDeal && GameEngine.CurrentPhase == GamePhase.InitialDeal)
+        if (Configuration.EnableAutomation && Configuration.ShowAutoPlayerHandButton
+            && Configuration.AutoInitialDeal && GameEngine.CurrentPhase == GamePhase.InitialDeal)
         {
             if (!CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending && !_autoActionInFlight)
             {
@@ -255,7 +256,8 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         // Auto Dealer Draw
-        if (Configuration.AutoDealerDraw && GameEngine.CurrentPhase == GamePhase.DealerTurn)
+        if (Configuration.EnableAutomation && Configuration.ShowAutoDealerDrawButton
+            && Configuration.AutoDealerDraw && GameEngine.CurrentPhase == GamePhase.DealerTurn)
         {
             if (!CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending && !_autoActionInFlight)
             {
@@ -318,7 +320,8 @@ public sealed class Plugin : IDalamudPlugin
             NearbyAlertManager.Update(nearby, Configuration);
         }
 
-        if (Configuration.AutoContinue && mainWindow.IsRecognitionActive)
+        if (Configuration.EnableAutomation && Configuration.ShowAutoContinueButton
+            && Configuration.AutoContinue && mainWindow.IsRecognitionActive)
         {
             var phase = GameEngine.CurrentPhase;
             if ((phase == GamePhase.Waiting || phase == GamePhase.Payout)

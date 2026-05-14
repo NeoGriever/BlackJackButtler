@@ -13,7 +13,7 @@ namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow : Window, IDisposable
 {
-    private enum Page { Main, Regexes, Messages, Commands , OwnButtons , Settings , Vars , RoundLog , Debug , Thanks , Stats , Webhooks , Presets , DrawLogic }
+    private enum Page { Main, Regexes, Messages, Commands , OwnButtons , Settings , Vars , RoundLog , Debug , Thanks , Stats , Presets , DrawLogic }
     private Page _page = Page.Main;
 
     private readonly Configuration _config;
@@ -65,7 +65,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _showVarRefPanel = false;
     private int _panicConfirmStage = 0;
     private bool _highlightNewRound = false;
-    private int _selectedWebhookIndex = -1;
     private bool _partyDissolved = false;
 
     private bool _notepadLoaded = false;
@@ -155,6 +154,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     public override void OnClose()
     {
+        DiscardSettingsV2Drafts();
         Plugin.Instance.UpdateEventHooks();
     }
     public List<PlayerState> GetPlayers() => _players;
@@ -257,7 +257,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             if(ShouldShowPage(Page.Messages, level))                    NavButton(Page.Messages, "Messages");
             if(ShouldShowPage(Page.Commands, level))                    NavButton(Page.Commands, "Commands");
             if(ShouldShowPage(Page.OwnButtons, level))                  NavButton(Page.OwnButtons, "Own Buttons");
-            if(ShouldShowPage(Page.Webhooks, level))                    NavButton(Page.Webhooks, "Webhooks");
             if(ShouldShowPage(Page.Presets, level))                     NavButton(Page.Presets, "Presets");
             ImGui.Separator();
             if(ShouldShowPage(Page.Settings, level))                    NavButton(Page.Settings, "Settings");
@@ -349,7 +348,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Debug:        DrawDebugPage(); break;
             case Page.Thanks:       DrawThanksPage(); break;
             case Page.Stats:        DrawStatsPage(); break;
-            case Page.Webhooks:     DrawWebhooksPage(); break;
             case Page.Presets:      DrawPresetsPage(); break;
             case Page.DrawLogic:    DrawDrawLogicPage(); break;
         }
@@ -425,11 +423,11 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
                 _save();
             }
             ImGui.SameLine();
-            if (ImGui.Button(label, new Vector2(-1, 40))) _page = page;
+            if (ImGui.Button(label, new Vector2(-1, 40)) && CanNavigateFromCurrentPage(page)) _page = page;
         }
         else
         {
-            if (ImGui.Button(label, new Vector2(-1, 40))) _page = page;
+            if (ImGui.Button(label, new Vector2(-1, 40)) && CanNavigateFromCurrentPage(page)) _page = page;
         }
 
         if (selected)
@@ -447,7 +445,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         return page switch
         {
             Page.Regexes or Page.Vars or Page.Debug or Page.DrawLogic => level >= UserLevel.Dev,
-            Page.Messages or Page.Commands or Page.OwnButtons or Page.Webhooks or Page.Presets => level >= UserLevel.Advanced,
+            Page.Messages or Page.Commands or Page.OwnButtons or Page.Presets => level >= UserLevel.Advanced,
             _ => true,
         };
     }
@@ -470,7 +468,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         if (ShouldShowPage(Page.Messages, level))    NavButtonBurger(Page.Messages, "Messages");
         if (ShouldShowPage(Page.Commands, level))    NavButtonBurger(Page.Commands, "Commands");
         if (ShouldShowPage(Page.OwnButtons, level))  NavButtonBurger(Page.OwnButtons, "Own Buttons");
-        if (ShouldShowPage(Page.Webhooks, level))    NavButtonBurger(Page.Webhooks, "Webhooks");
         if (ShouldShowPage(Page.Presets, level))     NavButtonBurger(Page.Presets, "Presets");
         ImGui.Separator();
         if (ShouldShowPage(Page.Settings, level))    NavButtonBurger(Page.Settings, "Settings");
@@ -504,9 +501,16 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             ImGui.SameLine();
         }
 
-        if (ImGui.Button(label, new Vector2(220, 28))) { _page = page; ImGui.CloseCurrentPopup(); }
+        if (ImGui.Button(label, new Vector2(220, 28)) && CanNavigateFromCurrentPage(page)) { _page = page; ImGui.CloseCurrentPopup(); }
 
         if (selected) ImGui.PopStyleColor();
+    }
+
+    private bool CanNavigateFromCurrentPage(Page targetPage)
+    {
+        if (_page == Page.Settings && targetPage != Page.Settings && _config.MainViewVersion == 2)
+            return TryLeaveSettingsV2(targetPage);
+        return true;
     }
 
 }

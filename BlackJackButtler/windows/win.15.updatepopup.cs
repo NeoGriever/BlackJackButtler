@@ -13,7 +13,7 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.8.1.3\n" +
+        "v1.8.2.0\n" +
         "\n" +
         "- Fix: T-button (Tell shortcut) could corrupt ImGui render — all window text could vanish\n" +
         "  Cause: race condition on VariableManager.Variables (writes from Task.Run thread\n" +

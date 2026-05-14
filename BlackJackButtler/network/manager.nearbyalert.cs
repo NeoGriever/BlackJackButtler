@@ -12,8 +12,10 @@ public static class NearbyAlertManager
     private static HashSet<string> _previousInRange = new();
     private static DateTime _lastSoundPlayed = DateTime.MinValue;
     private static WaveOutEvent? _activePlayer;
-    private static IWaveProvider? _activeReader;
+    private static WaveStream? _activeStream;
     private static readonly Random _rng = new();
+    private static readonly object _lock = new();
+    private static int _iterativeIndex;
 
     public static void Update(List<NearbyPlayerInfo> current, Configuration config)
     {
@@ -53,7 +55,12 @@ public static class NearbyAlertManager
         var valid = config.NearbyAlertSoundFiles.Where(File.Exists).ToList();
         if (valid.Count == 0) return;
 
-        var path = valid[_rng.Next(valid.Count)];
+        var path = config.NearbyAlertSoundMode switch
+        {
+            NearbyAlertSoundMode.FirstOnly => valid[0],
+            NearbyAlertSoundMode.Iterative => valid[_iterativeIndex++ % valid.Count],
+            _ => valid[_rng.Next(valid.Count)]
+        };
         PlayFile(path, config.NearbyAlertVolume);
     }
 
@@ -76,21 +83,33 @@ public static class NearbyAlertManager
             else
                 stream = new MediaFoundationReader(path);
 
-            _activeReader = stream;
+            _activeStream = stream;
             var volumeProvider = new VolumeWaveProvider(stream, volumePercent / 100f);
 
             var player = new WaveOutEvent();
             player.Init(volumeProvider);
             player.PlaybackStopped += (_, _) =>
             {
-                player.Dispose();
-                if (_activeReader is IDisposable d) d.Dispose();
+                lock (_lock)
+                {
+                    if (ReferenceEquals(_activePlayer, player))
+                    {
+                        _activePlayer = null;
+                        _activeStream?.Dispose();
+                        _activeStream = null;
+                        player.Dispose();
+                    }
+                }
             };
             _activePlayer = player;
             player.Play();
             _lastSoundPlayed = DateTime.Now;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning($"[NearbyAlert] Failed to play sound '{path}': {ex.Message}");
+            StopActive();
+        }
     }
 
     public static void Reset()
@@ -105,21 +124,27 @@ public static class NearbyAlertManager
 
     private static void StopActive()
     {
-        try
+        lock (_lock)
         {
-            if (_activePlayer != null)
+            try
             {
-                _activePlayer.Stop();
-                _activePlayer.Dispose();
+                var player = _activePlayer;
                 _activePlayer = null;
+
+                if (player != null)
+                {
+                    player.Stop();
+                    player.Dispose();
+                }
+
+                _activeStream?.Dispose();
+                _activeStream = null;
             }
-            if (_activeReader is IDisposable d)
+            catch (Exception ex)
             {
-                d.Dispose();
-                _activeReader = null;
+                Plugin.Log.Warning($"[NearbyAlert] Failed to stop active sound: {ex.Message}");
             }
         }
-        catch { }
     }
 }
 
