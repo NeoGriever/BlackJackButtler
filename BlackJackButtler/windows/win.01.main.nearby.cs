@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Linq;
+using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using BlackJackButtler.Chat;
@@ -20,7 +21,7 @@ public partial class BlackJackButtlerWindow
 
     private bool _distSliderHovered;
 
-    private void DrawNearbyPlayersSection()
+    private void DrawNearbyPlayersSection(bool version2 = false)
     {
         if (!_config.ShowNearbyPlayers) return;
 
@@ -78,6 +79,8 @@ public partial class BlackJackButtlerWindow
             if (!seenKeys.Contains(p.FullKey)) rest.Add(p);
 
         var sorted = queued.Concat(rest).ToList();
+        if (version2)
+            sorted = NearbyNumberManager.ApplyAndSort(sorted);
 
         if (sorted.Count == 0)
         {
@@ -86,7 +89,10 @@ public partial class BlackJackButtlerWindow
             return;
         }
 
-        int columns = Math.Clamp(_config.NearbyColumns, 1, 5);
+        if (version2)
+            NearbyNumberManager.DrawFootNumbers(sorted);
+
+        int columns = version2 ? 1 : Math.Clamp(_config.NearbyColumns, 1, 5);
         float availWidth = ImGui.GetContentRegionAvail().X;
         float colWidth = availWidth / columns;
         float rowHeight = ImGui.GetTextLineHeightWithSpacing() + 2f;
@@ -152,6 +158,25 @@ public partial class BlackJackButtlerWindow
 
                 ImGui.SameLine(0, 4);
 
+                if (version2)
+                {
+                    ImGui.TextColored(new Vector4(1f, 0.85f, 0.25f, 1f), $"{NearbyNumberManager.GetNumber(p.FullKey),2}");
+                    if (ImGui.IsItemHovered()) ImGui.SetTooltip("Stable nearby number");
+                    ImGui.SameLine(0, 4);
+                }
+
+                if (version2 && !string.IsNullOrWhiteSpace(_config.NearbyQuestionCommandName))
+                {
+                    bool canRunQuestion = !CommandExecutor.IsRunning;
+                    if (!canRunQuestion) ImGui.BeginDisabled();
+                    if (BJBGui.SmallButton($"?##nearby_question_{i}"))
+                        ExecuteNearbyQuestionCommand(p);
+                    if (!canRunQuestion) ImGui.EndDisabled();
+                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                        ImGui.SetTooltip($"Run {_config.NearbyQuestionCommandName} for {p.FullKey}");
+                    ImGui.SameLine(0, 4);
+                }
+
                 var starColor = isFav ? NearbyColorStarFav : NearbyColorStarNormal;
                 ImGui.TextColored(starColor, isFav ? "\u2605" : "\u2606");
                 if (ImGui.IsItemClicked())
@@ -210,6 +235,25 @@ public partial class BlackJackButtlerWindow
         ImGui.EndChild();
 
         DrawDistanceCircle();
+    }
+
+    private void ExecuteNearbyQuestionCommand(NearbyPlayerInfo p)
+    {
+        if (string.IsNullOrWhiteSpace(_config.NearbyQuestionCommandName)) return;
+
+        var currentTarget = Plugin.TargetManager.Target;
+        string previousName = currentTarget?.Name.TextValue ?? string.Empty;
+        string previousWorld = currentTarget is Dalamud.Game.ClientState.Objects.SubKinds.IPlayerCharacter pc
+            ? pc.HomeWorld.Value.Name.ToString()
+            : string.Empty;
+
+        GameEngine.TargetPlayer(p.Name, p.World);
+        Task.Run(async () =>
+        {
+            await CommandExecutor.ExecuteGroup(_config.NearbyQuestionCommandName, p.Name, _config);
+            if (!string.IsNullOrWhiteSpace(previousName))
+                GameEngine.TargetPlayer(previousName, previousWorld);
+        });
     }
 
     private void DrawDistanceCircle()

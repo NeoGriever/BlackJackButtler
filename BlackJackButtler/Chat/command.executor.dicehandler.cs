@@ -143,7 +143,9 @@ public static class DiceResultHandler
                 {
                     hand.IsStand = true;
                     shouldCancel = true;
-                    newGroup = (hand.Cards.Count == 2 && hand.IsNaturalBlackJack) ? "Natural BlackJack Notify" : "Dirty BlackJack Notify";
+                    newGroup = (hand.Cards.Count == 2 && hand.IsNaturalBlackJack) || !cfg.EnableDirtyBlackjack
+                        ? "Natural BlackJack Notify"
+                        : "Dirty BlackJack Notify";
                     window.AddDebugLog($"[DiceHandler] Player hit 21 - triggering {newGroup}");
                 }
                 else if (hand.IsDoubleDown)

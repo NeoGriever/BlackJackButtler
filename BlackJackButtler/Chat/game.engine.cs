@@ -304,7 +304,16 @@ public static partial class GameEngine
             if (lossList.Any()) parts.Add(GetV("loosers"));
             if (bustList.Any()) parts.Add(GetV("busted"));
 
-            VariableManager.SetVariable("results", string.Join(" | ", parts));
+            var defaultResults = string.Join(" | ", parts);
+            var resultTemplate = string.IsNullOrWhiteSpace(cfg.ResultTemplate) ? "${results}" : cfg.ResultTemplate;
+            var renderedResults = resultTemplate
+                .Replace("${results}", defaultResults)
+                .Replace("<results>", defaultResults)
+                .Replace("${winners}", GetV("winners"))
+                .Replace("${pushed}", GetV("pushed"))
+                .Replace("${loosers}", GetV("loosers"))
+                .Replace("${busted}", GetV("busted"));
+            VariableManager.SetVariable("results", renderedResults);
 
             await CommandExecutor.ExecuteGroup("ResultSmall", dealer.Name, cfg);
         }
@@ -370,20 +379,6 @@ public static partial class GameEngine
 
         ActivityLogManager.LogRoundEnd(dealer, players);
         RoundLogManager.AddRound(dealer, players, cfg);
-
-        try
-        {
-            var webhook = Plugin.Instance.GetMainWindow().GetSelectedWebhook();
-            if (webhook != null)
-            {
-                var playersCopy = players.Where(x => x.IsActivePlayer && !x.IsOnHold).ToList();
-                _ = Task.Run(() => WebhookManager.PostRoundResult(webhook, dealer, playersCopy, cfg));
-            }
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Error($"[WebhookManager] Failed to trigger webhook: {ex.Message}");
-        }
 
         SaveSessionIfNeeded(players);
     }

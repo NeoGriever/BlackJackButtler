@@ -41,6 +41,11 @@ public static partial class GameEngine
 
     public static void TargetPlayer(string name)
     {
+        TargetPlayer(name, null);
+    }
+
+    public static void TargetPlayer(string name, string? worldName)
+    {
         _virtualTargetName = name;
 
         if (_debugMode) return;
@@ -48,16 +53,19 @@ public static partial class GameEngine
         Plugin.Framework.RunOnTick(() =>
         {
             var obj = Plugin.ObjectTable.FirstOrDefault(o =>
-                o.Name.TextValue.Equals(name, StringComparison.OrdinalIgnoreCase));
+                o.Name.TextValue.Equals(name, StringComparison.OrdinalIgnoreCase)
+                && (string.IsNullOrWhiteSpace(worldName)
+                    || (o is Dalamud.Game.ClientState.Objects.SubKinds.IPlayerCharacter pc
+                        && pc.HomeWorld.Value.Name.ToString().Equals(worldName, StringComparison.OrdinalIgnoreCase))));
 
             if (obj != null)
             {
                 Plugin.TargetManager.Target = obj;
-                Plugin.Instance.GetMainWindow().AddDebugLog($"[Targeting] Focused: {name}");
+                Plugin.Instance.GetMainWindow().AddDebugLog($"[Targeting] Focused: {name}{(string.IsNullOrWhiteSpace(worldName) ? "" : "@" + worldName)}");
             }
             else
             {
-                Plugin.Instance.GetMainWindow().AddDebugLog($"[Targeting] Could not find: {name}");
+                Plugin.Instance.GetMainWindow().AddDebugLog($"[Targeting] Could not find: {name}{(string.IsNullOrWhiteSpace(worldName) ? "" : "@" + worldName)}");
             }
         });
     }

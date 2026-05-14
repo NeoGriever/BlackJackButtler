@@ -367,6 +367,9 @@ public partial class BlackJackButtlerWindow
             }
         }
 
+        if (dealer == null)
+            return;
+
         foreach (var e in _config.DrawLogicEntries)
         {
             if (!string.IsNullOrEmpty(e.ScriptPath))

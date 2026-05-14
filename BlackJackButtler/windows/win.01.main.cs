@@ -18,6 +18,12 @@ public partial class BlackJackButtlerWindow
 
     private void DrawMainPage()
     {
+        if (_config.MainViewVersion == 2)
+        {
+            DrawMainPageV2();
+            return;
+        }
+
         DrawMainHeader();
         ImGui.Separator();
         DrawCustomButtonBar();
@@ -498,34 +504,6 @@ public partial class BlackJackButtlerWindow
                 ImGui.SetTooltip("When ON, player action triggers (Hit/Stand/DD/Split) execute automatically.\nWhen OFF, they highlight the corresponding button instead.");
         }
 
-        {
-            var enabledWebhooks = _config.Webhooks.FindAll(w => w.Enabled);
-            if (enabledWebhooks.Count > 0)
-            {
-                float comboWidth = 150f;
-                float rightEdge = ImGui.GetContentRegionAvail().X + ImGui.GetCursorPosX();
-                ImGui.SameLine(rightEdge - comboWidth);
-
-                var phase = GameEngine.CurrentPhase;
-                bool locked = phase != GamePhase.Waiting && phase != GamePhase.Payout;
-                if (locked) ImGui.BeginDisabled();
-
-                var labels = new string[enabledWebhooks.Count + 1];
-                labels[0] = "None";
-                for (int i = 0; i < enabledWebhooks.Count; i++)
-                    labels[i + 1] = enabledWebhooks[i].Name;
-
-                int comboIndex = _selectedWebhookIndex + 1;
-                ImGui.SetNextItemWidth(comboWidth);
-                if (BJBGui.Combo("##webhook_select", ref comboIndex, labels, labels.Length))
-                    _selectedWebhookIndex = comboIndex - 1;
-
-                if (locked) ImGui.EndDisabled();
-                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                    ImGui.SetTooltip(locked ? "Webhook selection is locked during an active round" : "Select a Discord webhook for round results");
-            }
-        }
-
         if (IsRecognitionActive && !IsLocalPlayerPartyLeader())
         {
             var leaderName = GetPartyLeaderName();
@@ -580,7 +558,7 @@ public partial class BlackJackButtlerWindow
         ImGui.Spacing();
     }
 
-    internal void RenderCustomButtons(string idSuffix)
+    internal void RenderCustomButtons(string idSuffix, bool vertical = false)
     {
         bool isRunning = CommandExecutor.IsRunning;
         if (isRunning) ImGui.BeginDisabled();
@@ -616,7 +594,8 @@ public partial class BlackJackButtlerWindow
 
             if (prevWasButton)
             {
-                ImGui.SameLine();
+                if (!vertical)
+                    ImGui.SameLine();
 
                 bool estMono = group.UseCustomFont ? group.CustomUseMono : _config.CustomButtonUseMono;
                 if (estMono) ImGui.PushFont(UiBuilder.MonoFont);
@@ -630,7 +609,7 @@ public partial class BlackJackButtlerWindow
                 if (estScale != 1.0f) ImGui.SetWindowFontScale(1.0f);
                 if (estMono) ImGui.PopFont();
 
-                if (buttonWidth > ImGui.GetContentRegionAvail().X)
+                if (!vertical && buttonWidth > ImGui.GetContentRegionAvail().X)
                     ImGui.NewLine();
             }
 
@@ -657,10 +636,18 @@ public partial class BlackJackButtlerWindow
             }
 
             bool clicked;
+            var buttonSize = _config.ButtonBarFixedWidth
+                ? new Vector2(_config.ButtonBarFixedWidthValue, 0)
+                : Vector2.Zero;
+
             if (colorPushCount > 0 && group.UseCustomTextColor)
-                clicked = ImGui.Button($"{displayLabel}##{idSuffix}_{i}");
+                clicked = buttonSize.X > 0
+                    ? ImGui.Button($"{displayLabel}##{idSuffix}_{i}", buttonSize)
+                    : ImGui.Button($"{displayLabel}##{idSuffix}_{i}");
             else
-                clicked = BJBGui.Button($"{displayLabel}##{idSuffix}_{i}");
+                clicked = buttonSize.X > 0
+                    ? BJBGui.Button($"{displayLabel}##{idSuffix}_{i}", buttonSize)
+                    : BJBGui.Button($"{displayLabel}##{idSuffix}_{i}");
 
             if (colorPushCount > 0) ImGui.PopStyleColor(colorPushCount);
 
@@ -1420,10 +1407,11 @@ public partial class BlackJackButtlerWindow
             bool canHit = min < 21 && !currentHand.IsDoubleDown && !currentHand.IsStand;
 
             bool canDD = canHit && currentHand.Cards.Count == 2;
+            if (!_config.EnableDoubleDown) canDD = false;
             if (isSplitHand && !_config.AllowDoubleDownAfterSplit) canDD = false;
 
             bool canSplit = false;
-            if (canHit && currentHand.Cards.Count == 2 && p.Hands.Count < _config.MaxHandsPerPlayer)
+            if (_config.EnableSplit && canHit && currentHand.Cards.Count == 2 && p.Hands.Count < _config.MaxHandsPerPlayer)
             {
                 if (_config.IdenticalSplitOnly)
                 canSplit = currentHand.Cards[0].Value == currentHand.Cards[1].Value;
@@ -1632,14 +1620,6 @@ public partial class BlackJackButtlerWindow
         _players.Add(new PlayerState { Name = "Sit Amet",              IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 3000 });
         _players.Add(new PlayerState { Name = "Consentetuer Adipisci", IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 4000 });
         _players.Add(new PlayerState { Name = "Setue Vetue",           IsActivePlayer = false, IsDebugPlayer = true, IsInParty = true, IsCurrentTurn = false, Bank = 500000, CurrentBet = 5000 });
-    }
-
-    public WebhookEntry? GetSelectedWebhook()
-    {
-        var enabled = _config.Webhooks.FindAll(w => w.Enabled);
-        if (_selectedWebhookIndex < 0 || _selectedWebhookIndex >= enabled.Count)
-            return null;
-        return enabled[_selectedWebhookIndex];
     }
 
     private void ExecutePanic()

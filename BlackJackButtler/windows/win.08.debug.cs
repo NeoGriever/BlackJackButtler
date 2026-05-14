@@ -107,7 +107,7 @@ public partial class BlackJackButtlerWindow
         }
 
         var rolled = Random.Shared.Next(1, max + 1);
-        string diceResultMessage = $"Würfeln! (1-{max}) {rolled}";
+        string diceResultMessage = $"Random! (1-{max}) {rolled}";
 
         Plugin.Framework.RunOnTick(() => {
             Plugin.Instance.InjectChatMessage(2105, 0, "SYSTEM", "SYSTEM", diceResultMessage);

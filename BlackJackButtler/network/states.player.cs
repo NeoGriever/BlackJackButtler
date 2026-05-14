@@ -189,6 +189,23 @@ public class PlayerState
 
     public long GetEffectiveMaxBet(Configuration cfg)
     {
+        if (cfg.BetLimitEntries.Count > 0)
+        {
+            string resolvedWorld = VipManager.ResolveWorldName(WorldId);
+            int playerTier = VipManager.GetPlayerTier(Name, resolvedWorld);
+            var match = cfg.BetLimitEntries
+                .Where(e => e.Active && e.Kind == BetLimitEntryKind.Vip && e.VipLevel == playerTier)
+                .OrderByDescending(e => e.Amount)
+                .FirstOrDefault();
+            if (match != null) return match.Amount;
+
+            var fallback = cfg.BetLimitEntries
+                .Where(e => e.Active && e.Kind == BetLimitEntryKind.Vip && e.VipLevel == 0)
+                .OrderByDescending(e => e.Amount)
+                .FirstOrDefault();
+            if (fallback != null) return fallback.Amount;
+        }
+
         string worldName = VipManager.ResolveWorldName(WorldId);
         int tier = VipManager.GetPlayerTier(Name, worldName);
         if (tier > 0 && cfg.VipBetTiers.Count > 0)
@@ -201,6 +218,13 @@ public class PlayerState
 
     public string GetVipTierName(Configuration cfg)
     {
+        if (cfg.BetLimitEntries.Count > 0)
+        {
+            string resolvedWorld = VipManager.ResolveWorldName(WorldId);
+            int playerTier = VipManager.GetPlayerTier(Name, resolvedWorld);
+            return playerTier > 0 ? $"VIP {playerTier}" : string.Empty;
+        }
+
         string worldName = VipManager.ResolveWorldName(WorldId);
         int tier = VipManager.GetPlayerTier(Name, worldName);
         if (tier > 0 && cfg.VipBetTiers.Count > 0)

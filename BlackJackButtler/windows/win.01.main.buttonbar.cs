@@ -48,9 +48,10 @@ public class CustomButtonBarWindow : Window
 
     public override void Draw()
     {
-        _mainWindow.RenderCustomButtons("bar");
+        _mainWindow.RenderCustomButtons("bar", _config.ButtonBarLayout == ButtonBarLayout.Vertical);
 
-        ImGui.SameLine();
+        if (_config.ButtonBarLayout == ButtonBarLayout.Horizontal)
+            ImGui.SameLine();
 
         if (ImGui.SmallButton("\u2716##bar_close"))
         {
@@ -62,7 +63,8 @@ public class CustomButtonBarWindow : Window
 
         if (!_config.ButtonBarLocked)
         {
-            ImGui.SameLine();
+            if (_config.ButtonBarLayout == ButtonBarLayout.Horizontal)
+                ImGui.SameLine();
             ImGui.TextDisabled("\u2261");
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Drag window to move");
         }

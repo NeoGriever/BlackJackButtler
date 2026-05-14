@@ -8,6 +8,9 @@ using BlackJackButtler.Regex;
 namespace BlackJackButtler;
 public enum UserLevel { Beginner, Advanced, Dev, Custom }
 public enum BlackjackTieRule { AlwaysPush, PlayerNatBJWins, DealerNatBJWins, NatBJBeatsDirty }
+public enum NearbyAlertSoundMode { Iterative, Random, FirstOnly }
+public enum ButtonBarLayout { Horizontal, Vertical }
+public enum BetLimitEntryKind { MinBet, Vip }
 
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
@@ -19,6 +22,9 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool FirstDealThenPlay = true;
     public bool IdenticalSplitOnly = true;
+    public bool EnableSplit = true;
+    public bool EnableDoubleDown = true;
+    public bool EnableDirtyBlackjack = true;
     public bool AllowDoubleDownAfterSplit = false;
     public int MaxHandsPerPlayer = 2;
     public float MultiplierNormalWin = 1.0f;
@@ -41,7 +47,6 @@ public sealed class Configuration : IPluginConfiguration
     public List<string> CustomButtonOrder = new();
     public List<MessageBatch> MessageBatches = new();
     public List<UserRegexEntry> UserRegexes = new();
-    public List<WebhookEntry> Webhooks = new();
 
     public List<PresetEntry> Presets = new();
     public string? ActivePresetName = null;   // null = "Default"
@@ -61,9 +66,15 @@ public sealed class Configuration : IPluginConfiguration
     public bool AutoInitialDeal = false;
     public bool AutoDealerDraw = false;
     public bool AutoRun = false;
+    public bool EnableAutomation = true;
+    public bool ShowAutoDealerDrawButton = true;
+    public bool ShowAutoPlayerHandButton = true;
+    public bool ShowAutoContinueButton = true;
+    public bool ShowAutoRunButton = true;
     public int DealerDrawsUntil = 17;
     public bool DealerSoftRule = true;
     public bool SmallResult = false;
+    public string ResultTemplate = "${results}";
     public bool AutostartRoundOnlyOnMultiplePlayers = true;
     public bool EnableAntiDouble = false;
     public Vector4 HighlightColor = new Vector4(1.0f, 1.0f, 0.0f, 1.0f);
@@ -89,6 +100,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool DisableUpdatePopup = false;
 
     public bool UseBurgerMenu = false;
+    public int MainViewVersion = 1;
 
     public bool ImportantNoticeAcknowledged = false;
 
@@ -107,6 +119,7 @@ public sealed class Configuration : IPluginConfiguration
     public int NearbyColumns = 2;
     public bool NoAutoDequeue = false;
     public bool NearbyAlwaysShowCircle = false;
+    public string NearbyQuestionCommandName = string.Empty;
 
     public bool AutoContinue = false;
     public float AutoContinueDelay = 30f;
@@ -119,6 +132,7 @@ public sealed class Configuration : IPluginConfiguration
     public List<string> NearbyAlertSoundFiles = new();
     public float NearbyAlertVolume = 50f;
     public float NearbyAlertCooldown = 0.30f;
+    public NearbyAlertSoundMode NearbyAlertSoundMode = NearbyAlertSoundMode.Random;
 
     public float CustomButtonPaddingH = 4.0f;
     public float CustomButtonPaddingV = 2.0f;
@@ -128,6 +142,15 @@ public sealed class Configuration : IPluginConfiguration
     public bool ButtonBarPopout = false;
     public bool ButtonBarNoBackground = false;
     public bool ButtonBarLocked = false;
+    public ButtonBarLayout ButtonBarLayout = ButtonBarLayout.Horizontal;
+    public bool ButtonBarFixedWidth = false;
+    public float ButtonBarFixedWidthValue = 200f;
+    public Vector4 ButtonBarBackgroundColor = new(0.1f, 0.1f, 0.1f, 1f);
+    public string SelectedFontName = "Default";
+    public ButtonStyleConfig GeneralButtonDefaultStyle = ButtonStyleConfig.Default();
+    public ButtonStyleConfig GeneralButtonActiveStyle = ButtonStyleConfig.Active();
+    public ButtonStyleConfig GeneralButtonHighlightStyle = ButtonStyleConfig.Highlight();
+    public ButtonStyleConfig CustomButtonDefaultStyle = ButtonStyleConfig.Default();
 
     public List<DrawLogicEntry> DrawLogicEntries = new();
     public string DrawLogicStartEntry = "";
@@ -148,6 +171,7 @@ public sealed class Configuration : IPluginConfiguration
 
     public UserLevel CurrentLevel = UserLevel.Beginner;
     public List<string> CustomVisiblePages = new();
+    public List<BetLimitEntry> BetLimitEntries = new();
 
     public static string[] StandardBatchNames => DefaultsManager.GetDefaultMessages().Select(m => m.Name).ToArray();
     public static string[] StandardRegexNames => DefaultsManager.GetDefaultRegex().Select(r => r.Name).ToArray();
@@ -278,15 +302,6 @@ public sealed class MessageBatch
 }
 
 [Serializable]
-public sealed class WebhookEntry
-{
-    public string Name = "New Webhook";
-    public string Url = string.Empty;
-    public bool ShowBetAmounts = true;
-    public bool Enabled = true;
-}
-
-[Serializable]
 public sealed class PresetEntry
 {
     public string Name = "New Preset";
@@ -298,7 +313,6 @@ public sealed class PresetEntry
     public bool ApplyOwnButtons = true;
     public bool ApplyMessages = true;
     public bool ApplyRegexes  = true;
-    public bool ApplyWebhooks = true;
 
     public bool CommandsCheckboxMigrated = false;
 
@@ -321,4 +335,39 @@ public sealed class VipBetTier
 {
     public string Name = "VIP";
     public long MaxBet = 1000000;
+}
+
+[Serializable]
+public sealed class BetLimitEntry
+{
+    public bool Active = true;
+    public BetLimitEntryKind Kind = BetLimitEntryKind.Vip;
+    public int VipLevel = 0;
+    public long Amount = 250000;
+}
+
+[Serializable]
+public sealed class ButtonStyleConfig
+{
+    public Vector4 Background = new(0.26f, 0.26f, 0.26f, 1f);
+    public Vector4 Text = new(1f, 1f, 1f, 1f);
+    public float FontSize = 1f;
+    public int PaddingTop = 0;
+    public int PaddingLeft = 0;
+    public int PaddingBottom = 0;
+    public int PaddingRight = 0;
+
+    public static ButtonStyleConfig Default() => new();
+
+    public static ButtonStyleConfig Active() => new()
+    {
+        Background = new Vector4(1.0f, 0.5f, 0.0f, 1f),
+        Text = new Vector4(1f, 1f, 1f, 1f),
+    };
+
+    public static ButtonStyleConfig Highlight() => new()
+    {
+        Background = new Vector4(1.0f, 1.0f, 0.0f, 1f),
+        Text = new Vector4(0f, 0f, 0f, 1f),
+    };
 }

@@ -378,7 +378,7 @@ public static class DefaultsMigration
 
             for (int i = 0; i < entry.Patterns.Count; i++)
             {
-                // Nur englische Variante fixen: enthält "gil" (lowercase) und falsch [\d.]+
+                // Fix only the English variant: it contains lowercase "gil" and the wrong [\d.]+ pattern.
                 if (entry.Patterns[i].Contains(@"[\d.]") && entry.Patterns[i].Contains("gil"))
                 {
                     entry.Patterns[i] = entry.Patterns[i].Replace(@"[\d.]", @"[\d,]");
