@@ -26,10 +26,6 @@ public static partial class GameEngine
                 return _forcedRecipientName;
         }
 
-        var real = Plugin.TargetManager.Target?.Name.TextValue ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(real))
-            return real;
-
         return _virtualTargetName;
     }
 
@@ -297,7 +293,8 @@ public static partial class GameEngine
             VariableManager.SetVariable("busted", FormatResultCategory(bustList.Distinct().ToList(), "Busted", "Busted"));
 
             var parts = new List<string>();
-            string GetV(string n) => VariableManager.Variables.FirstOrDefault(v => v.Name == n)?.Value ?? "";
+            var variableSnapshot = VariableManager.SnapshotForUi();
+            string GetV(string n) => variableSnapshot.FirstOrDefault(v => v.Name == n)?.Value ?? "";
 
             if (winList.Any())  parts.Add(GetV("winners"));
             if (pushList.Any()) parts.Add(GetV("pushed"));

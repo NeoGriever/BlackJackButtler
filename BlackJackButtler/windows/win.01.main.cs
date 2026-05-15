@@ -436,7 +436,9 @@ public partial class BlackJackButtlerWindow
 
         if (BJBGui.Button(auto_deal_text))
         {
-            _config.AutoInitialDeal = !_config.AutoInitialDeal;
+            var newValue = !_config.AutoInitialDeal;
+            _config.AutoInitialDeal = newValue;
+            Plugin.Instance.ResetAutoActionState(cancelCurrentGroup: !newValue);
             _save();
         }
 
@@ -453,7 +455,9 @@ public partial class BlackJackButtlerWindow
 
         if (BJBGui.Button(auto_dealer_text))
         {
-            _config.AutoDealerDraw = !_config.AutoDealerDraw;
+            var newValue = !_config.AutoDealerDraw;
+            _config.AutoDealerDraw = newValue;
+            Plugin.Instance.ResetAutoActionState(cancelCurrentGroup: !newValue);
             _save();
         }
 
@@ -470,7 +474,9 @@ public partial class BlackJackButtlerWindow
 
         if (BJBGui.Button(auto_continue_text))
         {
-            _config.AutoContinue = !_config.AutoContinue;
+            var newValue = !_config.AutoContinue;
+            _config.AutoContinue = newValue;
+            Plugin.Instance.ResetAutoActionState(cancelCurrentGroup: !newValue);
             _save();
         }
 
@@ -494,7 +500,9 @@ public partial class BlackJackButtlerWindow
 
             if (BJBGui.Button(auto_run_text))
             {
-                _config.AutoRun = !_config.AutoRun;
+                var newValue = !_config.AutoRun;
+                _config.AutoRun = newValue;
+                Plugin.Instance.ResetAutoActionState(cancelCurrentGroup: !newValue);
                 _save();
             }
 

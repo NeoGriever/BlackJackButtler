@@ -80,11 +80,9 @@ public static class BlacklistManager
             string homeWorld = "";
             for (int i = 0; i < 30; i++)
             {
-                var local = Plugin.ObjectTable?.LocalPlayer;
-                if (local != null)
+                (playerName, homeWorld) = await GetLocalPlayerIdentityAsync();
+                if (!string.IsNullOrEmpty(playerName))
                 {
-                    playerName = local.Name.TextValue;
-                    homeWorld = local.HomeWorld.Value.Name.ToString();
                     break;
                 }
                 await Task.Delay(1000);
@@ -109,10 +107,13 @@ public static class BlacklistManager
 
             if (found && string.IsNullOrEmpty(config.BlacklistDetectedAt))
             {
-                config.BlacklistDetectedAt = DateTime.UtcNow.ToString("o");
-                config.Save();
-                _isBlacklisted = true;
-                _bannerMessage = "Access revoked. You have 3 days left. If you want to talk about the reason, join the discord.";
+                await RunOnFrameworkTickAsync(() =>
+                {
+                    config.BlacklistDetectedAt = DateTime.UtcNow.ToString("o");
+                    config.Save();
+                    _isBlacklisted = true;
+                    _bannerMessage = "Access revoked. You have 3 days left. If you want to talk about the reason, join the discord.";
+                });
             }
             else if (found)
             {
@@ -121,12 +122,15 @@ public static class BlacklistManager
             }
             else if (!found && !string.IsNullOrEmpty(config.BlacklistDetectedAt))
             {
-                config.BlacklistDetectedAt = "";
-                config.BlacklistActive = false;
-                config.Save();
-                _isBlacklisted = false;
-                _isBlocked = false;
-                _bannerMessage = "";
+                await RunOnFrameworkTickAsync(() =>
+                {
+                    config.BlacklistDetectedAt = "";
+                    config.BlacklistActive = false;
+                    config.Save();
+                    _isBlacklisted = false;
+                    _isBlocked = false;
+                    _bannerMessage = "";
+                });
             }
         }
         catch (Exception ex)
@@ -137,6 +141,49 @@ public static class BlacklistManager
         {
             _checkComplete = true;
         }
+    }
+
+    private static Task<(string playerName, string homeWorld)> GetLocalPlayerIdentityAsync()
+    {
+        var tcs = new TaskCompletionSource<(string playerName, string homeWorld)>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        Plugin.Framework.RunOnTick(() =>
+        {
+            try
+            {
+                var local = Plugin.ObjectTable?.LocalPlayer;
+                tcs.TrySetResult(local == null
+                    ? ("", "")
+                    : (local.Name.TextValue, local.HomeWorld.Value.Name.ToString()));
+            }
+            catch (Exception ex)
+            {
+                tcs.TrySetException(ex);
+            }
+        });
+
+        return tcs.Task;
+    }
+
+    private static Task RunOnFrameworkTickAsync(Action action)
+    {
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        Plugin.Framework.RunOnTick(() =>
+        {
+            try
+            {
+                action();
+                tcs.TrySetResult();
+            }
+            catch (Exception ex)
+            {
+                tcs.TrySetException(ex);
+            }
+        });
+
+        return tcs.Task;
     }
 }
 

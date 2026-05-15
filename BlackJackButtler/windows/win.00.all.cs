@@ -192,10 +192,11 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             float availWidth = ImGui.GetContentRegionAvail().X;
             float xBtnWidth = 40f;
             float spacing = ImGui.GetStyle().ItemSpacing.X;
+            float restoreBtnWidth = Math.Max(availWidth - xBtnWidth - spacing, 1f);
 
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1.0f, 0.6f, 0.1f, 1.0f));
-            if (ImGui.Button("⚠ RESTORE PREVIOUS SESSION ⚠", new Vector2(availWidth - xBtnWidth - spacing, 40)))
+            if (ImGui.Button("⚠ RESTORE PREVIOUS SESSION ⚠", new Vector2(restoreBtnWidth, 40)))
                 RestoreSessionFromFile();
             ImGui.PopStyleColor(2);
 
@@ -227,6 +228,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         }
 
         var avail = ImGui.GetContentRegionAvail();
+        var childHeight = Math.Max(avail.Y, 1f);
         var burgerMode = _config.UseBurgerMenu;
         var sidebarWidth = (_isSidebarVisible && !burgerMode) ? 200f : 0f;
 
@@ -235,16 +237,17 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
         if (_isSidebarVisible && !burgerMode)
         {
-            ImGui.BeginChild("bjb.sidebar", new Vector2(sidebarWidth, avail.Y), true);
+            ImGui.BeginChild("bjb.sidebar", new Vector2(sidebarWidth, childHeight), true);
             if (ImGui.SmallButton("<##hide_sidebar")) _isSidebarVisible = false;
             ImGui.SameLine();
             ImGui.TextUnformatted("BlackJack Buttler");
             if (level == UserLevel.Custom)
             {
                 ImGui.SameLine();
-                if (_customEditMode) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 0.9f));
+                var wasCustomEditMode = _customEditMode;
+                if (wasCustomEditMode) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 0.9f));
                 if (ImGui.SmallButton("\u270F##custom_edit")) _customEditMode = !_customEditMode;
-                if (_customEditMode) ImGui.PopStyleColor();
+                if (wasCustomEditMode) ImGui.PopStyleColor();
             }
             else
             {
@@ -288,7 +291,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         ImGui.PushStyleColor(ImGuiCol.Button,        _config.ButtonColor);
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, btnHover);
         ImGui.PushStyleColor(ImGuiCol.ButtonActive,  btnActive);
-        ImGui.BeginChild("bjb.content", new Vector2(0, avail.Y), true);
+        ImGui.BeginChild("bjb.content", new Vector2(0, childHeight), true);
 
         if (burgerMode)
         {
@@ -301,9 +304,10 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             if (level == UserLevel.Custom)
             {
                 ImGui.SameLine();
-                if (_customEditMode) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 0.9f));
+                var wasCustomEditMode = _customEditMode;
+                if (wasCustomEditMode) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 0.9f));
                 if (ImGui.SmallButton("✏##custom_edit_burger")) _customEditMode = !_customEditMode;
-                if (_customEditMode) ImGui.PopStyleColor();
+                if (wasCustomEditMode) ImGui.PopStyleColor();
             }
             else
             {

@@ -124,9 +124,10 @@ public partial class BlackJackButtlerWindow
             if (_config.CurrentLevel == UserLevel.Custom)
             {
                 ImGui.SameLine();
-                if (_customEditMode) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 0.9f));
+                var wasCustomEditMode = _customEditMode;
+                if (wasCustomEditMode) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 0.9f));
                 if (BJBGui.SmallButton("\u270F##custom_edit_settings")) _customEditMode = !_customEditMode;
-                if (_customEditMode) ImGui.PopStyleColor();
+                if (wasCustomEditMode) ImGui.PopStyleColor();
             }
 
             ImGui.Spacing();

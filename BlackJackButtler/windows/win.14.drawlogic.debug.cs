@@ -53,8 +53,8 @@ public class DrawLogicDebugWindow : Window
                 else
                     ImGui.TextUnformatted(line);
             }
-            ImGui.EndChild();
         }
+        ImGui.EndChild();
         ImGui.PopFont();
     }
 }

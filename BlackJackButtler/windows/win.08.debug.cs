@@ -83,8 +83,8 @@ public partial class BlackJackButtlerWindow
                 if (!_verboseMode && !entry.IsChat) continue;
                 if (ImGui.Selectable($"{entry.Text}##{i}")) ImGui.SetClipboardText(entry.Text);
             }
-            ImGui.EndChild();
         }
+        ImGui.EndChild();
     }
 
     private void TrySimulateDiceCommand(string line)
