@@ -22,6 +22,7 @@ using System.Numerics;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
@@ -69,6 +70,11 @@ public sealed class Plugin : IDalamudPlugin
     private volatile bool _autoActionInFlight = false;
     private bool _frameworkHooked = false;
     private bool _chatHooked = false;
+    private int _autoActionGeneration = 0;
+#if DEBUG
+    private const bool EnableDebugImGuiTextRecoveryOnLoad = false;
+    private bool _debugImGuiTextRecoveryApplied = false;
+#endif
     private DateTime _lastAutoLog = DateTime.MinValue;
     private GamePhase _lastPhase = GamePhase.Waiting;
     private DateTime _lastChatActivity = DateTime.MinValue;
@@ -84,6 +90,36 @@ public sealed class Plugin : IDalamudPlugin
     public void CloseButtonBar() => buttonBarWindow.IsOpen = false;
     public void OpenChatBox() { chatBoxWindow.IsOpen = true; UpdateEventHooks(); }
     public BlackJackButtlerWindow GetMainWindow() => mainWindow;
+    public int CurrentAutoActionGeneration => Volatile.Read(ref _autoActionGeneration);
+    public bool IsAutoActionGenerationCurrent(int generation) => generation == CurrentAutoActionGeneration;
+    public void RunAutoAction(string context, Func<Task> action, Func<bool>? isStillEnabled = null)
+    {
+        var generation = CurrentAutoActionGeneration;
+        Task.Run(async () =>
+        {
+            try
+            {
+                if (!IsAutoActionGenerationCurrent(generation) || (isStillEnabled != null && !isStillEnabled()))
+                    return;
+
+                await action();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, $"[AutoAction] {context} failed");
+            }
+        });
+    }
+
+    public void ResetAutoActionState(bool cancelCurrentGroup)
+    {
+        Interlocked.Increment(ref _autoActionGeneration);
+        _autoContinueWaiting = false;
+        _autoActionInFlight = false;
+
+        if (cancelCurrentGroup && CommandExecutor.IsRunning)
+            CommandExecutor.CancelCurrentGroup();
+    }
     private string _cachedLocalName = string.Empty;
 
     public Plugin()
@@ -165,6 +201,10 @@ public sealed class Plugin : IDalamudPlugin
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand) {HelpMessage = "Open BlackJack Buttler. Use '/bjb chat' to open the BJB Messenger."});
 
+#if DEBUG
+        if (EnableDebugImGuiTextRecoveryOnLoad)
+            PluginInterface.UiBuilder.Draw += TryApplyDebugImGuiTextRecovery;
+#endif
         PluginInterface.UiBuilder.Draw += windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi += mainWindow.OpenMain;
         PluginInterface.UiBuilder.OpenConfigUi += mainWindow.OpenSettings;
@@ -177,6 +217,38 @@ public sealed class Plugin : IDalamudPlugin
 
         Log.Information("BlackJack Buttler loaded.");
     }
+
+#if DEBUG
+    private void TryApplyDebugImGuiTextRecovery()
+    {
+        if (_debugImGuiTextRecoveryApplied)
+        {
+            PluginInterface.UiBuilder.Draw -= TryApplyDebugImGuiTextRecovery;
+            return;
+        }
+
+        _debugImGuiTextRecoveryApplied = true;
+
+        try
+        {
+            var style = ImGui.GetStyle();
+            style.Colors[(int)ImGuiCol.Text] = new Vector4(1f, 1f, 1f, 1f);
+            style.Colors[(int)ImGuiCol.TextDisabled] = new Vector4(0.55f, 0.55f, 0.55f, 1f);
+            style.Colors[(int)ImGuiCol.TextSelectedBg] = new Vector4(0.26f, 0.59f, 0.98f, 0.35f);
+
+            _ = PluginInterface.UiBuilder.FontAtlas.BuildFontsAsync();
+            Log.Warning("DEBUG temporary workaround applied: reset ImGui text colors and queued a font atlas rebuild.");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "DEBUG temporary ImGui text recovery workaround failed.");
+        }
+        finally
+        {
+            PluginInterface.UiBuilder.Draw -= TryApplyDebugImGuiTextRecovery;
+        }
+    }
+#endif
 
     private void OnFrameworkUpdate(IFramework framework)
     {
@@ -226,14 +298,22 @@ public sealed class Plugin : IDalamudPlugin
                 if (currentPlayer != null && currentPlayer.IsActivePlayer && !currentPlayer.IsOnHold && !currentPlayer.HasInitialHandDealt)
                 {
                     mainWindow.AddDebugLog($"[AutoDeal] Starting deal for {currentPlayer.DisplayName}");
+                    var generation = CurrentAutoActionGeneration;
                     _autoActionInFlight = true;
                     Task.Run(async () => {
                         try
                         {
+                            if (!IsAutoActionGenerationCurrent(generation) || !Configuration.AutoInitialDeal)
+                                return;
+
                             await GameEngine.ActionDealHand(currentPlayer, Configuration, players);
                             mainWindow.AddDebugLog($"[AutoDeal] Deal completed for {currentPlayer.DisplayName}");
                         }
-                        finally { _autoActionInFlight = false; }
+                        finally
+                        {
+                            if (IsAutoActionGenerationCurrent(generation))
+                                _autoActionInFlight = false;
+                        }
                     });
                 }
                 else
@@ -275,25 +355,44 @@ public sealed class Plugin : IDalamudPlugin
                         if (shouldHit)
                         {
                             mainWindow.AddDebugLog($"[AutoDealer] Hit: score={score} (soft={isSoft}) vs {(Configuration.DealerSoftRule ? "soft" : "hard")} {Configuration.DealerDrawsUntil}");
+                            var generation = CurrentAutoActionGeneration;
                             _autoActionInFlight = true;
                             var players = mainWindow.GetPlayers();
                             Task.Run(async () => {
-                                try { await GameEngine.DealerHit(Configuration, players); }
-                                finally { _autoActionInFlight = false; }
+                                try
+                                {
+                                    if (!IsAutoActionGenerationCurrent(generation) || !Configuration.AutoDealerDraw)
+                                        return;
+
+                                    await GameEngine.DealerHit(Configuration, players);
+                                }
+                                finally
+                                {
+                                    if (IsAutoActionGenerationCurrent(generation))
+                                        _autoActionInFlight = false;
+                                }
                             });
                         }
                         else
                         {
                             mainWindow.AddDebugLog($"[AutoDealer] Stand: score={score} (soft={isSoft}) vs {(Configuration.DealerSoftRule ? "soft" : "hard")} {Configuration.DealerDrawsUntil}");
+                            var generation = CurrentAutoActionGeneration;
                             _autoActionInFlight = true;
                             var players = mainWindow.GetPlayers();
                             Task.Run(async () => {
                                 try {
+                                    if (!IsAutoActionGenerationCurrent(generation) || !Configuration.AutoDealerDraw)
+                                        return;
+
                                     await GameEngine.DealerStand(Configuration, players);
                                     await GameEngine.EvaluateFinalResults(players, dealer, Configuration);
                                     mainWindow.AddDebugLog("[AutoDealer] DealerStand + EvaluateFinalResults completed");
                                 }
-                                finally { _autoActionInFlight = false; }
+                                finally
+                                {
+                                    if (IsAutoActionGenerationCurrent(generation))
+                                        _autoActionInFlight = false;
+                                }
                             });
                         }
                     }
@@ -339,10 +438,21 @@ public sealed class Plugin : IDalamudPlugin
                     var activePlayers = players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
                     if (activePlayers.Count >= 2 || !Configuration.AutostartRoundOnlyOnMultiplePlayers)
                     {
+                        var generation = CurrentAutoActionGeneration;
                         _autoActionInFlight = true;
                         Task.Run(async () => {
-                            try { await Task.Run(() => GameEngine.StartInitialDeal(players, Configuration)); }
-                            finally { _autoActionInFlight = false; }
+                            try
+                            {
+                                if (!IsAutoActionGenerationCurrent(generation) || !Configuration.AutoContinue)
+                                    return;
+
+                                await GameEngine.StartInitialDeal(players, Configuration);
+                            }
+                            finally
+                            {
+                                if (IsAutoActionGenerationCurrent(generation))
+                                    _autoActionInFlight = false;
+                            }
                         });
                     }
                 }
@@ -388,6 +498,9 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+#if DEBUG
+        PluginInterface.UiBuilder.Draw -= TryApplyDebugImGuiTextRecovery;
+#endif
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= mainWindow.OpenMain;
         PluginInterface.UiBuilder.OpenConfigUi -= mainWindow.OpenSettings;

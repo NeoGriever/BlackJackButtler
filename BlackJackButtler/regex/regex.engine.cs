@@ -32,7 +32,10 @@ public static class RegexEngine
 
         _nextRoundVotes.Clear();
         if (cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun)
-            Task.Run(() => GameEngine.StartInitialDeal(players, cfg));
+            Plugin.Instance.RunAutoAction(
+                "ReadyStart",
+                () => GameEngine.StartInitialDeal(players, cfg),
+                () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
         else
             Plugin.Instance.GetMainWindow().SetHighlightNewRound();
     }
@@ -175,7 +178,10 @@ public static class RegexEngine
                     if (min < 21 && !hand.IsDoubleDown && !hand.IsStand)
                     {
                         GameLog.PushSnapshot(players, dealer, GameEngine.CurrentPhase, $"RegexHit:{p.Name}");
-                        Task.Run(() => GameEngine.ActionHit(p, cfg, players));
+                        Plugin.Instance.RunAutoAction(
+                            "RegexHit",
+                            () => GameEngine.ActionHit(p, cfg, players),
+                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
                     }
                 }
                 break;
@@ -195,7 +201,10 @@ public static class RegexEngine
                     if (!hand.IsStand && !hand.IsBust)
                     {
                         GameLog.PushSnapshot(players, dealer, GameEngine.CurrentPhase, $"RegexStand:{p.Name}");
-                        Task.Run(() => GameEngine.ActionStand(p, cfg, players));
+                        Plugin.Instance.RunAutoAction(
+                            "RegexStand",
+                            () => GameEngine.ActionStand(p, cfg, players),
+                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
                     }
                 }
                 break;
@@ -219,7 +228,10 @@ public static class RegexEngine
                         && !(p.Hands.Count > 1 && !cfg.AllowDoubleDownAfterSplit))
                     {
                         GameLog.PushSnapshot(players, dealer, GameEngine.CurrentPhase, $"RegexDD:{p.Name}");
-                        Task.Run(() => GameEngine.ActionDD(p, cfg, players));
+                        Plugin.Instance.RunAutoAction(
+                            "RegexDD",
+                            () => GameEngine.ActionDD(p, cfg, players),
+                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
                     }
                 }
                 break;
@@ -247,7 +259,10 @@ public static class RegexEngine
                         if (canSplit)
                         {
                             GameLog.PushSnapshot(players, dealer, GameEngine.CurrentPhase, $"RegexSplit:{p.Name}");
-                            Task.Run(() => GameEngine.ActionSplit(p, cfg, players));
+                            Plugin.Instance.RunAutoAction(
+                                "RegexSplit",
+                                () => GameEngine.ActionSplit(p, cfg, players),
+                                () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
                         }
                     }
                 }
@@ -311,7 +326,10 @@ public static class RegexEngine
                     }
                     else if (cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun)
                     {
-                        Task.Run(() => GameEngine.StartInitialDeal(players, cfg));
+                        Plugin.Instance.RunAutoAction(
+                            "RegexNextRound",
+                            () => GameEngine.StartInitialDeal(players, cfg),
+                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
                     }
                     else
                     {
@@ -338,16 +356,18 @@ public static class RegexEngine
                 var groupName = entry.ActionParam;
                 obWindow.AddDebugLog($"[RegexEngine] ExecuteOwnButton '{groupName}' for {targetName}");
                 var capturedP = p;
-                Task.Run(async () =>
-                {
-                    if (capturedP != null)
+                Plugin.Instance.RunAutoAction(
+                    "RegexExecuteOwnButton",
+                    async () =>
                     {
-                        GameEngine.TargetPlayer(capturedP.Name);
-                        VariableManager.SetPlayerVariables(capturedP);
-                    }
-                    await CommandExecutor.ExecuteGroup(groupName, targetName, cfg);
-                    GameEngine.TargetPlayer(obWindow.GetDealer().Name);
-                });
+                        if (capturedP != null)
+                        {
+                            GameEngine.TargetPlayer(capturedP.Name);
+                            VariableManager.SetPlayerVariables(capturedP);
+                        }
+                        await CommandExecutor.ExecuteGroup(groupName, targetName, cfg);
+                        GameEngine.TargetPlayer(obWindow.GetDealer().Name);
+                    });
                 break;
             }
 
@@ -384,13 +404,16 @@ public static class RegexEngine
                 btWindow.AddDebugLog($"[RegexEngine] BankTell executing for {p.DisplayName}");
                 p.HighlightTell = false;
                 var capturedPlayer = p;
-                Task.Run(async () =>
-                {
-                    GameEngine.TargetPlayer(capturedPlayer.Name);
-                    VariableManager.SetPlayerVariables(capturedPlayer);
-                    await CommandExecutor.ExecuteGroup("BankTell", capturedPlayer.DisplayName, cfg);
-                    GameEngine.TargetPlayer(btWindow.GetDealer().Name);
-                });
+                Plugin.Instance.RunAutoAction(
+                    "RegexBankTell",
+                    async () =>
+                    {
+                        GameEngine.TargetPlayer(capturedPlayer.Name);
+                        VariableManager.SetPlayerVariables(capturedPlayer);
+                        await CommandExecutor.ExecuteGroup("BankTell", capturedPlayer.DisplayName, cfg);
+                        GameEngine.TargetPlayer(btWindow.GetDealer().Name);
+                    },
+                    () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
                 break;
             }
         }

@@ -104,9 +104,10 @@ public static class CommandExecutor
         if (string.IsNullOrEmpty(text)) return text;
 
         string[] resVars = { "winners", "pushed", "loosers", "busted", "results" };
+        var variableSnapshot = VariableManager.SnapshotForUi();
         foreach (var varName in resVars)
         {
-            var v = VariableManager.Variables.FirstOrDefault(x => x.Name.Equals(varName, StringComparison.OrdinalIgnoreCase));
+            var v = variableSnapshot.FirstOrDefault(x => x.Name.Equals(varName, StringComparison.OrdinalIgnoreCase));
             if (v != null) text = text.Replace($"<{varName}>", v.Value);
         }
 
@@ -119,9 +120,7 @@ public static class CommandExecutor
 
         if (isTellCommand && text.Contains("<t>"))
         {
-            string currentTarget = Plugin.IsDebugMode
-                ? GameEngine.GetCurrentTargetName()
-                : (Plugin.TargetManager.Target?.Name.TextValue ?? string.Empty);
+            string currentTarget = GameEngine.GetCurrentTargetName();
 
             bool isCorrectlyTargeted = pState != null
                 && !string.IsNullOrWhiteSpace(currentTarget)

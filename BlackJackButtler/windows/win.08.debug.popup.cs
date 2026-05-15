@@ -56,8 +56,8 @@ public class DebugLogWindow : Window
                 if (ImGui.Selectable($"{entry.Text}##pop_{i}")) ImGui.SetClipboardText(entry.Text);
                 if (color.HasValue) ImGui.PopStyleColor();
             }
-            ImGui.EndChild();
         }
+        ImGui.EndChild();
     }
 
     private static Vector4? GetChannelColor(string text)

@@ -13,13 +13,11 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.8.2.0\n" +
+        "v1.8.2.1\n" +
         "\n" +
-        "- Fix: T-button (Tell shortcut) could corrupt ImGui render — all window text could vanish\n" +
-        "  Cause: race condition on VariableManager.Variables (writes from Task.Run thread\n" +
-        "  collided with UI-thread reads, throwing an exception mid-frame)\n" +
-        "- Fix: Bank /tell mass-button hardened against the same race\n" +
-        "- VariableManager is now fully thread-safe (lock + Snapshot API)\n";
+        "- Fix: Custom edit mode no longer corrupts the ImGui style stack when toggled\n" +
+        "- Fix: Main window layout now clamps child and restore-button sizes to valid values\n" +
+        "- Fix: Child windows are now always closed correctly even when ImGui skips drawing their contents\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",
@@ -51,8 +49,8 @@ public class UpdatePopupWindow : Window
         if (ImGui.BeginChild("##changelog_content", new Vector2(-1, -150), false))
         {
             ImGui.TextWrapped(CurrentChangelog);
-            ImGui.EndChild();
         }
+        ImGui.EndChild();
 
         ImGui.Separator();
         ImGui.Spacing();

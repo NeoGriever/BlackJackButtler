@@ -35,8 +35,7 @@ public static partial class GameEngine
         if (_debugMode)
             return _virtualTargetName;
 
-        var real = Plugin.TargetManager.Target?.Name.TextValue ?? string.Empty;
-        return !string.IsNullOrWhiteSpace(real) ? real : _virtualTargetName;
+        return _virtualTargetName;
     }
 
     public static void TargetPlayer(string name)
