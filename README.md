@@ -1,4 +1,4 @@
-`v1.8.2.1`
+`v1.8.2.2`
 
 # BlackJack Buttler
 
