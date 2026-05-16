@@ -13,11 +13,12 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.8.2.1\n" +
+        "v1.8.2.2\n" +
         "\n" +
         "- Fix: Custom edit mode no longer corrupts the ImGui style stack when toggled\n" +
         "- Fix: Main window layout now clamps child and restore-button sizes to valid values\n" +
-        "- Fix: Child windows are now always closed correctly even when ImGui skips drawing their contents\n";
+        "- Fix: Child windows are now always closed correctly even when ImGui skips drawing their contents\n" +
+        "- Fix: MP3 sound files now play correctly via dedicated Mp3FileReader\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",

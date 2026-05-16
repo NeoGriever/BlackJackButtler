@@ -80,6 +80,8 @@ public static class NearbyAlertManager
 
             if (ext == ".ogg")
                 stream = new VorbisWaveReader(path);
+            else if (ext == ".mp3")
+                stream = new Mp3FileReader(path);
             else
                 stream = new MediaFoundationReader(path);
 
