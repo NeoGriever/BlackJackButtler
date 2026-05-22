@@ -100,6 +100,11 @@ public static partial class GameEngine
         CurrentPhase = GamePhase.InitialDeal;
     }
 
+    public static bool HasPlayerUnableToCoverBet(IEnumerable<PlayerState> players)
+    {
+        return players.Any(p => p.IsActivePlayer && !p.IsOnHold && p.Bank < p.CurrentBet);
+    }
+
     public static async Task ActionDealHand(PlayerState p, Configuration cfg, List<PlayerState> players)
     {
         Plugin.Instance.GetMainWindow().AddDebugLog($"[ActionDealHand] Start: {p.DisplayName}");

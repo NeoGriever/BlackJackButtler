@@ -230,11 +230,12 @@ public partial class BlackJackButtlerWindow
         ImGui.TextWrapped("Edit bet entries here. Sorting and runtime application happen only after Save.");
         ImGui.Spacing();
 
-        if (ImGui.BeginTable("bjb_bet_entries_v2", 5, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+        if (ImGui.BeginTable("bjb_bet_entries_v2", 6, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
         {
             ImGui.TableSetupColumn("Active", ImGuiTableColumnFlags.WidthFixed, 55);
             ImGui.TableSetupColumn("Kind", ImGuiTableColumnFlags.WidthFixed, 90);
             ImGui.TableSetupColumn("VIP", ImGuiTableColumnFlags.WidthFixed, 80);
+            ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch, 1f);
             ImGui.TableSetupColumn("Amount", ImGuiTableColumnFlags.WidthStretch, 1f);
             ImGui.TableSetupColumn("Delete", ImGuiTableColumnFlags.WidthFixed, 60);
             ImGui.TableHeadersRow();
@@ -260,7 +261,19 @@ public partial class BlackJackButtlerWindow
                 if (entry.Kind == BetLimitEntryKind.MinBet)
                     ImGui.TextDisabled("-");
                 else
+                {
+                    int oldLevel = entry.VipLevel;
+                    string oldDefaultName = GetDefaultVipName(oldLevel);
                     DraftInt("##vip", ref entry.VipLevel, 0, 9);
+                    if (entry.VipLevel != oldLevel && (string.IsNullOrWhiteSpace(entry.Name) || entry.Name == oldDefaultName))
+                        entry.Name = GetDefaultVipName(entry.VipLevel);
+                }
+
+                ImGui.TableNextColumn();
+                if (entry.Kind == BetLimitEntryKind.MinBet)
+                    ImGui.TextDisabled("-");
+                else
+                    DraftString("##vip_name", ref entry.Name, GetDefaultVipName(entry.VipLevel));
 
                 ImGui.TableNextColumn();
                 DraftLong("##amount", ref entry.Amount, 1, 1_000_000_000);
@@ -279,7 +292,7 @@ public partial class BlackJackButtlerWindow
             ImGui.EndTable();
         }
 
-        if (BJBGui.SmallButton("+ Add VIP")) AddBetDraft(new BetLimitEntry { Kind = BetLimitEntryKind.Vip, VipLevel = 0, Amount = _config.MaxBet });
+        if (BJBGui.SmallButton("+ Add VIP")) AddBetDraft(new BetLimitEntry { Kind = BetLimitEntryKind.Vip, VipLevel = 0, Name = GetDefaultVipName(0), Amount = _config.MaxBet });
         ImGui.SameLine();
         if (BJBGui.SmallButton("+ Add Min-Bet")) AddBetDraft(new BetLimitEntry { Kind = BetLimitEntryKind.MinBet, Amount = _config.MinBet });
 
@@ -724,6 +737,22 @@ public partial class BlackJackButtlerWindow
         }
     }
 
+    private void DraftString(string label, ref string value, string defaultValue)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            value = defaultValue;
+
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.InputText(label, ref value, 64))
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                value = defaultValue;
+            _betDraftDirty = true;
+        }
+    }
+
+    private static string GetDefaultVipName(int level) => level <= 0 ? "VIP" : $"VIP {level}";
+
     private void AddBetDraft(BetLimitEntry entry)
     {
         EnsureBetDraft();
@@ -746,10 +775,10 @@ public partial class BlackJackButtlerWindow
         var list = new List<BetLimitEntry>
         {
             new() { Active = true, Kind = BetLimitEntryKind.MinBet, Amount = _config.MinBet },
-            new() { Active = true, Kind = BetLimitEntryKind.Vip, VipLevel = 0, Amount = _config.MaxBet }
+            new() { Active = true, Kind = BetLimitEntryKind.Vip, VipLevel = 0, Name = GetDefaultVipName(0), Amount = _config.MaxBet }
         };
         for (int i = 0; i < _config.VipBetTiers.Count && i < 9; i++)
-            list.Add(new BetLimitEntry { Active = true, Kind = BetLimitEntryKind.Vip, VipLevel = i + 1, Amount = _config.VipBetTiers[i].MaxBet });
+            list.Add(new BetLimitEntry { Active = true, Kind = BetLimitEntryKind.Vip, VipLevel = i + 1, Name = _config.VipBetTiers[i].Name, Amount = _config.VipBetTiers[i].MaxBet });
         return list;
     }
 
@@ -758,6 +787,7 @@ public partial class BlackJackButtlerWindow
         Active = e.Active,
         Kind = e.Kind,
         VipLevel = e.VipLevel,
+        Name = e.Name,
         Amount = e.Amount,
     };
 
@@ -780,7 +810,15 @@ public partial class BlackJackButtlerWindow
             .Where(e => e.Active && e.Kind == BetLimitEntryKind.Vip && e.VipLevel > 0)
             .GroupBy(e => e.VipLevel)
             .OrderBy(g => g.Key)
-            .Select(g => new VipBetTier { Name = $"VIP {g.Key}", MaxBet = g.Last().Amount })
+            .Select(g =>
+            {
+                var last = g.Last();
+                return new VipBetTier
+                {
+                    Name = string.IsNullOrWhiteSpace(last.Name) ? GetDefaultVipName(g.Key) : last.Name.Trim(),
+                    MaxBet = last.Amount
+                };
+            })
             .ToList();
 
         _betDraftEntries = sorted.Select(CloneBetEntry).ToList();

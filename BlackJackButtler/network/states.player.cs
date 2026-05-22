@@ -222,7 +222,13 @@ public class PlayerState
         {
             string resolvedWorld = VipManager.ResolveWorldName(WorldId);
             int playerTier = VipManager.GetPlayerTier(Name, resolvedWorld);
-            return playerTier > 0 ? $"VIP {playerTier}" : string.Empty;
+            if (playerTier <= 0) return string.Empty;
+
+            var match = cfg.BetLimitEntries
+                .Where(e => e.Active && e.Kind == BetLimitEntryKind.Vip && e.VipLevel == playerTier)
+                .OrderByDescending(e => e.Amount)
+                .FirstOrDefault();
+            return string.IsNullOrWhiteSpace(match?.Name) ? $"VIP {playerTier}" : match.Name;
         }
 
         string worldName = VipManager.ResolveWorldName(WorldId);

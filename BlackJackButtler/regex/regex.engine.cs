@@ -31,6 +31,13 @@ public static class RegexEngine
         if (!activePlayers.All(pl => pl.ReadySkip || _nextRoundVotes.Contains(pl.Name))) return;
 
         _nextRoundVotes.Clear();
+        if (GameEngine.HasPlayerUnableToCoverBet(activePlayers))
+        {
+            Plugin.Instance.GetMainWindow().SetHighlightNewRound();
+            Plugin.Instance.GetMainWindow().AddDebugLog("[ReadyStart] Auto-start blocked: at least one active player cannot cover their bet.");
+            return;
+        }
+
         if (cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun)
             Plugin.Instance.RunAutoAction(
                 "ReadyStart",
@@ -326,6 +333,13 @@ public static class RegexEngine
                     }
                     else if (cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun)
                     {
+                        if (GameEngine.HasPlayerUnableToCoverBet(activePlayers))
+                        {
+                            Plugin.Instance.GetMainWindow().SetHighlightNewRound();
+                            Plugin.Instance.GetMainWindow().AddDebugLog("[RegexNextRound] Auto-start blocked: at least one active player cannot cover their bet.");
+                            break;
+                        }
+
                         Plugin.Instance.RunAutoAction(
                             "RegexNextRound",
                             () => GameEngine.StartInitialDeal(players, cfg),
@@ -404,16 +418,7 @@ public static class RegexEngine
                 btWindow.AddDebugLog($"[RegexEngine] BankTell executing for {p.DisplayName}");
                 p.HighlightTell = false;
                 var capturedPlayer = p;
-                Plugin.Instance.RunAutoAction(
-                    "RegexBankTell",
-                    async () =>
-                    {
-                        GameEngine.TargetPlayer(capturedPlayer.Name);
-                        VariableManager.SetPlayerVariables(capturedPlayer);
-                        await CommandExecutor.ExecuteGroup("BankTell", capturedPlayer.DisplayName, cfg);
-                        GameEngine.TargetPlayer(btWindow.GetDealer().Name);
-                    },
-                    () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
+                BankTellQueueManager.Enqueue(capturedPlayer, cfg, "RegexBankTell");
                 break;
             }
         }
