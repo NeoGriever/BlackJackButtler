@@ -168,7 +168,23 @@ public static class CommandExecutor
             string min = FormatGilAmount(cfg.MinBet, cfg.ShortBetFormat);
             string max = FormatGilAmount(cfg.MaxBet, cfg.ShortBetFormat);
             string range = $"Min: {min} - Max: {max}";
-            if (cfg.VipBetTiers.Count > 0)
+            if (cfg.BetLimitEntries.Count > 0)
+            {
+                var tierParts = cfg.BetLimitEntries
+                    .Where(e => e.Active && e.Kind == BetLimitEntryKind.Vip && e.VipLevel > 0)
+                    .GroupBy(e => e.VipLevel)
+                    .OrderBy(g => g.Key)
+                    .Select(g =>
+                    {
+                        var entry = g.OrderByDescending(e => e.Amount).First();
+                        string name = string.IsNullOrWhiteSpace(entry.Name) ? $"VIP {entry.VipLevel}" : entry.Name;
+                        return $"{name}: {FormatGilAmount(entry.Amount, cfg.ShortBetFormat)}";
+                    });
+                var parts = tierParts.ToList();
+                if (parts.Count > 0)
+                    range += $" ({string.Join(", ", parts)})";
+            }
+            else if (cfg.VipBetTiers.Count > 0)
             {
                 var tierParts = cfg.VipBetTiers
                     .Select(t => $"{t.Name}: {FormatGilAmount(t.MaxBet, cfg.ShortBetFormat)}");

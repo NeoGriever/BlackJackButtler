@@ -79,9 +79,14 @@ public partial class BlackJackButtlerWindow
             }
             else
             {
-                SessionManager.ClearSession();
+                if (!StatsManager.IsRunning)
+                    SessionManager.ClearSession();
                 _players.RemoveAll(p => !p.IsActivePlayer && p.Bank == 0);
-                AddDebugLog("[SessionManager] Session cleared (Group Detector deactivated)", false);
+                AddDebugLog(StatsManager.IsRunning
+                    ? "[SessionManager] Session retained for active stats (Group Detector deactivated)"
+                    : "[SessionManager] Session cleared (Group Detector deactivated)", false);
+                if (StatsManager.IsRunning)
+                    SaveSessionFromUI();
                 _groupDetectorActivatedAt = null;
             }
 
@@ -103,7 +108,7 @@ public partial class BlackJackButtlerWindow
                 if (BJBGui.Button($"Start Bank ({secondsLeft}s)##v2_groupdetect_startbank", new Vector2(150, 0)))
                 {
                     StatsManager.StartSession();
-                    _save();
+                    SaveSessionFromUI();
                     _groupDetectorActivatedAt = null;
                 }
                 ImGui.PopStyleColor(2);
@@ -239,22 +244,12 @@ public partial class BlackJackButtlerWindow
     private void DrawBankTellAllButtonV2()
     {
         var tellPhase = GameEngine.CurrentPhase;
-        bool canTell = (tellPhase == GamePhase.Waiting || tellPhase == GamePhase.Payout) && !CommandExecutor.IsRunning;
+        bool canTell = tellPhase == GamePhase.Waiting || tellPhase == GamePhase.Payout;
         if (!canTell) ImGui.BeginDisabled();
         if (BJBGui.Button("Bank /tell##v2_banktell_all"))
         {
             var snapshot = _players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
-            var dealerName = _dealer.Name;
-            Task.Run(async () =>
-            {
-                foreach (var p in snapshot)
-                {
-                    GameEngine.TargetPlayer(p.Name);
-                    VariableManager.SetPlayerVariables(p);
-                    await CommandExecutor.ExecuteGroup("BankTell", p.DisplayName, _config);
-                }
-                GameEngine.TargetPlayer(dealerName);
-            });
+            BankTellQueueManager.EnqueueMany(snapshot, _config, "MainV2All");
         }
         if (!canTell) ImGui.EndDisabled();
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))

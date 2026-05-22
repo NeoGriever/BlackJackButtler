@@ -20,6 +20,7 @@ public partial class BlackJackButtlerWindow
     private static readonly Vector4 NearbyColorQueuedName = new(0.5f, 0.85f, 1f, 1f);
 
     private bool _distSliderHovered;
+    private bool _nearbyListHovered;
 
     private void DrawNearbyPlayersSection(bool version2 = false)
     {
@@ -53,6 +54,7 @@ public partial class BlackJackButtlerWindow
         }
         _distSliderHovered = ImGui.IsItemHovered();
 
+        NearbyPlayersManager.PauseSorting = _config.NearbySticky || _nearbyListHovered;
         var allPlayers = NearbyPlayersManager.GetNearbyPlayers(_config);
 
         var queue = JoinQueueManager.Queue;
@@ -92,7 +94,7 @@ public partial class BlackJackButtlerWindow
         if (version2)
             NearbyNumberManager.DrawFootNumbers(sorted);
 
-        int columns = version2 ? 1 : Math.Clamp(_config.NearbyColumns, 1, 5);
+        int columns = Math.Clamp(_config.NearbyColumns, 1, 5);
         float availWidth = ImGui.GetContentRegionAvail().X;
         float colWidth = availWidth / columns;
         float rowHeight = ImGui.GetTextLineHeightWithSpacing() + 2f;
@@ -102,16 +104,14 @@ public partial class BlackJackButtlerWindow
         int visibleRows = Math.Clamp(totalRows, 3, 15);
         float childHeight = visibleRows * rowHeight + 8f;
 
-        NearbyPlayersManager.PauseSorting = _config.NearbySticky;
-
         bool partyFull = Plugin.PartyList.Length >= 8;
 
         if (ImGui.BeginChild("bjb_nearby_scroll", new Vector2(availWidth, childHeight), true))
         {
             ImGui.PushFont(UiBuilder.MonoFont);
 
-            if (ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows))
-                NearbyPlayersManager.PauseSorting = true;
+            _nearbyListHovered = ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows);
+            NearbyPlayersManager.PauseSorting = _config.NearbySticky || _nearbyListHovered;
 
             for (int i = 0; i < sorted.Count; i++)
             {

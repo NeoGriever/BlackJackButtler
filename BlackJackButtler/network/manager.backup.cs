@@ -39,7 +39,7 @@ public static class SessionManager
         GamePhase phase,
         bool isRecognitionActive)
     {
-        if (!isRecognitionActive)
+        if (!isRecognitionActive && !StatsManager.IsRunning)
         {
             ClearSession();
             return;

@@ -84,21 +84,12 @@ public partial class BlackJackButtlerWindow
         ImGui.SameLine();
         {
             var tellPhase = GameEngine.CurrentPhase;
-            bool canTell = (tellPhase == GamePhase.Waiting || tellPhase == GamePhase.Payout) && !CommandExecutor.IsRunning;
+            bool canTell = tellPhase == GamePhase.Waiting || tellPhase == GamePhase.Payout;
             if (!canTell) ImGui.BeginDisabled();
             if (BJBGui.SmallButton("Bank /tell"))
             {
                 var snapshot = _players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
-                var dealerName = _dealer.Name;
-                Task.Run(async () => {
-                    foreach (var p in snapshot)
-                    {
-                        GameEngine.TargetPlayer(p.Name);
-                        VariableManager.SetPlayerVariables(p);
-                        await CommandExecutor.ExecuteGroup("BankTell", p.DisplayName, _config);
-                    }
-                    GameEngine.TargetPlayer(dealerName);
-                });
+                BankTellQueueManager.EnqueueMany(snapshot, _config, "MainV1All");
             }
             if (!canTell) ImGui.EndDisabled();
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
@@ -344,9 +335,14 @@ public partial class BlackJackButtlerWindow
 
             if (!IsRecognitionActive)
             {
-                SessionManager.ClearSession();
+                if (!StatsManager.IsRunning)
+                    SessionManager.ClearSession();
                 _players.RemoveAll(p => !p.IsActivePlayer && p.Bank == 0);
-                AddDebugLog("[SessionManager] Session cleared (Group Detector deactivated)", false);
+                AddDebugLog(StatsManager.IsRunning
+                    ? "[SessionManager] Session retained for active stats (Group Detector deactivated)"
+                    : "[SessionManager] Session cleared (Group Detector deactivated)", false);
+                if (StatsManager.IsRunning)
+                    SaveSessionFromUI();
                 _groupDetectorActivatedAt = null;
             }
 
@@ -416,7 +412,7 @@ public partial class BlackJackButtlerWindow
                 if (BJBGui.Button($"Start Bank ({secondsLeft}s)##groupdetect_startbank", new Vector2(160, 0)))
                 {
                     StatsManager.StartSession();
-                    _save();
+                    SaveSessionFromUI();
                     _groupDetectorActivatedAt = null;
                 }
                 ImGui.PopStyleColor(2);
@@ -943,7 +939,7 @@ public partial class BlackJackButtlerWindow
         ImGui.TableNextColumn();
         {
             var phase = GameEngine.CurrentPhase;
-            bool canTellPlayer = (phase == GamePhase.Waiting || phase == GamePhase.Payout) && !CommandExecutor.IsRunning;
+            bool canTellPlayer = phase == GamePhase.Waiting || phase == GamePhase.Payout;
             float tButtonWidth = 25f;
             float heartButtonWidth = 25f;
             float mButtonWidth = 25f;
@@ -976,14 +972,7 @@ public partial class BlackJackButtlerWindow
             if (BJBGui.SmallButton($"T##tell_{p.UIID}"))
             {
                 p.HighlightTell = false;
-                GameEngine.TargetPlayer(p.Name);
-                VariableManager.SetPlayerVariables(p);
-                var displayName = p.DisplayName;
-                var dealerName = _dealer.Name;
-                Task.Run(async () => {
-                    await CommandExecutor.ExecuteGroup("BankTell", displayName, _config);
-                    GameEngine.TargetPlayer(dealerName);
-                });
+                BankTellQueueManager.Enqueue(p, _config, "PlayerButton");
             }
             if (hlTell) ImGui.PopStyleColor(2);
             if (!canTellPlayer) ImGui.EndDisabled();
@@ -1041,12 +1030,12 @@ public partial class BlackJackButtlerWindow
             ImGui.SameLine();
             if (BJBGui.SmallButton($"M##maxbet_{p.UIID}"))
             {
-                p.CurrentBet = p.GetEffectiveMaxBet(_config);
+                p.CurrentBet = Math.Min(p.GetEffectiveMaxBet(_config), p.Bank);
                 _save();
                 SaveSessionFromUI();
             }
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip($"Set bet to max ({p.GetEffectiveMaxBet(_config):N0})");
+                ImGui.SetTooltip($"Set bet to lower value of max bet ({p.GetEffectiveMaxBet(_config):N0}) or bank ({p.Bank:N0})");
         }
 
         ImGui.TableNextColumn();

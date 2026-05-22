@@ -343,6 +343,7 @@ public sealed class BetLimitEntry
     public bool Active = true;
     public BetLimitEntryKind Kind = BetLimitEntryKind.Vip;
     public int VipLevel = 0;
+    public string Name = "";
     public long Amount = 250000;
 }
 

@@ -36,12 +36,6 @@ public static class NearbyNumberManager
         foreach (var p in list)
             GetNumber(p.FullKey);
 
-        list.Sort((a, b) =>
-        {
-            int cmp = GetNumber(a.FullKey).CompareTo(GetNumber(b.FullKey));
-            if (cmp != 0) return cmp;
-            return string.Compare(a.FullKey, b.FullKey, StringComparison.OrdinalIgnoreCase);
-        });
         return list;
     }
 
