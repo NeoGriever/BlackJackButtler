@@ -114,9 +114,10 @@ public partial class BlackJackButtlerWindow
                     if (ImGui.InputText($"##msg_{batch.Name}_{m}", ref msg, 256)) { batch.Messages[m] = msg; _save(); }
                     ImGui.SameLine();
                     bool isAD = batch.GetAD(m);
-                    if (isAD) { ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor); ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor); }
-                    if (BJBGui.SmallButton($"AD##{batch.Name}_{m}")) { batch.SetAD(m, !isAD); _save(); }
-                    if (isAD) ImGui.PopStyleColor(2);
+                    if (isAD
+                        ? BJBGui.SmallButtonHighlighted($"AD##{batch.Name}_{m}", _config.HighlightColor, _config.HighlightTextColor)
+                        : BJBGui.SmallButton($"AD##{batch.Name}_{m}"))
+                    { batch.SetAD(m, !isAD); _save(); }
                     ImGui.SameLine();
                     if (BJBGui.Button($"X##{batch.Name}_{m}")) { batch.Messages.RemoveAt(m); if (m < batch.ADFlags.Count) batch.ADFlags.RemoveAt(m); _save(); break; }
                 }

@@ -235,7 +235,7 @@ public static class DrawLogicInterpreter
         ctx.CameraDirection = _cachedCameraDirection;
 
         var nearby = NearbyPlayersManager.GetNearbyPlayers(config);
-        ctx.IsNearby = nearby.Any(n => n.Name == player.Name && n.Distance <= config.NearbyDistanceCap);
+        ctx.IsNearby = nearby.Any(n => n.Name == player.Name && n.IsInRange);
 
         return ctx;
     }

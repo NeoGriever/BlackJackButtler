@@ -23,26 +23,29 @@ public static class RegexEngine
 
     public static void CheckAutoReadyStart(List<PlayerState> players, Configuration cfg)
     {
-        var phase = GameEngine.CurrentPhase;
-        if (phase != GamePhase.Waiting && phase != GamePhase.Payout) return;
+        if (!GameEngine.CanAcceptInterRoundDetectors()) return;
 
         var activePlayers = players.Where(pl => pl.IsActivePlayer && !pl.IsOnHold).ToList();
         if (activePlayers.Count < 2) return;
         if (!activePlayers.All(pl => pl.ReadySkip || _nextRoundVotes.Contains(pl.Name))) return;
 
         _nextRoundVotes.Clear();
-        if (GameEngine.HasPlayerUnableToCoverBet(activePlayers))
-        {
-            Plugin.Instance.GetMainWindow().SetHighlightNewRound();
-            Plugin.Instance.GetMainWindow().AddDebugLog("[ReadyStart] Auto-start blocked: at least one active player cannot cover their bet.");
-            return;
-        }
-
         if (cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun)
+        {
+            var underfunded = activePlayers.Where(GameEngine.IsPlayerUnableToCoverBet).ToList();
+            if (underfunded.Count > 0)
+            {
+                Plugin.Instance.GetMainWindow().SetHighlightNewRound();
+                InsufficientBetQueueManager.EnqueueMany(underfunded, cfg, "ReadyStart");
+                Plugin.Instance.GetMainWindow().AddDebugLog("[ReadyStart] Auto-start blocked: at least one active player cannot cover their bet.");
+                return;
+            }
+
             Plugin.Instance.RunAutoAction(
                 "ReadyStart",
                 () => GameEngine.StartInitialDeal(players, cfg),
                 () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
+        }
         else
             Plugin.Instance.GetMainWindow().SetHighlightNewRound();
     }
@@ -66,10 +69,12 @@ public static class RegexEngine
     public static void ProcessIncoming(ParsedChatMessage msg, Configuration cfg, List<PlayerState> players, PlayerState dealer)
     {
         var cleanMessage = SanitizeForRegex(msg.Message);
+        var isTell = ChatLogBuffer.IsTellChatType(msg.ChatType);
 
         foreach (var entry in cfg.UserRegexes)
         {
             if (!entry.Enabled || entry.Patterns == null || entry.Patterns.Count == 0) continue;
+            if (isTell && !entry.ApplyToTells) continue;
 
             foreach (var pattern in entry.Patterns)
             {
@@ -317,9 +322,12 @@ public static class RegexEngine
 
             case RegexAction.NextRound:
             {
-                var phase = GameEngine.CurrentPhase;
-                if (phase != GamePhase.Waiting && phase != GamePhase.Payout)
+                if (!GameEngine.CanAcceptInterRoundDetectors())
+                {
+                    if (GameEngine.CurrentPhase == GamePhase.Payout)
+                        _nextRoundVotes.Clear();
                     break;
+                }
                 if (p == null || !p.IsActivePlayer || p.IsOnHold)
                     break;
                 _nextRoundVotes.Add(p.Name);
@@ -333,9 +341,11 @@ public static class RegexEngine
                     }
                     else if (cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun)
                     {
-                        if (GameEngine.HasPlayerUnableToCoverBet(activePlayers))
+                        var underfunded = activePlayers.Where(GameEngine.IsPlayerUnableToCoverBet).ToList();
+                        if (underfunded.Count > 0)
                         {
                             Plugin.Instance.GetMainWindow().SetHighlightNewRound();
+                            InsufficientBetQueueManager.EnqueueMany(underfunded, cfg, "RegexNextRound");
                             Plugin.Instance.GetMainWindow().AddDebugLog("[RegexNextRound] Auto-start blocked: at least one active player cannot cover their bet.");
                             break;
                         }
@@ -388,11 +398,10 @@ public static class RegexEngine
             case RegexAction.BankTell:
             {
                 var btWindow = Plugin.Instance.GetMainWindow();
-                var phase = GameEngine.CurrentPhase;
 
-                if (phase != GamePhase.Waiting && phase != GamePhase.Payout)
+                if (!GameEngine.CanAcceptInterRoundDetectors())
                 {
-                    btWindow.AddDebugLog($"[RegexEngine] BankTell blocked: wrong phase {phase}");
+                    btWindow.AddDebugLog($"[RegexEngine] BankTell blocked: wrong phase {GameEngine.CurrentPhase}");
                     break;
                 }
 
@@ -421,7 +430,53 @@ public static class RegexEngine
                 BankTellQueueManager.Enqueue(capturedPlayer, cfg, "RegexBankTell");
                 break;
             }
+
+            case RegexAction.SetBet:
+            {
+                var sbWindow = Plugin.Instance.GetMainWindow();
+                if (p == null)
+                {
+                    sbWindow.AddDebugLog($"[RegexEngine] SetBet blocked: player not found for '{msg.Name}'");
+                    break;
+                }
+
+                if (!match.Success || match.Groups.Count < 2)
+                {
+                    sbWindow.AddDebugLog($"[RegexEngine] SetBet blocked: pattern needs one capture group");
+                    break;
+                }
+
+                var rawAmount = match.Groups[1].Value;
+                sbWindow.AddDebugLog($"[RegexEngine] SetBet queued for {p.DisplayName}: {rawAmount}");
+                SetBetQueueManager.Enqueue(p, rawAmount, cfg, "RegexSetBet");
+                break;
+            }
+
+            case RegexAction.InviteNearby:
+            {
+                if (string.IsNullOrWhiteSpace(msg.Name))
+                    break;
+
+                var world = ResolveNearbyWorld(msg.Name);
+                JoinQueueManager.Enqueue(msg.Name, world);
+                Plugin.Instance.GetMainWindow().AddDebugLog(
+                    $"[RegexEngine] InviteNearby queued for {msg.Name}{(string.IsNullOrWhiteSpace(world) ? "" : $"@{world}")}");
+                break;
+            }
         }
+    }
+
+    private static string ResolveNearbyWorld(string name)
+    {
+        foreach (var obj in Plugin.ObjectTable)
+        {
+            if (obj.ObjectKind != Dalamud.Game.ClientState.Objects.Enums.ObjectKind.Pc) continue;
+            if (obj is not Dalamud.Game.ClientState.Objects.SubKinds.IPlayerCharacter pc) continue;
+            if (pc.Name.TextValue.Equals(name, StringComparison.OrdinalIgnoreCase))
+                return pc.HomeWorld.Value.Name.ToString();
+        }
+
+        return string.Empty;
     }
 
     private static string SanitizeForRegex(string input)

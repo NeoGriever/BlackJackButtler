@@ -7,6 +7,7 @@ namespace BlackJackButtler;
 public class PlayerState
 {
     public bool IsDebugPlayer = false;
+    public bool IsDealer = false;
 
     public string Name = string.Empty;
     public string Alias = string.Empty;
@@ -148,6 +149,7 @@ public class PlayerState
         return new PlayerState
         {
             IsDebugPlayer = IsDebugPlayer,
+            IsDealer = IsDealer,
             Name = Name,
             Alias = Alias,
             WorldId = WorldId,

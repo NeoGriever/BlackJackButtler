@@ -62,11 +62,38 @@ internal static class BJBGui
         return r;
     }
 
+    public static bool ButtonHighlighted(string label, Vector4 buttonColor, Vector4 textColor)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Button, buttonColor);
+        ImGui.PushStyleColor(ImGuiCol.Text, textColor);
+        var r = ImGui.Button(label);
+        ImGui.PopStyleColor(2);
+        return r;
+    }
+
+    public static bool ButtonHighlighted(string label, Vector2 size, Vector4 buttonColor, Vector4 textColor)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Button, buttonColor);
+        ImGui.PushStyleColor(ImGuiCol.Text, textColor);
+        var r = ImGui.Button(label, size);
+        ImGui.PopStyleColor(2);
+        return r;
+    }
+
     public static bool SmallButton(string label)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
         var r = ImGui.SmallButton(label);
         ImGui.PopStyleColor();
+        return r;
+    }
+
+    public static bool SmallButtonHighlighted(string label, Vector4 buttonColor, Vector4 textColor)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Button, buttonColor);
+        ImGui.PushStyleColor(ImGuiCol.Text, textColor);
+        var r = ImGui.SmallButton(label);
+        ImGui.PopStyleColor(2);
         return r;
     }
 

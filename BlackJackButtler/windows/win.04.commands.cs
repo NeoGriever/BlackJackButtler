@@ -277,9 +277,10 @@ public partial class BlackJackButtlerWindow
             // Col 5 — anti-double
             ImGui.TableNextColumn();
             bool isAD = cmd.NonDoubled;
-            if (isAD) { ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor); ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor); }
-            if (BJBGui.SmallButton($"AD##ad_{group.Name}_{i}")) { cmd.NonDoubled = !cmd.NonDoubled; _save(); }
-            if (isAD) ImGui.PopStyleColor(2);
+            if (isAD
+                ? BJBGui.SmallButtonHighlighted($"AD##ad_{group.Name}_{i}", _config.HighlightColor, _config.HighlightTextColor)
+                : BJBGui.SmallButton($"AD##ad_{group.Name}_{i}"))
+            { cmd.NonDoubled = !cmd.NonDoubled; _save(); }
 
             // Col 6 — up / down
             ImGui.TableNextColumn();

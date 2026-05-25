@@ -22,14 +22,14 @@ public static class NearbyAlertManager
         if (!config.NearbyAlertEnabled || config.NearbyAlertSoundFiles.Count == 0)
         {
             var currentKeys = new HashSet<string>(current
-                .Where(p => p.Distance <= config.NearbyDistanceCap)
+                .Where(p => p.IsInRange)
                 .Select(p => p.FullKey));
             _previousInRange = currentKeys;
             return;
         }
 
         var inRange = new HashSet<string>(current
-            .Where(p => p.Distance <= config.NearbyDistanceCap)
+            .Where(p => p.IsInRange)
             .Select(p => p.FullKey));
 
         bool hasNew = false;

@@ -516,6 +516,12 @@ public partial class BlackJackButtlerWindow
             ImGui.SetTooltip("On: 50k, 1m, 5m\nOff: 50,000 Gil, 1,000,000 Gil");
 
         ImGui.Spacing();
+        ImGui.TextUnformatted("Auto-Bet Detection");
+        ImGui.Separator();
+        DrawAutoBetPostCommandSelector("classic");
+        DrawInsufficientBetCommandSelector("classic");
+
+        ImGui.Spacing();
         ImGui.Spacing();
         ImGui.TextUnformatted("Multipliers");
         ImGui.Separator();
@@ -895,6 +901,32 @@ public partial class BlackJackButtlerWindow
             ImGui.Spacing();
 
             if (ImGui.Checkbox("Disable update popup", ref _config.DisableUpdatePopup)) _save();
+            if (ImGui.Checkbox("Hide Thanks page", ref _config.HideThanksPage)) _save();
+
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Card-Companion App");
+            ImGui.Separator();
+            ImGui.Spacing();
+
+            if (ImGui.Checkbox("Enable Companion Synchronization", ref _config.EnableCompanionSync)) _save();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Mirrors active player card state to the configured companion server.");
+
+            ImGui.TextUnformatted("Server Address");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(260f);
+            if (ImGui.InputText("##companion_server", ref _config.CompanionServerAddress, 255))
+                _save();
+
+            ImGui.TextUnformatted("Timeout");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            var companionTimeout = _config.CompanionTimeoutMs;
+            if (ImGui.SliderInt("##companion_timeout", ref companionTimeout, 1, 1000, "%d ms"))
+            {
+                _config.CompanionTimeoutMs = Math.Clamp(companionTimeout, 1, 1000);
+                _save();
+            }
 
             ImGui.Spacing();
             ImGui.TextUnformatted("Defaults");
@@ -1061,6 +1093,11 @@ public partial class BlackJackButtlerWindow
         TryApply<int>   (j, "CharlieCardCount",                      v => _config.CharlieCardCount = v);
         TryApply<bool>  (j, "CharlieInstantWin",                     v => _config.CharlieInstantWin = v);
         TryApply<bool>  (j, "EnableBankInput",                        v => _config.EnableBankInput = v);
+        TryApply<string>(j, "AutoBetPostCommandName",                 v => _config.AutoBetPostCommandName = v);
+        TryApply<string>(j, "InsufficientBetCommandName",             v => _config.InsufficientBetCommandName = v);
+        TryApply<bool>  (j, "EnableCompanionSync",                    v => _config.EnableCompanionSync = v);
+        TryApply<string>(j, "CompanionServerAddress",                 v => _config.CompanionServerAddress = v);
+        TryApply<int>   (j, "CompanionTimeoutMs",                     v => _config.CompanionTimeoutMs = Math.Clamp(v, 1, 1000));
         TryApply<bool>  (j, "EnableAntiDouble",                       v => _config.EnableAntiDouble = v);
         TryApply<long>  (j, "MinBet",                                 v => _config.MinBet = v);
         TryApply<long>  (j, "MaxBet",                                 v => _config.MaxBet = v);
@@ -1093,6 +1130,20 @@ public partial class BlackJackButtlerWindow
         TryApply<int>   (j, "NearbyColumns",                          v => _config.NearbyColumns = v);
         TryApply<string>(j, "NearbyQuestionCommandName",              v => _config.NearbyQuestionCommandName = v);
         TryApply<bool>  (j, "NoAutoDequeue",                          v => _config.NoAutoDequeue = v);
+        TryApply<bool>  (j, "NearbyShowFootNumbers",                  v => _config.NearbyShowFootNumbers = v);
+        TryApply<float> (j, "NearbyOffsetX",                          v => _config.NearbyOffsetX = v);
+        TryApply<float> (j, "NearbyOffsetZ",                          v => _config.NearbyOffsetZ = v);
+        TryApply<NearbyShapeMode>(j, "NearbyShape",                   v => _config.NearbyShape = v);
+        TryApply<float> (j, "NearbyRectangleAspectRatio",             v => _config.NearbyRectangleAspectRatio = Math.Clamp(v, 0.1f, 10f));
+        TryApply<float> (j, "NearbyRectangleRotation",                v => _config.NearbyRectangleRotation = Math.Clamp(v, -180f, 180f));
+        TryApply<bool>  (j, "NearbyUseFixedPosition",                 v => _config.NearbyUseFixedPosition = v);
+        TryApply<float> (j, "NearbyFixedCenterX",                     v => _config.NearbyFixedCenterX = v);
+        TryApply<float> (j, "NearbyFixedCenterY",                     v => _config.NearbyFixedCenterY = v);
+        TryApply<float> (j, "NearbyFixedCenterZ",                     v => _config.NearbyFixedCenterZ = v);
+        TryApply<bool>  (j, "NearbyFixedCenterCaptured",              v => _config.NearbyFixedCenterCaptured = v);
+        TryApply<bool>  (j, "NearbyAutoActEnabled",                   v => _config.NearbyAutoActEnabled = v);
+        TryApply<string>(j, "NearbyAutoActCommandName",               v => _config.NearbyAutoActCommandName = v);
+        TryApply<float> (j, "NearbyAutoActTimeoutMinutes",            v => _config.NearbyAutoActTimeoutMinutes = Math.Clamp(v, 1f, 1440f));
         TryApply<float> (j, "CustomButtonPaddingH",                   v => _config.CustomButtonPaddingH = v);
         TryApply<float> (j, "CustomButtonPaddingV",                   v => _config.CustomButtonPaddingV = v);
         TryApply<float> (j, "CustomButtonFontScale",                  v => _config.CustomButtonFontScale = v);
@@ -1153,6 +1204,8 @@ public partial class BlackJackButtlerWindow
             _config.CustomButtonOrder = _tempImportJson["CustomButtonOrder"]!.ToObject<List<string>>()!;
         if (_tempImportJson.ContainsKey("NearbyAlertSoundFiles"))
             _config.NearbyAlertSoundFiles = _tempImportJson["NearbyAlertSoundFiles"]!.ToObject<List<string>>()!;
+        if (_tempImportJson.ContainsKey("NearbyAutoActIgnoreList"))
+            _config.NearbyAutoActIgnoreList = _tempImportJson["NearbyAutoActIgnoreList"]!.ToObject<List<string>>()!;
 
         _save();
     }
@@ -1186,6 +1239,8 @@ public partial class BlackJackButtlerWindow
             _config.CustomButtonOrder = _tempImportJson["CustomButtonOrder"]!.ToObject<List<string>>()!;
         if (_tempImportJson.ContainsKey("NearbyAlertSoundFiles"))
             _config.NearbyAlertSoundFiles = _tempImportJson["NearbyAlertSoundFiles"]!.ToObject<List<string>>()!;
+        if (_tempImportJson.ContainsKey("NearbyAutoActIgnoreList"))
+            _config.NearbyAutoActIgnoreList = _tempImportJson["NearbyAutoActIgnoreList"]!.ToObject<List<string>>()!;
 
         _save();
     }

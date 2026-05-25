@@ -127,6 +127,13 @@ public partial class BlackJackButtlerWindow
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     ImGui.SetTooltip("Case sensitive");
 
+                ImGui.SameLine();
+
+                if (ImGui.Checkbox("##applyToTells", ref e.ApplyToTells)) _save();
+
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    ImGui.SetTooltip("Apply this regex to incoming tells");
+
                 var entryName = e.Name ?? "";
 
                 ImGui.SameLine();
@@ -223,7 +230,9 @@ public partial class BlackJackButtlerWindow
                         "Highlight Split\0" +
                         "NextRound\0" +
                         "BankTell\0" +
-                        "Own Button\0"
+                        "Own Button\0" +
+                        "SetBet\0" +
+                        "Invite Nearby\0"
                     ))
                     {
                         e.Action = (RegexAction)action;

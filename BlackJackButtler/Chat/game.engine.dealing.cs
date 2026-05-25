@@ -36,6 +36,7 @@ public static partial class GameEngine
 
         dealer.Hands.Clear();
         dealer.CurrentHandIndex = 0;
+        dealer.IsCurrentTurn = true;
 
         foreach (var p in activePlayers)
         {
@@ -90,19 +91,27 @@ public static partial class GameEngine
         {
             ClearForcedRecipient();
         }
+        SendCompanionTableUpdate(cfg, activePlayers);
 
         foreach (var p in activePlayers) p.IsCurrentTurn = false;
+        dealer.IsCurrentTurn = false;
         var first = activePlayers[0];
         first.IsCurrentTurn = true;
         first.CurrentHandIndex = 0;
         TargetPlayer(first.Name);
 
         CurrentPhase = GamePhase.InitialDeal;
+        SendCompanionTableUpdate(cfg, activePlayers);
     }
 
     public static bool HasPlayerUnableToCoverBet(IEnumerable<PlayerState> players)
     {
-        return players.Any(p => p.IsActivePlayer && !p.IsOnHold && p.Bank < p.CurrentBet);
+        return players.Any(IsPlayerUnableToCoverBet);
+    }
+
+    public static bool IsPlayerUnableToCoverBet(PlayerState p)
+    {
+        return p.IsActivePlayer && !p.IsOnHold && p.CurrentBet > 0 && p.Bank < p.CurrentBet;
     }
 
     public static async Task ActionDealHand(PlayerState p, Configuration cfg, List<PlayerState> players)
@@ -159,6 +168,7 @@ public static partial class GameEngine
 
                 if (IsPlayerFinished(activePlayers[0])) {
                     window.AddDebugLog($"[NextTurn] First player {activePlayers[0].DisplayName} already finished, recursing");
+                    SendCompanionTableUpdate(cfg, activePlayers);
                     NextTurn(players, cfg);
                 } else {
                     SwitchTurnTo(activePlayers[0], activePlayers, cfg);
@@ -173,6 +183,7 @@ public static partial class GameEngine
                     if (IsPlayerFinished(current))
                     {
                         window.AddDebugLog($"[NextTurn] Current player {current.DisplayName} already finished, recursing");
+                        SendCompanionTableUpdate(cfg, activePlayers);
                         NextTurn(players, cfg);
                     }
                     else
@@ -188,6 +199,7 @@ public static partial class GameEngine
             if (current.CurrentHandIndex < current.Hands.Count)
             {
                 window.AddDebugLog($"[NextTurn] {current.DisplayName} advancing to hand {current.CurrentHandIndex}");
+                SendCompanionTableUpdate(cfg, activePlayers);
                 if (current.Hands[current.CurrentHandIndex].IsStand || current.Hands[current.CurrentHandIndex].IsBust)
                 {
                     NextTurn(players, cfg);
@@ -223,6 +235,7 @@ public static partial class GameEngine
 
             if (IsPlayerFinished(next))
             {
+                SendCompanionTableUpdate(cfg, activePlayers);
                 NextTurn(players, cfg);
             }
             else if (!next.HasInitialHandDealt)
@@ -232,6 +245,7 @@ public static partial class GameEngine
                 next.CurrentHandIndex = 0;
                 TargetPlayer(next.Name);
                 VariableManager.SetPlayerVariables(next);
+                SendCompanionTableUpdate(cfg, activePlayers);
             }
             else
             {
@@ -260,9 +274,11 @@ public static partial class GameEngine
                         firstFromBench.BankAtRoundStart = firstFromBench.Bank;
                         TargetPlayer(firstFromBench.Name);
                         VariableManager.SetPlayerVariables(firstFromBench);
+                        SendCompanionTableUpdate(cfg, newActive);
                     }
                     else if (IsPlayerFinished(firstFromBench))
                     {
+                        SendCompanionTableUpdate(cfg, newActive);
                         NextTurn(players, cfg);
                     }
                     else
@@ -279,7 +295,7 @@ public static partial class GameEngine
             if (!anyPlayerAlive)
             {
                 window.AddDebugLog("[NextTurn] All players busted, skipping Dealer turn");
-                CurrentPhase = GamePhase.Payout;
+                BeginPayoutOutput();
                 Task.Run(async () => await EvaluateFinalResults(players, _ctxDealer!, cfg));
             }
             else
@@ -288,6 +304,8 @@ public static partial class GameEngine
                 CurrentPhase = GamePhase.DealerTurn;
                 if (_ctxDealer != null)
                 {
+                    _ctxDealer.IsCurrentTurn = true;
+                    _ctxDealer.CurrentHandIndex = 0;
                     TargetPlayer(_ctxDealer.Name);
 
                     if (_ctxDealer.Hands.Count > 0)
@@ -297,6 +315,7 @@ public static partial class GameEngine
                         VariableManager.SetVariable("dealerpoints", dealerScore.ToString());
                     }
                 }
+                SendCompanionTableUpdate(cfg, allActivePlayers);
             }
         }
         SaveSessionIfNeeded(players);
@@ -311,11 +330,16 @@ public static partial class GameEngine
         target.CurrentHandIndex = 0;
         TargetPlayer(target.Name);
         VariableManager.SetPlayerVariables(target);
+        SendCompanionTableUpdate(cfg, allActive);
         if (target.Hands.Count > 0 && target.Hands[target.CurrentHandIndex].Cards.Count >= 2)
         {
             string promptGroup = GetStatePromptGroup(target, cfg);
             window.AddDebugLog($"[SwitchTurn] Triggering prompt group: {promptGroup}");
-            Task.Run(async () => await CommandExecutor.ExecuteGroup(promptGroup, target.DisplayName, cfg));
+            Task.Run(async () =>
+            {
+                await CommandExecutor.ExecuteGroup(promptGroup, target.DisplayName, cfg);
+                SendCompanionTableUpdate(cfg, allActive);
+            });
         }
     }
 
@@ -336,6 +360,7 @@ public static partial class GameEngine
             }
         });
         SaveSessionIfNeeded(players);
+        CompanionSyncManager.SendPlayerUpdate(cfg, p);
     }
 
     public static async Task ActionStand(PlayerState p, Configuration cfg, List<PlayerState> players)
@@ -353,6 +378,7 @@ public static partial class GameEngine
 
         NextTurn(players, cfg);
         SaveSessionIfNeeded(players);
+        CompanionSyncManager.SendPlayerUpdate(cfg, p);
     }
 
     public static async Task ActionDD(PlayerState p, Configuration cfg, List<PlayerState> players)
@@ -409,6 +435,7 @@ public static partial class GameEngine
             hand.IsStand = true;
         });
         SaveSessionIfNeeded(players);
+        CompanionSyncManager.SendPlayerUpdate(cfg, p);
     }
 
     public static async Task ActionSplit(PlayerState p, Configuration cfg, List<PlayerState> players)
@@ -485,6 +512,7 @@ public static partial class GameEngine
         finally { ClearForcedRecipient(); }
 
         SaveSessionIfNeeded(players);
+        CompanionSyncManager.SendPlayerUpdate(cfg, p);
 
         Plugin.Instance.GetMainWindow().AddDebugLog($"[Split] {p.DisplayName} successfully split hand", false);
     }
@@ -496,6 +524,8 @@ public static partial class GameEngine
         if (dealer == null) return;
 
         CurrentPhase = GamePhase.DealerTurn;
+        dealer.IsCurrentTurn = true;
+        dealer.CurrentHandIndex = 0;
 
         if (dealer.Hands.Count > 0)
             dealer.Hands[0].ActionLog.Add("Hit");
@@ -513,6 +543,7 @@ public static partial class GameEngine
         }
 
         SaveSessionIfNeeded(players);
+        SendCompanionTableUpdate(cfg, players.Where(x => x.IsActivePlayer));
     }
 
     public static async Task DealerStand(Configuration cfg, List<PlayerState> players)
@@ -521,16 +552,21 @@ public static partial class GameEngine
         lock (_ctxLock) dealer = _ctxDealer;
         if (dealer == null) return;
 
-        CurrentPhase = GamePhase.Payout;
+        BeginPayoutOutput();
+        dealer.IsCurrentTurn = false;
 
         if (dealer.Hands.Count > 0)
+        {
             dealer.Hands[0].ActionLog.Add("Stand");
+            dealer.Hands[0].IsStand = true;
+        }
 
         TargetPlayer(dealer.Name);
         SetForcedRecipient(dealer.Name);
         try { await CommandExecutor.ExecuteGroup("DealStand", dealer.Name, cfg); }
         finally { ClearForcedRecipient(); }
         SaveSessionIfNeeded(players);
+        SendCompanionTableUpdate(cfg, players.Where(x => x.IsActivePlayer));
     }
 
     public static string GetStatePromptGroup(PlayerState p, Configuration cfg)
@@ -650,6 +686,7 @@ public static partial class GameEngine
             NextTurn(allPlayers, cfg);
 
         SaveSessionIfNeeded(allPlayers);
+        CompanionSyncManager.ClearPlayer(cfg, player);
     }
 
     private static void SaveSessionIfNeeded(List<PlayerState> players)
@@ -665,6 +702,23 @@ public static partial class GameEngine
             CurrentPhase,
             mainWindow.IsRecognitionActive
         );
+    }
+
+    public static void SendCompanionTableUpdate(Configuration cfg, IEnumerable<PlayerState> players)
+    {
+        PlayerState? dealer;
+        lock (_ctxLock) dealer = _ctxDealer;
+        var snapshot = new List<PlayerState>();
+
+        if (dealer != null)
+            snapshot.Add(dealer);
+
+        snapshot.AddRange(players
+            .Where(p => p != null)
+            .OrderBy(p => p.IsCurrentTurn ? 1 : 0)
+            .ThenBy(p => p.UIID));
+
+        CompanionSyncManager.SendPlayersUpdate(cfg, snapshot);
     }
 
     private static List<PlayerState> GetPlayersFromContext()

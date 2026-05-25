@@ -82,6 +82,7 @@ public static class DiceResultHandler
                     else
                     {
                         window.AddDebugLog("[DiceHandler] Initial deal complete, moving to next turn");
+                        GameEngine.SendCompanionTableUpdate(cfg, players.Where(x => x.IsActivePlayer));
                         CommandExecutor.NotifyDiceResult();
                         CommandExecutor.SignalFollowUpPending();
                         Task.Run(async () =>
@@ -158,6 +159,9 @@ public static class DiceResultHandler
             }
         }
 
+        if (!isDealer)
+            GameEngine.SendCompanionTableUpdate(cfg, players.Where(x => x.IsActivePlayer));
+
         if (shouldCancel && !string.IsNullOrEmpty(newGroup))
         {
             window.AddDebugLog($"[DiceHandler] Canceling current group before starting: {newGroup}");
@@ -198,7 +202,7 @@ public static class DiceResultHandler
                     else if (isDealer && (newGroup == "DealerBJ" || newGroup == "DealerBust"))
                     {
                         window.AddDebugLog($"[DiceHandler-Cancel] Dealer {newGroup}, transitioning to Payout");
-                        GameEngine.CurrentPhase = GamePhase.Payout;
+                        GameEngine.BeginPayoutOutput();
                         await GameEngine.EvaluateFinalResults(players, dealer, cfg);
                         window.AddDebugLog("[DiceHandler-Cancel] EvaluateFinalResults completed");
                     }
@@ -231,6 +235,7 @@ public static class DiceResultHandler
                     {
                         await CommandExecutor.WaitForCurrentGroupToFinishAsync();
                         await CommandExecutor.ExecuteGroup(promptGroup, target.DisplayName, cfg);
+                        GameEngine.SendCompanionTableUpdate(cfg, players.Where(x => x.IsActivePlayer));
                     }
                     catch (Exception ex)
                     {

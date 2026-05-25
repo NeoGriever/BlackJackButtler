@@ -70,6 +70,15 @@ public partial class BlackJackButtlerWindow
             ImGui.SetTooltip("Copy all visible log entries to clipboard in chronological order");
         }
 
+        if (Plugin.IsDebugMode)
+        {
+            ImGui.SameLine();
+            if (BJBGui.Button("Generate Debug Players"))
+                GenerateRandomDebugPlayers();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Replace debug players with random numbered characters");
+        }
+
         ImGui.Separator();
 
         if (ImGui.BeginChild("debug_scroll_area", new Vector2(-1, -1), true))
@@ -128,8 +137,8 @@ public partial class BlackJackButtlerWindow
 
     private void DisableDebugMode()
     {
-        _players.Clear();
-        _dealer = new PlayerState { Name = "Dealer", IsActivePlayer = true };
+        ClearPlayersWithCompanionErase();
+        _dealer = new PlayerState { Name = "Dealer", IsActivePlayer = true, IsDealer = true };
         GameEngine.CurrentPhase = GamePhase.Waiting;
         GameEngine.SetDebugMode(false);
         GameEngine.SetRuntimeContext(_players, _dealer);

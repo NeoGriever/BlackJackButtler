@@ -46,6 +46,11 @@ public sealed class ChatLogBuffer
         || t == (int)XivChatType.CrossParty
         || t == 64;
   }
+
+  public static bool IsTellChatType(int t)
+  {
+    return t == (int)XivChatType.TellIncoming;
+  }
 }
 
 public sealed record ParsedChatMessage(

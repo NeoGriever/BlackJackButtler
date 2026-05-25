@@ -123,6 +123,39 @@ public partial class BlackJackButtlerWindow
 
         if (CheckSaveChanged("Enable Auto Run", ref _config.ShowAutoRunButton) && !_config.ShowAutoRunButton)
             _config.AutoRun = false;
+
+        ImGui.Spacing();
+        Header("Initial Rotation");
+        var currentRotation = Plugin.ObjectTable.LocalPlayer?.Rotation;
+        var currentText = currentRotation.HasValue
+            ? FormatRotationLabel(currentRotation.Value)
+            : "n/a";
+        var targetText = FormatRotationLabel(_config.InitialViewDirection);
+
+        ImGui.TextUnformatted("Current Rotation");
+        ImGui.SameLine(260f);
+        ImGui.TextUnformatted(currentText);
+
+        ImGui.TextUnformatted("Target Rotation");
+        ImGui.SameLine(260f);
+        ImGui.TextUnformatted(targetText);
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("To current rotation##v2_settings_initial_rotation_current"))
+        {
+            ViewDirectionManager.CaptureCurrentRotation(_config);
+            _save();
+        }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Sets the initial round rotation to your current facing direction.");
+    }
+
+    private static string FormatRotationLabel(float radians)
+    {
+        var degrees = radians * (180f / MathF.PI);
+        degrees %= 360f;
+        if (degrees < 0f)
+            degrees += 360f;
+        return $"{degrees:0.0}° / {radians:0.0000} rad";
     }
 
     private void DrawSettingsV2Rules()
@@ -296,15 +329,18 @@ public partial class BlackJackButtlerWindow
         ImGui.SameLine();
         if (BJBGui.SmallButton("+ Add Min-Bet")) AddBetDraft(new BetLimitEntry { Kind = BetLimitEntryKind.MinBet, Amount = _config.MinBet });
 
-        ImGui.Spacing();
-        if (_betDraftDirty)
+        Header("Auto-Bet Detection");
+        Indent(() =>
         {
-            ImGui.PushStyleColor(ImGuiCol.Button, _config.HighlightColor);
-            ImGui.PushStyleColor(ImGuiCol.Text, _config.HighlightTextColor);
-        }
-        if (BJBGui.Button("Save Betting Changes##v2_bet_save"))
+            DrawAutoBetPostCommandSelector("v2");
+            DrawInsufficientBetCommandSelector("v2");
+        });
+
+        ImGui.Spacing();
+        if (_betDraftDirty
+            ? BJBGui.ButtonHighlighted("Save Betting Changes##v2_bet_save", _config.HighlightColor, _config.HighlightTextColor)
+            : BJBGui.Button("Save Betting Changes##v2_bet_save"))
             SaveBetDraft();
-        if (_betDraftDirty) ImGui.PopStyleColor(2);
         ImGui.SameLine();
         if (BJBGui.Button("Discard##v2_bet_discard"))
             ResetBetDraft();
@@ -450,6 +486,22 @@ public partial class BlackJackButtlerWindow
     private void DrawSettingsV2System(int level)
     {
         CheckSave("Disable Update Popup", ref _config.DisableUpdatePopup);
+        CheckSave("Hide Thanks page", ref _config.HideThanksPage);
+
+        Header("Card-Companion App");
+        Indent(() =>
+        {
+            CheckSave("Enable Companion Synchronization", ref _config.EnableCompanionSync);
+
+            ImGui.TextUnformatted("Server Address");
+            ImGui.SameLine(260f);
+            ImGui.SetNextItemWidth(260f);
+            if (ImGui.InputText("##v2_companion_server", ref _config.CompanionServerAddress, 255))
+                _save();
+
+            IntInputSave("Timeout (ms)##v2_companion_timeout", ref _config.CompanionTimeoutMs, 1, 1000, 10, 200);
+        });
+
         if (BJBGui.Button("Reset default config file")) DefaultsMigration.ResetSnapshotFile();
 
         ImGui.Spacing();

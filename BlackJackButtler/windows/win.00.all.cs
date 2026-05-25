@@ -36,7 +36,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _openCleanDataPopup = false;
     private string _startTimeInputBuffer = string.Empty;
     private string? _startTimeInputError;
-    private PlayerState _dealer = new() { Name = "Dealer", IsActivePlayer = true };
+    private PlayerState _dealer = new() { Name = "Dealer", IsActivePlayer = true, IsDealer = true };
     private PlayerState? _editingAliasPlayer;
     private string _aliasInputBuffer = string.Empty;
     private bool _isAliasModalOpen = false;
@@ -44,6 +44,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     private readonly Dictionary<string, long> _bankSnapshot = new();
     private readonly Dictionary<string, long> _betSnapshot = new();
+    private readonly HashSet<string> _bankChanged = new();
+    private readonly HashSet<string> _betChanged = new();
     private readonly Dictionary<string, (long amount, DateTime clickedAt)> _bankToTipUndo = new();
 
     private JObject? _tempImportJson;
@@ -80,6 +82,14 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     private Vector2 _lastWindowPos;
     private Vector2 _lastWindowSize;
+    private TablePopoutWindow? _tablePopoutWindow;
+    private NearbyPopoutWindow? _nearbyPopoutWindow;
+
+    public void SetPopoutWindows(TablePopoutWindow table, NearbyPopoutWindow nearby)
+    {
+        _tablePopoutWindow = table;
+        _nearbyPopoutWindow = nearby;
+    }
 
     public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog, NotepadWindow notepadWindow) : base($"BlackJack Buttler v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version} [Default]###BlackJackButtler")
     {
@@ -93,6 +103,29 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         SizeCondition = ImGuiCond.FirstUseEver;
 
         RespectCloseHotkey = false;
+
+        TitleBarButtons.Add(new TitleBarButton
+        {
+            Icon = FontAwesomeIcon.StickyNote,
+            Priority = 70,
+            Click = _ =>
+            {
+                if (_notepadWindow.IsOpen)
+                {
+                    _notepadWindow.IsOpen = false;
+                }
+                else
+                {
+                    if (!_notepadLoaded) { _notepadLoaded = true; _notepadWindow.LoadContent(); }
+                    _notepadWindow.IsOpen = true;
+                }
+            },
+            ShowTooltip = () =>
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                ImGui.SetTooltip(_notepadWindow.IsOpen ? "Close Notepad" : "Open Notepad");
+            }
+        });
 
         TitleBarButtons.Add(new TitleBarButton
         {
@@ -273,7 +306,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             var remainingHeight = ImGui.GetContentRegionAvail().Y;
             if (remainingHeight > 50) ImGui.SetCursorPosY(ImGui.GetCursorPosY() + remainingHeight - 50);
 
-            if(ShouldShowPage(Page.Thanks, level))                      NavButton(Page.Thanks, "Thanks to");
+            if (!_config.HideThanksPage && ShouldShowPage(Page.Thanks, level))
+                NavButton(Page.Thanks, "Thanks to");
 
             ImGui.EndChild();
             ImGui.SameLine();
@@ -350,7 +384,10 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Vars:         DrawVarsPage(); break;
             case Page.RoundLog:     DrawRoundLogPage(); break;
             case Page.Debug:        DrawDebugPage(); break;
-            case Page.Thanks:       DrawThanksPage(); break;
+            case Page.Thanks:
+                if (_config.HideThanksPage) { _page = Page.Main; DrawMainPage(); }
+                else DrawThanksPage();
+                break;
             case Page.Stats:        DrawStatsPage(); break;
             case Page.Presets:      DrawPresetsPage(); break;
             case Page.DrawLogic:    DrawDrawLogicPage(); break;
@@ -377,9 +414,13 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             out var history,
             out var historyIndex))
         {
+            foreach (var player in _players)
+                CompanionSyncManager.ClearPlayer(_config, player);
+
             _players = players;
             _dealer = dealer;
             GameEngine.CurrentPhase = phase;
+            CompanionSyncManager.SendPlayersUpdate(_config, _players);
 
             GameLog.Clear();
             foreach (var (idx, snapshot) in history)

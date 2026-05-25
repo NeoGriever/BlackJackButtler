@@ -1,0 +1,42 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace BlackJackButtler;
+
+public static class WorldNameManager
+{
+    public static readonly string[] AllWorldNames =
+    {
+        "Cerberus", "Louisoix", "Moogle", "Omega", "Phantom", "Ragnarok", "Sagittarius", "Spriggan",
+        "Alpha", "Lich", "Odin", "Phoenix", "Raiden", "Shiva", "Twintania", "Zodiark",
+        "Bismarck", "Ravana", "Sephirot", "Sophia", "Zurvan",
+        "Adamantoise", "Cactuar", "Faerie", "Gilgamesh", "Jenova", "Midgardsormr", "Sargatanas", "Siren",
+        "Balmung", "Brynhildr", "Coeurl", "Diabolos", "Goblin", "Malboro", "Mateus", "Zalera",
+        "Cuchulainn", "Golem", "Halicarnassus", "Kraken", "Maduin", "Marilith", "Rafflesia", "Seraph",
+        "Behemoth", "Excalibur", "Exodus", "Famfrit", "Hyperion", "Lamia", "Leviathan", "Ultros",
+        "Aegis", "Atomos", "Carbuncle", "Garuda", "Gungnir", "Kujata", "Tonberry", "Typhon",
+        "Alexander", "Bahamut", "Durandal", "Fenrir", "Ifrit", "Ridill", "Tiamat", "Ultima",
+        "Anima", "Asura", "Chocobo", "Hades", "Ixion", "Masamune", "Pandaemonium", "Titan",
+        "Belias", "Mandragora", "Ramuh", "Shinryu", "Unicorn", "Valefor", "Yojimbo", "Zeromus",
+    };
+
+    public static IReadOnlyList<string> SortedWorldNames { get; } = AllWorldNames
+        .OrderBy(w => w, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    public static bool TryCompletePrefix(string input, out string world)
+    {
+        world = string.Empty;
+        var trimmed = input.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed)) return false;
+
+        var matches = SortedWorldNames
+            .Where(w => w.StartsWith(trimmed, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (matches.Count != 1) return false;
+
+        world = matches[0];
+        return true;
+    }
+}

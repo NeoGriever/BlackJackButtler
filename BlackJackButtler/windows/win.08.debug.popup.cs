@@ -11,6 +11,7 @@ namespace BlackJackButtler.Windows;
 public class DebugLogWindow : Window
 {
     private readonly BlackJackButtlerWindow _main;
+    private int _lastChatEntryCount = -1;
 
     public DebugLogWindow(BlackJackButtlerWindow main) : base("BJB Chat Debug Popout")
     {
@@ -21,7 +22,11 @@ public class DebugLogWindow : Window
 
     public override void Draw()
     {
-        if (BJBGui.SmallButton("Clear Log")) { lock(_main.GetLogLock()) _main.GetDebugLog().Clear(); }
+        if (BJBGui.SmallButton("Clear Log"))
+        {
+            lock(_main.GetLogLock()) _main.GetDebugLog().Clear();
+            _lastChatEntryCount = 0;
+        }
 
         if (Plugin.IsDebugMode)
         {
@@ -46,15 +51,23 @@ public class DebugLogWindow : Window
             List<BlackJackButtlerWindow.DebugEntry> logCopy;
             lock (_main.GetLogLock()) logCopy = _main.GetDebugLog().ToList();
 
-            for (int i = logCopy.Count - 1; i >= 0; i--)
+            var chatEntryCount = 0;
+            for (int i = 0; i < logCopy.Count; i++)
             {
                 var entry = logCopy[i];
                 if (!entry.IsChat) continue;
+                chatEntryCount++;
 
                 var color = GetChannelColor(entry.Text);
                 if (color.HasValue) ImGui.PushStyleColor(ImGuiCol.Text, color.Value);
                 if (ImGui.Selectable($"{entry.Text}##pop_{i}")) ImGui.SetClipboardText(entry.Text);
                 if (color.HasValue) ImGui.PopStyleColor();
+            }
+
+            if (chatEntryCount != _lastChatEntryCount)
+            {
+                ImGui.SetScrollHereY(1.0f);
+                _lastChatEntryCount = chatEntryCount;
             }
         }
         ImGui.EndChild();
