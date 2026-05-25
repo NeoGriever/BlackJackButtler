@@ -38,7 +38,8 @@ public static class JoinQueueManager
 
     public static void Enqueue(string name, string world)
     {
-        if (_queue.Any(e => e.Name == name && e.World == world)) return;
+        if (_queue.Any(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+            && (string.IsNullOrWhiteSpace(world) || string.IsNullOrWhiteSpace(e.World) || e.World.Equals(world, StringComparison.OrdinalIgnoreCase)))) return;
         _queue.Add(new JoinQueueEntry
         {
             Name = name,
@@ -49,7 +50,8 @@ public static class JoinQueueManager
 
     public static void Dequeue(string name, string world)
     {
-        _queue.RemoveAll(e => e.Name == name && e.World == world);
+        _queue.RemoveAll(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+            && (string.IsNullOrWhiteSpace(world) || string.IsNullOrWhiteSpace(e.World) || e.World.Equals(world, StringComparison.OrdinalIgnoreCase)));
     }
 
     public static void Clear()
@@ -64,7 +66,8 @@ public static class JoinQueueManager
 
     public static bool IsQueued(string name, string world)
     {
-        return _queue.Any(e => e.Name == name && e.World == world);
+        return _queue.Any(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+            && (string.IsNullOrWhiteSpace(world) || string.IsNullOrWhiteSpace(e.World) || e.World.Equals(world, StringComparison.OrdinalIgnoreCase)));
     }
 
     public static void Tick(Configuration cfg)
@@ -80,17 +83,11 @@ public static class JoinQueueManager
 
     private static void UpdateOutOfRange(Configuration cfg)
     {
-        var local = Plugin.ObjectTable.LocalPlayer;
-        if (local == null) return;
-
-        var localPos = local.Position;
-
         for (int i = _queue.Count - 1; i >= 0; i--)
         {
             var entry = _queue[i];
-            var obj = FindPlayerObject(entry.Name, entry.World);
 
-            if (obj != null && Vector3.Distance(localPos, obj.Position) <= cfg.NearbyDistanceCap)
+            if (NearbyPlayersManager.IsPlayerInRange(entry.Name, entry.World, cfg))
             {
                 entry.OutOfRangeSince = null;
             }
@@ -156,7 +153,11 @@ public static class JoinQueueManager
                 if (currentTgt is IPlayerCharacter tgtPc)
                 {
                     var tgtKey = $"{tgtPc.Name.TextValue}@{tgtPc.HomeWorld.Value.Name}";
-                    if (tgtKey == _currentInviteName)
+                    var currentParts = _currentInviteName.Split('@');
+                    var currentName = currentParts.Length > 0 ? currentParts[0] : _currentInviteName;
+                    var currentWorld = currentParts.Length > 1 ? currentParts[1] : string.Empty;
+                    if (tgtPc.Name.TextValue.Equals(currentName, StringComparison.OrdinalIgnoreCase)
+                        && (string.IsNullOrWhiteSpace(currentWorld) || tgtKey.Equals(_currentInviteName, StringComparison.OrdinalIgnoreCase)))
                     {
                         ChatCommandRouter.Send("/pcmd add <t>", cfg, "JoinQueue");
                         _state = InviteState.SendingInvite;
@@ -212,7 +213,8 @@ public static class JoinQueueManager
         {
             if (obj.ObjectKind != ObjectKind.Pc) continue;
             if (obj is not IPlayerCharacter pc) continue;
-            if (pc.Name.TextValue == name && pc.HomeWorld.Value.Name.ToString() == world)
+            if (pc.Name.TextValue == name
+                && (string.IsNullOrWhiteSpace(world) || pc.HomeWorld.Value.Name.ToString() == world))
                 return pc;
         }
         return null;

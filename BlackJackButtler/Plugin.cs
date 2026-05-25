@@ -35,6 +35,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
+    [PluginService] internal static IPlayerState PlayerState { get; private set; } = null!;
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static IPartyList PartyList { get; private set; } = null!;
     [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
@@ -61,6 +62,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly DrawLogicDebugWindow drawLogicDebugWindow;
     private readonly NotepadWindow notepadWindow;
     private readonly CustomButtonBarWindow buttonBarWindow;
+    private readonly TablePopoutWindow tablePopoutWindow;
+    private readonly NearbyPopoutWindow nearbyPopoutWindow;
     private readonly UpdatePopupWindow updatePopupWindow;
     private readonly ImportantNoticeWindow importantNoticeWindow;
     private readonly BlacklistBannerWindow blacklistBannerWindow;
@@ -165,6 +168,26 @@ public sealed class Plugin : IDalamudPlugin
             () => mainWindow?.GetWindowRect() ?? (Vector2.Zero, Vector2.Zero), mainWindow);
         windowSystem.AddWindow(buttonBarWindow);
         if (Configuration.ButtonBarPopout) buttonBarWindow.IsOpen = true;
+
+        PresetStorage.Initialize(PluginInterface.GetPluginConfigDirectory());
+        if (Configuration.PresetsMigrated && PresetStorage.PresetsFileExists())
+        {
+            var loaded = PresetStorage.Load();
+            Configuration.Presets.Clear();
+            Configuration.Presets.AddRange(loaded);
+        }
+
+        // Popout-Zustand ist nur session-stabil — beim Plugin-Start immer geschlossen
+        Configuration.TablePopout  = false;
+        Configuration.NearbyPopout = false;
+
+        tablePopoutWindow = new TablePopoutWindow(Configuration, () => Configuration.Save(), mainWindow);
+        windowSystem.AddWindow(tablePopoutWindow);
+
+        nearbyPopoutWindow = new NearbyPopoutWindow(Configuration, () => Configuration.Save(), mainWindow);
+        windowSystem.AddWindow(nearbyPopoutWindow);
+
+        mainWindow.SetPopoutWindows(tablePopoutWindow, nearbyPopoutWindow);
 
         debugLogWindow = new DebugLogWindow(mainWindow);
         windowSystem.AddWindow(debugLogWindow);
@@ -468,12 +491,18 @@ public sealed class Plugin : IDalamudPlugin
             NearbyAlertManager.Update(nearby, Configuration);
         }
 
+        if (Configuration.ShowNearbyPlayers)
+        {
+            var nearby = NearbyPlayersManager.GetNearbyPlayers(Configuration);
+            NearbyAutoActManager.Update(nearby, Configuration);
+        }
+
         if (Configuration.EnableAutomation && Configuration.ShowAutoContinueButton
             && Configuration.AutoContinue && mainWindow.IsRecognitionActive)
         {
-            var phase = GameEngine.CurrentPhase;
-            if ((phase == GamePhase.Waiting || phase == GamePhase.Payout)
-                && !CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending && !_autoActionInFlight)
+            if (GameEngine.CanAcceptInterRoundDetectors()
+                && !CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending && !_autoActionInFlight
+                && !InsufficientBetQueueManager.IsProcessing)
             {
                 if (!_autoContinueWaiting)
                 {
@@ -487,9 +516,11 @@ public sealed class Plugin : IDalamudPlugin
                     var activePlayers = players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
                     if (activePlayers.Count >= 2 || !Configuration.AutostartRoundOnlyOnMultiplePlayers)
                     {
-                        if (GameEngine.HasPlayerUnableToCoverBet(activePlayers))
+                        var underfunded = activePlayers.Where(GameEngine.IsPlayerUnableToCoverBet).ToList();
+                        if (underfunded.Count > 0)
                         {
                             mainWindow.SetHighlightNewRound();
+                            InsufficientBetQueueManager.EnqueueMany(underfunded, Configuration, "AutoContinue");
                             mainWindow.AddDebugLog("[AutoContinue] Auto-start blocked: at least one active player cannot cover their bet.");
                             return;
                         }

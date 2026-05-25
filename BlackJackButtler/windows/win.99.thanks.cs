@@ -14,7 +14,6 @@ public partial class BlackJackButtlerWindow
         "Hadesyra Ravenshadow",
         "LG",
         "Amystra",
-        "Latency",
         "Saph",
         "Lydia",
         "Club: Calisto"
@@ -68,70 +67,92 @@ public partial class BlackJackButtlerWindow
         var nameColor = new Vector4(1.0f, 0.7f, 0.7f, 1.0f);
         var glowColor = new Vector4(0.8f, 0.0f, 0.0f, 0.3f);
 
-        var colWidth = windowWidth / 2f;
-        int half = (_thanksToNamesTesting.Count + 1) / 2;
-        var leftNames  = _thanksToNamesTesting.Take(half).ToList();
-        var rightNames = _thanksToNamesTesting.Skip(half).ToList();
+        int colCount = 3;
+        float colWidth = windowWidth / colCount;
+        int perCol = (_thanksToNamesTesting.Count + colCount - 1) / colCount;
+        var col1 = _thanksToNamesTesting.Take(perCol).ToList();
+        var col2 = _thanksToNamesTesting.Skip(perCol).Take(perCol).ToList();
+        var col3 = _thanksToNamesTesting.Skip(perCol * 2).ToList();
 
-        // Linke Spalte
-        ImGui.BeginGroup();
-        foreach (var name in leftNames)
+        void DrawNameColumn(List<string> names, float startX)
         {
-            var nameSize = ImGui.CalcTextSize(name);
-            var posX = (colWidth - nameSize.X) / 2f;
-
-            ImGui.SetCursorPosX(posX);
-            var cursorPos = ImGui.GetCursorScreenPos();
-            var textPos = new Vector2(cursorPos.X, cursorPos.Y);
-
-            var drawList = ImGui.GetWindowDrawList();
-            for (int ox = -2; ox <= 2; ox++)
-                for (int oy = -2; oy <= 2; oy++)
-                {
-                    if (ox == 0 && oy == 0) continue;
-                    drawList.AddText(new Vector2(textPos.X + ox, textPos.Y + oy),
-                                     ImGui.ColorConvertFloat4ToU32(glowColor), name);
-                }
-
-            ImGui.SetCursorPosX(posX);
-            ImGui.TextColored(nameColor, name);
-            ImGui.Spacing();
+            ImGui.BeginGroup();
+            foreach (var name in names)
+            {
+                var nameSize = ImGui.CalcTextSize(name);
+                var posX = startX + (colWidth - nameSize.X) / 2f;
+                ImGui.SetCursorPosX(posX);
+                var cursorPos = ImGui.GetCursorScreenPos();
+                var drawList2 = ImGui.GetWindowDrawList();
+                for (int ox = -2; ox <= 2; ox++)
+                    for (int oy = -2; oy <= 2; oy++)
+                    {
+                        if (ox == 0 && oy == 0) continue;
+                        drawList2.AddText(new Vector2(cursorPos.X + ox, cursorPos.Y + oy),
+                            ImGui.ColorConvertFloat4ToU32(glowColor), name);
+                    }
+                ImGui.SetCursorPosX(posX);
+                ImGui.TextColored(nameColor, name);
+                ImGui.Spacing();
+            }
+            ImGui.EndGroup();
         }
-        ImGui.EndGroup();
 
+        DrawNameColumn(col1, 0f);
         ImGui.SameLine(colWidth);
+        DrawNameColumn(col2, colWidth);
+        ImGui.SameLine(colWidth * 2);
+        DrawNameColumn(col3, colWidth * 2);
 
-        // Rechte Spalte
-        ImGui.BeginGroup();
-        foreach (var name in rightNames)
-        {
-            var nameSize = ImGui.CalcTextSize(name);
-            var posX = colWidth + (colWidth - nameSize.X) / 2f;
-
-            ImGui.SetCursorPosX(posX);
-            var cursorPos = ImGui.GetCursorScreenPos();
-            var textPos = new Vector2(cursorPos.X, cursorPos.Y);
-
-            var drawList = ImGui.GetWindowDrawList();
-            for (int ox = -2; ox <= 2; ox++)
-                for (int oy = -2; oy <= 2; oy++)
-                {
-                    if (ox == 0 && oy == 0) continue;
-                    drawList.AddText(new Vector2(textPos.X + ox, textPos.Y + oy),
-                                     ImGui.ColorConvertFloat4ToU32(glowColor), name);
-                }
-
-            ImGui.SetCursorPosX(posX);
-            ImGui.TextColored(nameColor, name);
-            ImGui.Spacing();
-        }
-        ImGui.EndGroup();
-
-        ImGui.Spacing();
         ImGui.Spacing();
         ImGui.Spacing();
         ImGui.Separator();
-        ImGui.SetWindowFontScale(1.5f);
+        ImGui.Spacing();
+
+        // Zwischen-Text
+        var grayColor = new Vector4(0.55f, 0.55f, 0.55f, 1.0f);
+        var accentColor = new Vector4(0.9f, 0.7f, 0.3f, 1.0f);
+
+        List<string> projectLines = new()
+        {
+            "This project is a deep hobby project. I put a lot of effort into this and try to make every",
+            "feature as stable as possible. The BlackJack Butler is not 100% perfect yet. But I do my best.",
+            "If you want to support me, please consider joining my Discord and/or tipping me.",
+            "It's not required, but I would appreciate it."
+        };
+        foreach (var line in projectLines)
+        {
+            var ls = ImGui.CalcTextSize(line);
+            ImGui.SetCursorPosX((windowWidth - ls.X) / 2f);
+            ImGui.TextColored(grayColor, line);
+        }
+
+        ImGui.Spacing();
+        var discordLabel = "[Join my Discord]";
+        var discordSize = ImGui.CalcTextSize(discordLabel);
+        ImGui.SetCursorPosX((windowWidth - discordSize.X - ImGui.CalcTextSize("  ").X - ImGui.CalcTextSize("[or tip me]").X) / 2f);
+        ImGui.TextColored(accentColor, discordLabel);
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (ImGui.IsItemClicked())
+                Dalamud.Utility.Util.OpenLink("https://discord.gg/HBh4nSbuJp");
+        }
+        ImGui.SameLine();
+        ImGui.TextColored(grayColor, "  or  ");
+        ImGui.SameLine();
+        ImGui.TextColored(accentColor, "[tip me]");
+        if (ImGui.IsItemHovered())
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (ImGui.IsItemClicked())
+                Dalamud.Utility.Util.OpenLink("https://buymeacoffee.com/mindconstructor");
+        }
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.Spacing();
 
         ImGui.PushFont(ImGui.GetFont());
         ImGui.SetWindowFontScale(1.5f);

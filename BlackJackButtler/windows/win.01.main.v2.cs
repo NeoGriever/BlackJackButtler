@@ -18,25 +18,23 @@ public partial class BlackJackButtlerWindow
         DrawCustomButtonBarV2();
         DrawAutoContinueBarV2();
 
-        ImGui.Spacing();
-        DrawDealerPanelV2();
+        if (!_config.TablePopout)
+        {
+            ImGui.Spacing();
+            DrawDealerPanelV2();
+            ImGui.Spacing();
+            DrawPlayersPanelV2();
+        }
 
-        ImGui.Spacing();
-        DrawPlayersPanelV2();
+        if (!_config.NearbyPopout)
+            DrawNearbyPlayersSection(true);
 
-        DrawNearbyPlayersSection(true);
         DrawMainSharedPopupsV2();
     }
 
     private void DrawMainHeaderV2()
     {
-        ImGui.TextColored(new Vector4(1f, 0.65f, 0.2f, 1f), $"Phase: {GameEngine.CurrentPhase}");
-        ImGui.SameLine();
-        ImGui.TextDisabled("Main View V2");
-
-        DrawSessionControlsV2();
-        DrawAutomationControlsV2();
-        DrawRoundUtilityControlsV2();
+        DrawCompactHeaderRowV2();
 
         if (IsRecognitionActive && !IsLocalPlayerPartyLeader())
         {
@@ -61,14 +59,25 @@ public partial class BlackJackButtlerWindow
         }
     }
 
-    private void DrawSessionControlsV2()
-    {
-        ImGui.Spacing();
-        ImGui.TextDisabled("Session");
-        ImGui.SameLine();
+    private const float _v2BtnW = 52f;
 
-        var reconText = IsRecognitionActive ? "Group Detector: ON" : "Group Detector: OFF";
-        if (BJBGui.Button(reconText, new Vector2(170, 0)))
+    private void DrawCompactHeaderRowV2()
+    {
+        // Status-Indikator oben rechts
+        var phaseText = GameEngine.CurrentPhase.ToString();
+        var phaseSize = ImGui.CalcTextSize(phaseText);
+        var savedCursor = ImGui.GetCursorPos();
+        ImGui.SetCursorPos(new Vector2(ImGui.GetWindowWidth() - phaseSize.X - 10f, savedCursor.Y + 2f));
+        ImGui.TextColored(new Vector4(1f, 0.65f, 0.2f, 1f), phaseText);
+        ImGui.SetCursorPos(savedCursor);
+
+        // Open / Closed
+        bool isOn = IsRecognitionActive;
+        if (isOn)
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.15f, 0.55f, 0.15f, 1f));
+        else
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.30f, 0.30f, 0.30f, 1f));
+        if (BJBGui.Button(isOn ? "Open##v2_recon" : "Closed##v2_recon", new Vector2(64f, 0)))
         {
             IsRecognitionActive = !IsRecognitionActive;
             if (IsRecognitionActive)
@@ -81,7 +90,7 @@ public partial class BlackJackButtlerWindow
             {
                 if (!StatsManager.IsRunning)
                     SessionManager.ClearSession();
-                _players.RemoveAll(p => !p.IsActivePlayer && p.Bank == 0);
+                RemovePlayersWithCompanionErase(p => !p.IsActivePlayer && p.Bank == 0);
                 AddDebugLog(StatsManager.IsRunning
                     ? "[SessionManager] Session retained for active stats (Group Detector deactivated)"
                     : "[SessionManager] Session cleared (Group Detector deactivated)", false);
@@ -89,37 +98,157 @@ public partial class BlackJackButtlerWindow
                     SaveSessionFromUI();
                 _groupDetectorActivatedAt = null;
             }
-
             Plugin.Instance.UpdateEventHooks();
         }
+        ImGui.PopStyleColor();
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(isOn ? "Group Detector: ON — click to deactivate" : "Group Detector: OFF — click to activate");
 
-        if (!IsRecognitionActive)
-            DrawCleanDataButtonV2();
-
-        if (IsRecognitionActive && !StatsManager.IsRunning && _groupDetectorActivatedAt.HasValue)
+        // Clear (nur bei Residual-Daten)
+        bool hasResidualData =
+            _players.Any(p => !p.IsDebugPlayer)
+            || _dealer.Hands.Any(h => h.Cards.Count > 0)
+            || DrawLogicDebugManager.DebugHands.Any(h => h.Cards.Count > 0)
+            || DrawLogicDebugManager.ValidScriptCache.Count > 0;
+        if (!IsRecognitionActive && hasResidualData)
         {
-            double elapsed = (DateTime.Now - _groupDetectorActivatedAt.Value).TotalSeconds;
-            if (elapsed < 30)
+            ImGui.SameLine();
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.55f, 0.30f, 0.05f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.75f, 0.40f, 0.10f, 1f));
+            if (BJBGui.Button("Clear##v2_clean_residual", new Vector2(_v2BtnW, 0)))
+            {
+                _openCleanDataPopup = true;
+                ImGui.OpenPopup("bjb.clean_data.confirm.v2");
+            }
+            ImGui.PopStyleColor(2);
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Clean players and DrawLogic debug data left over while Group Detector is off.");
+        }
+
+        // Automation-Buttons (nur wenn Automation aktiviert)
+        if (_config.EnableAutomation)
+        {
+            if (_config.ShowAutoPlayerHandButton)
             {
                 ImGui.SameLine();
-                int secondsLeft = 30 - (int)elapsed;
-                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.1f, 0.5f, 0.1f, 1f));
-                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.15f, 0.65f, 0.15f, 1f));
-                if (BJBGui.Button($"Start Bank ({secondsLeft}s)##v2_groupdetect_startbank", new Vector2(150, 0)))
-                {
-                    StatsManager.StartSession();
-                    SaveSessionFromUI();
-                    _groupDetectorActivatedAt = null;
-                }
-                ImGui.PopStyleColor(2);
-                if (ImGui.IsItemHovered())
-                    ImGui.SetTooltip("Start the stats session with the current bank.");
+                DrawCompactToggleV2("APH##v2_aph", ref _config.AutoInitialDeal, "Auto Player Hand", _v2BtnW);
             }
-            else
+            else _config.AutoInitialDeal = false;
+
+            if (_config.ShowAutoDealerDrawButton)
             {
-                _groupDetectorActivatedAt = null;
+                ImGui.SameLine();
+                DrawCompactToggleV2("ADD##v2_add", ref _config.AutoDealerDraw,
+                    $"Auto Dealer Draw (until {(_config.DealerSoftRule ? "soft" : "hard")} {_config.DealerDrawsUntil})", _v2BtnW);
             }
+            else _config.AutoDealerDraw = false;
+
+            if (_config.ShowAutoContinueButton)
+            {
+                ImGui.SameLine();
+                DrawCompactToggleV2("AC##v2_ac", ref _config.AutoContinue,
+                    $"Auto Continue (after {_config.AutoContinueDelay:0}s)", _v2BtnW);
+            }
+            else _config.AutoContinue = false;
+
+            bool hasAutoTriggers = _config.UserRegexes.Any(r =>
+                r.Enabled && r.Mode == RegexEntryMode.Trigger &&
+                (r.Action == RegexAction.WantHit || r.Action == RegexAction.WantStand ||
+                 r.Action == RegexAction.WantDD || r.Action == RegexAction.WantSplit));
+            if (hasAutoTriggers && _config.ShowAutoRunButton)
+            {
+                ImGui.SameLine();
+                bool prevAutoRun = _config.AutoRun;
+                DrawCompactToggleV2("AR##v2_ar", ref _config.AutoRun, "Auto Run", _v2BtnW);
+                if (_config.AutoRun != prevAutoRun)
+                    Plugin.Instance.ResetAutoActionState(cancelCurrentGroup: !_config.AutoRun);
+            }
+            else _config.AutoRun = false;
         }
+
+        // BNK
+        ImGui.SameLine();
+        bool canTell = GameEngine.CanAcceptInterRoundDetectors();
+        if (!canTell) ImGui.BeginDisabled();
+        if (BJBGui.Button("BNK##v2_bnk", new Vector2(_v2BtnW, 0)))
+        {
+            var snapshot = _players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
+            BankTellQueueManager.EnqueueMany(snapshot, _config, "MainV2All");
+        }
+        if (!canTell) ImGui.EndDisabled();
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Bank /tell cycle");
+
+        // STOP
+        ImGui.SameLine();
+        if (CommandExecutor.IsRunning)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.7f, 0.0f, 0.0f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.9f, 0.1f, 0.1f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.5f, 0.0f, 0.0f, 1.0f));
+            if (BJBGui.Button("STOP##v2_stop", new Vector2(_v2BtnW, 0)))
+                CommandExecutor.CancelCurrentGroup();
+            ImGui.PopStyleColor(3);
+        }
+        else
+        {
+            ImGui.BeginDisabled();
+            ImGui.Button("STOP##v2_stop_dis", new Vector2(_v2BtnW, 0));
+            ImGui.EndDisabled();
+        }
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Stop currently running commands");
+
+        // Table Popout — Snapshot VOR dem Button, damit Push/Pop immer übereinstimmen
+        ImGui.SameLine();
+        bool tblOn = _config.TablePopout;
+        if (tblOn) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
+        if (BJBGui.Button("Tbl##v2_tbl", new Vector2(_v2BtnW, 0)))
+        {
+            _config.TablePopout = !_config.TablePopout;
+            if (_tablePopoutWindow != null) _tablePopoutWindow.IsOpen = _config.TablePopout;
+            _save();
+        }
+        if (tblOn) ImGui.PopStyleColor();
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(tblOn
+            ? "Table is open in popup — click to close"
+            : "Open dealer/player table as popup window");
+
+        // Nearby Popout — gleicher Snapshot-Fix
+        ImGui.SameLine();
+        bool nbyOn = _config.NearbyPopout;
+        if (nbyOn) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
+        if (BJBGui.Button("Nby##v2_nby", new Vector2(_v2BtnW, 0)))
+        {
+            _config.NearbyPopout = !_config.NearbyPopout;
+            if (_nearbyPopoutWindow != null) _nearbyPopoutWindow.IsOpen = _config.NearbyPopout;
+            _save();
+        }
+        if (nbyOn) ImGui.PopStyleColor();
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(nbyOn
+            ? "Nearby Players is open in popup — click to close"
+            : "Open Nearby Players as popup window");
+
+        // PANIC (nur bei Ctrl+Shift)
+        var io = ImGui.GetIO();
+        if (io.KeyCtrl && io.KeyShift)
+        {
+            ImGui.SameLine();
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.5f, 0.0f, 0.0f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.65f, 0.0f, 0.0f, 1.0f));
+            if (BJBGui.Button("PANIC##v2_panic", new Vector2(_v2BtnW, 0)))
+                _panicConfirmStage = 1;
+            ImGui.PopStyleColor(2);
+        }
+    }
+
+    private void DrawCompactToggleV2(string id, ref bool value, string tooltip, float width)
+    {
+        bool wasOn = value;
+        if (wasOn) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
+        if (BJBGui.Button(id, new Vector2(width, 0)))
+        {
+            value = !value;
+            _save();
+        }
+        if (wasOn) ImGui.PopStyleColor();
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip(tooltip);
     }
 
     private void DrawCleanDataButtonV2()
@@ -134,7 +263,7 @@ public partial class BlackJackButtlerWindow
         ImGui.SameLine();
         ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.55f, 0.30f, 0.05f, 1f));
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.75f, 0.40f, 0.10f, 1f));
-        if (BJBGui.Button("Clean Data##v2_clean_residual", new Vector2(130, 0)))
+        if (BJBGui.Button("Clear##v2_clean_residual_legacy", new Vector2(130, 0)))
         {
             _openCleanDataPopup = true;
             ImGui.OpenPopup("bjb.clean_data.confirm.v2");
@@ -142,158 +271,6 @@ public partial class BlackJackButtlerWindow
         ImGui.PopStyleColor(2);
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Clean players and DrawLogic debug data left over while Group Detector is off.");
-    }
-
-    private void DrawAutomationControlsV2()
-    {
-        ImGui.Spacing();
-        ImGui.TextDisabled("Automation");
-        if (!_config.EnableAutomation)
-        {
-            ImGui.SameLine();
-            ImGui.TextDisabled("disabled");
-            return;
-        }
-
-        bool anyButton = false;
-        if (_config.ShowAutoPlayerHandButton)
-        {
-            ImGui.SameLine();
-            DrawToggleButtonV2("Player Hand", ref _config.AutoInitialDeal, "Automatically deals initial player hands.");
-            anyButton = true;
-        }
-        else _config.AutoInitialDeal = false;
-
-        if (_config.ShowAutoDealerDrawButton)
-        {
-            ImGui.SameLine();
-            DrawToggleButtonV2("Dealer Draw", ref _config.AutoDealerDraw,
-                $"Dealer draws until {(_config.DealerSoftRule ? "soft" : "hard")} {_config.DealerDrawsUntil}.");
-            anyButton = true;
-        }
-        else _config.AutoDealerDraw = false;
-
-        if (_config.ShowAutoContinueButton)
-        {
-            ImGui.SameLine();
-            DrawToggleButtonV2("Auto Continue", ref _config.AutoContinue,
-                $"Starts the next round after {_config.AutoContinueDelay:0}s of no chat activity.");
-            anyButton = true;
-        }
-        else _config.AutoContinue = false;
-
-        bool hasAutoTriggers = _config.UserRegexes.Any(r =>
-            r.Enabled && r.Mode == RegexEntryMode.Trigger &&
-            (r.Action == RegexAction.WantHit || r.Action == RegexAction.WantStand ||
-             r.Action == RegexAction.WantDD || r.Action == RegexAction.WantSplit));
-        if (hasAutoTriggers && _config.ShowAutoRunButton)
-        {
-            ImGui.SameLine();
-            DrawToggleButtonV2("Auto Run", ref _config.AutoRun,
-                "Executes player action triggers automatically.");
-            anyButton = true;
-        }
-        else _config.AutoRun = false;
-
-        if (!anyButton)
-        {
-            ImGui.SameLine();
-            ImGui.TextDisabled("no visible buttons");
-        }
-    }
-
-    private void DrawToggleButtonV2(string label, ref bool value, string tooltip)
-    {
-        if (value) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
-        if (BJBGui.Button($"{(value ? "ON" : "OFF")} {label}##v2_toggle_{label}"))
-        {
-            value = !value;
-            _save();
-        }
-        if (value) ImGui.PopStyleColor();
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip(tooltip);
-    }
-
-    private void DrawRoundUtilityControlsV2()
-    {
-        ImGui.Spacing();
-        ImGui.TextDisabled("Round Tools");
-        ImGui.SameLine();
-
-        DrawBankTellAllButtonV2();
-        ImGui.SameLine();
-        DrawStopButtonV2();
-        DrawNotepadButtonV2();
-        ImGui.SameLine();
-        if (ImGui.Checkbox("Bank input##v2_enable_bank_input", ref _config.EnableBankInput)) _save();
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Enable Bank input");
-
-        var io = ImGui.GetIO();
-        if (io.KeyCtrl && io.KeyShift)
-        {
-            ImGui.SameLine();
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.5f, 0.0f, 0.0f, 1.0f));
-            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.65f, 0.0f, 0.0f, 1.0f));
-            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f));
-            if (ImGui.Button("PANIC##v2_panic_btn", new Vector2(70, 0)))
-                _panicConfirmStage = 1;
-            ImGui.PopStyleColor(3);
-        }
-    }
-
-    private void DrawBankTellAllButtonV2()
-    {
-        var tellPhase = GameEngine.CurrentPhase;
-        bool canTell = tellPhase == GamePhase.Waiting || tellPhase == GamePhase.Payout;
-        if (!canTell) ImGui.BeginDisabled();
-        if (BJBGui.Button("Bank /tell##v2_banktell_all"))
-        {
-            var snapshot = _players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
-            BankTellQueueManager.EnqueueMany(snapshot, _config, "MainV2All");
-        }
-        if (!canTell) ImGui.EndDisabled();
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Post bank/bet info for all active players to party chat");
-    }
-
-    private void DrawStopButtonV2()
-    {
-        if (!CommandExecutor.IsRunning)
-        {
-            ImGui.TextDisabled("STOP");
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("No command group is running.");
-            return;
-        }
-
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.7f, 0.0f, 0.0f, 1.0f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.9f, 0.1f, 0.1f, 1.0f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.5f, 0.0f, 0.0f, 1.0f));
-        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f));
-        if (ImGui.Button("STOP##v2_stop_commands"))
-            CommandExecutor.CancelCurrentGroup();
-        ImGui.PopStyleColor(4);
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Stop currently running commands");
-    }
-
-    private void DrawNotepadButtonV2()
-    {
-        if (_notepadWindow.IsOpen)
-        {
-            if (BJBGui.Button("X##v2_notepad_close_btn", new Vector2(ImGui.GetFrameHeight(), 0)))
-                _notepadWindow.IsOpen = false;
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Close Notepad");
-            return;
-        }
-
-        ImGui.PushFont(UiBuilder.IconFont);
-        if (BJBGui.Button(FontAwesomeIcon.StickyNote.ToIconString() + "##v2_notepad_btn", new Vector2(ImGui.GetFrameHeight(), 0)))
-        {
-            if (!_notepadLoaded) { _notepadLoaded = true; _notepadWindow.LoadContent(); }
-            _notepadWindow.IsOpen = true;
-        }
-        ImGui.PopFont();
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Open Notepad");
     }
 
     private void DrawCustomButtonBarV2()
@@ -340,11 +317,9 @@ public partial class BlackJackButtlerWindow
         ImGui.Dummy(new Vector2(availWidth, barHeight));
     }
 
-    private void DrawDealerPanelV2()
+    internal void DrawDealerPanelV2(string idSuffix = "")
     {
-        ImGui.TextColored(new Vector4(1f, 0.65f, 0.2f, 1f), "Table");
-        ImGui.Separator();
-        if (ImGui.BeginTable("bjb_dealer_table_v2", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+        if (ImGui.BeginTable($"bjb_dealer_table_v2{idSuffix}", 4, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
         {
             ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, 170);
             ImGui.TableSetupColumn("Cards", ImGuiTableColumnFlags.WidthStretch, 1.0f);
@@ -357,10 +332,10 @@ public partial class BlackJackButtlerWindow
         }
     }
 
-    private void DrawPlayersPanelV2()
+    internal void DrawPlayersPanelV2(string idSuffix = "")
     {
         _partyDissolved = _players.Count > 0 && !_players.Any(x => x.IsInParty);
-        if (ImGui.BeginTable("bjb_main_table_v2", 10, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
+        if (ImGui.BeginTable($"bjb_main_table_v2{idSuffix}", 11, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
         {
             SetupTableColumns();
             ImGui.TableHeadersRow();
@@ -369,13 +344,16 @@ public partial class BlackJackButtlerWindow
             foreach (var player in playerSnapshot)
             {
                 ImGui.TableNextRow();
+                ApplyPlayerRowBackground(player);
                 DrawPlayerRow(player, false);
             }
             ImGui.EndTable();
         }
     }
 
-    private void DrawMainSharedPopupsV2()
+    internal void TriggerPanicStage1() => _panicConfirmStage = 1;
+
+    internal void DrawMainSharedPopupsV2()
     {
         if (_triggerAliasPopup)
         {
@@ -403,7 +381,7 @@ public partial class BlackJackButtlerWindow
         if (BJBGui.Button("Yes, clean##v2_clean_yes", new Vector2(160, 0)))
         {
             Chat.GameLog.PushSnapshot(_players, _dealer, GameEngine.CurrentPhase, "CleanData");
-            _players.RemoveAll(p => !p.IsDebugPlayer);
+            RemovePlayersWithCompanionErase(p => !p.IsDebugPlayer);
             _dealer.Hands.Clear();
             DrawLogicDebugManager.Reset();
             Regex.RegexEngine.ClearNextRoundVotes();

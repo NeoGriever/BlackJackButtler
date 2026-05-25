@@ -9,6 +9,7 @@ namespace BlackJackButtler;
 public enum UserLevel { Beginner, Advanced, Dev, Custom }
 public enum BlackjackTieRule { AlwaysPush, PlayerNatBJWins, DealerNatBJWins, NatBJBeatsDirty }
 public enum NearbyAlertSoundMode { Iterative, Random, FirstOnly }
+public enum NearbyShapeMode { Circle, Rectangle }
 public enum ButtonBarLayout { Horizontal, Vertical }
 public enum BetLimitEntryKind { MinBet, Vip }
 
@@ -36,11 +37,16 @@ public sealed class Configuration : IPluginConfiguration
     public int CharlieCardCount = 5;
     public bool CharlieInstantWin = true;
     public bool EnableBankInput = false;
+    public string AutoBetPostCommandName = "";
+    public string InsufficientBetCommandName = "";
     public float CommandSpeedMultiplier = 1.0f;
     public bool UnlockWaitTimer = false;
     public bool OpenDropboxInsteadOfTrade = true;
     public bool DelaySecondSnapping = true;
     public float RecallUnlockSeconds = 20f;
+    public bool EnableCompanionSync = false;
+    public string CompanionServerAddress = "http://127.0.0.1:8000";
+    public int CompanionTimeoutMs = 200;
 
     public List<CommandGroup> CommandGroups = new();
     public List<CommandGroup> CustomCommandGroups = new();
@@ -120,6 +126,21 @@ public sealed class Configuration : IPluginConfiguration
     public bool NoAutoDequeue = false;
     public bool NearbyAlwaysShowCircle = false;
     public string NearbyQuestionCommandName = string.Empty;
+    public bool NearbyShowFootNumbers = true;
+    public float NearbyOffsetX = 0f;
+    public float NearbyOffsetZ = 0f;
+    public NearbyShapeMode NearbyShape = NearbyShapeMode.Circle;
+    public float NearbyRectangleAspectRatio = 1f;
+    public float NearbyRectangleRotation = 0f;
+    public bool NearbyUseFixedPosition = false;
+    public float NearbyFixedCenterX = 0f;
+    public float NearbyFixedCenterY = 0f;
+    public float NearbyFixedCenterZ = 0f;
+    public bool NearbyFixedCenterCaptured = false;
+    public bool NearbyAutoActEnabled = false;
+    public string NearbyAutoActCommandName = string.Empty;
+    public float NearbyAutoActTimeoutMinutes = 120f;
+    public List<string> NearbyAutoActIgnoreList = new();
 
     public bool AutoContinue = false;
     public float AutoContinueDelay = 30f;
@@ -158,6 +179,11 @@ public sealed class Configuration : IPluginConfiguration
     public bool DotTokenMigrated = false;
     public bool NotifyGroupsMigrated = false;
     public string DrawLogicScriptDir = "";
+
+    public bool TablePopout = false;
+    public bool NearbyPopout = false;
+    public bool HideThanksPage = false;
+    public bool PresetsMigrated = false;
 
     public float DrawLogicScale = 1.0f;
     public float DrawLogicOffsetX = 0.0f;
@@ -228,6 +254,28 @@ public sealed class Configuration : IPluginConfiguration
                 p.CommandsCheckboxMigrated = true;
                 changed = true;
             }
+            if (!p.SettingsCategoryMigrated)
+            {
+                p.ApplySettingsGeneral = p.ApplySettings;
+                p.ApplySettingsAutomation = p.ApplySettings;
+                p.ApplySettingsRules = p.ApplySettings;
+                p.ApplySettingsBetting = p.ApplySettings;
+                p.ApplySettingsTimeDelay = p.ApplySettings;
+                p.ApplySettingsMessageSettings = p.ApplySettings;
+                p.ApplySettingsNearbyPlayers = p.ApplySettings;
+                p.ApplySettingsVisual = p.ApplySettings;
+                p.ApplySettingsSystem = false;
+                p.ApplyDrawLogic = false;
+                p.SettingsCategoryMigrated = true;
+                changed = true;
+            }
+            if (!p.MessagesCategoryMigrated)
+            {
+                p.ApplyMessagesDefault = p.ApplyMessages;
+                p.ApplyMessagesCustom = p.ApplyMessages;
+                p.MessagesCategoryMigrated = true;
+                changed = true;
+            }
         }
         if (string.IsNullOrEmpty(ActivePresetId) && !string.IsNullOrEmpty(ActivePresetName))
         {
@@ -241,7 +289,20 @@ public sealed class Configuration : IPluginConfiguration
         return changed;
     }
 
-    public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
+    public void Save()
+    {
+        if (PresetsMigrated && Presets.Count > 0)
+        {
+            var snapshot = Presets.ToList();
+            Presets.Clear();
+            Plugin.PluginInterface.SavePluginConfig(this);
+            Presets.AddRange(snapshot);
+        }
+        else
+        {
+            Plugin.PluginInterface.SavePluginConfig(this);
+        }
+    }
 }
 
 public enum SelectionMode { Random, First, Iterative }
@@ -307,14 +368,40 @@ public sealed class PresetEntry
     public string Name = "New Preset";
     public string PresetId = string.Empty;
 
+    // Legacy-Flags (für Migration erhalten)
     public bool ApplySettings = true;
     public bool ApplyCommands = true;
+    public bool ApplyMessages = true;
+
+    // Granulare Kategorien
+    public bool ApplyRegexes = true;
+    public bool ApplyMessagesDefault = true;
+    public bool ApplyMessagesCustom = true;
     public bool ApplyStandardCommands = true;
     public bool ApplyOwnButtons = true;
-    public bool ApplyMessages = true;
-    public bool ApplyRegexes  = true;
+    public bool ApplySettingsGeneral = true;
+    public bool ApplySettingsAutomation = true;
+    public bool ApplySettingsRules = true;
+    public bool ApplySettingsBetting = true;
+    public bool ApplySettingsTimeDelay = true;
+    public bool ApplySettingsMessageSettings = true;
+    public bool ApplySettingsNearbyPlayers = true;
+    public bool ApplySettingsVisual = true;
+    public bool ApplySettingsSystem = false;
+    public bool ApplyDrawLogic = false;
 
+    // Zeitstempel & Reihenfolge
+    public DateTime CreatedAt = DateTime.UtcNow;
+    public DateTime UpdatedAt = DateTime.UtcNow;
+    public int SortOrder = 0;
+
+    // Migrations-Flags
     public bool CommandsCheckboxMigrated = false;
+    public bool SettingsCategoryMigrated = false;
+    public bool MessagesCategoryMigrated = false;
+
+    // Optionale Titelfarbe (null = automatisch aus Checkbox-Kombination berechnet)
+    public Vector4? CustomTitleColor = null;
 
     public string SnapshotJson = "{}";
 }

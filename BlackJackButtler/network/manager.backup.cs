@@ -138,7 +138,7 @@ public static class SessionManager
         out int currentHistoryIndex)
     {
         players = new List<PlayerState>();
-        dealer = new PlayerState { Name = "Dealer", IsActivePlayer = true };
+        dealer = new PlayerState { Name = "Dealer", IsActivePlayer = true, IsDealer = true };
         phase = GamePhase.Waiting;
         history = new List<(int, GameSnapshot)>();
         currentHistoryIndex = 0;

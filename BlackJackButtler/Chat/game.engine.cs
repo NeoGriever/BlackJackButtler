@@ -190,7 +190,7 @@ public static partial class GameEngine
             return;
         }
 
-        CurrentPhase = GamePhase.Payout;
+        BeginPayoutOutput();
 
         int dealerScore = dealer.GetBestScore(0);
         bool dealerBust = dealer.Hands.Count > 0 && dealer.Hands[0].IsBust;
@@ -378,6 +378,10 @@ public static partial class GameEngine
         RoundLogManager.AddRound(dealer, players, cfg);
 
         SaveSessionIfNeeded(players);
+        dealer.IsCurrentTurn = false;
+        CompanionSyncManager.SendPlayerUpdate(cfg, dealer);
+        CompanionSyncManager.SendPlayersUpdate(cfg, players.Where(x => x.IsActivePlayer));
+        MarkPayoutOutputComplete();
     }
 
     private static string FormatResultCategory(List<string> names, string singular, string plural)

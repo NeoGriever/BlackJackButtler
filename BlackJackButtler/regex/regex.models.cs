@@ -39,6 +39,8 @@ public enum RegexAction
     NextRound,
     BankTell,
     ExecuteOwnButton,
+    SetBet,
+    InviteNearby,
 }
 
 [Serializable]
@@ -52,4 +54,5 @@ public sealed class UserRegexEntry
     [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
     public List<string> Patterns = new() { "" };
     public bool CaseSensitive = false;
+    public bool ApplyToTells = false;
 }

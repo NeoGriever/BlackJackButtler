@@ -13,12 +13,46 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.8.2.2\n" +
+        "v1.8.3.1 — Changes since v1.8.2.1\n" +
         "\n" +
-        "- Fix: Custom edit mode no longer corrupts the ImGui style stack when toggled\n" +
-        "- Fix: Main window layout now clamps child and restore-button sizes to valid values\n" +
-        "- Fix: Child windows are now always closed correctly even when ImGui skips drawing their contents\n" +
-        "- Fix: MP3 sound files now play correctly via dedicated Mp3FileReader\n";
+        "Fixes carried over from v1.8.2.2:\n" +
+        "- Fix: ImGui style stack corruption when toggling custom edit mode\n" +
+        "- Fix: Main window layout clamps child/restore-button sizes to valid values\n" +
+        "- Fix: Child windows now close correctly when ImGui skips drawing their contents\n" +
+        "- Fix: MP3 sound files now play correctly via dedicated Mp3FileReader\n" +
+        "\n" +
+        "Main Tab UI:\n" +
+        "- Feature: Compact single-line header row (V2 layout)\n" +
+        "- Feature: Table Popout — dealer & player table as separate floating window\n" +
+        "- Feature: Nearby Players Popout — nearby list as separate floating window\n" +
+        "- Feature: [Tbl] / [Nby] toggle buttons in Main tab header\n" +
+        "- Fix: Table popout CLR crash — ImGui popup context isolation\n" +
+        "- Fix: Popout windows no longer auto-open on plugin load (session-only)\n" +
+        "\n" +
+        "Preset System:\n" +
+        "- Feature: Preset migration to a separate presets.json file\n" +
+        "- Feature: Granular apply-categories (15 checkboxes per preset)\n" +
+        "- Feature: Created / Updated timestamps per preset\n" +
+        "- Feature: Sort order management via up/down arrows\n" +
+        "- Feature: Collapsible entries with compact color-coded checkboxes\n" +
+        "- Feature: \"Use\" button in header row with Yes/No confirmation\n" +
+        "- Feature: \"Upd\" button with Yes/No confirmation and 2s safety delay\n" +
+        "- Feature: \"Dup\" (Duplicate) button with Yes/No confirmation\n" +
+        "- Feature: Command preview (Dealer Draw / Player Draw / Player Hit simulation)\n" +
+        "- Feature: Auto-derived title color from active category combination\n" +
+        "- Feature: Custom title color override with color picker and reset\n" +
+        "- Fix: Preset migration no longer causes presets to disappear\n" +
+        "- Fix: Preset update popup window context mismatch resolved\n" +
+        "- Fix: Preset update now correctly respects enabled category checkboxes\n" +
+        "- Fix: Preset sort order normalization on load\n" +
+        "\n" +
+        "Player Table:\n" +
+        "- Feature: Player controls row shifts down for multi-hand sessions (Hand 2+)\n" +
+        "- Feature: Auto-Ready (R) column added to player table\n" +
+        "\n" +
+        "────────────────────────────────────────────────\n" +
+        "Searching for active testers for beta-versions before release.\n" +
+        "Join the Discord server for more informations or questions about this.\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",

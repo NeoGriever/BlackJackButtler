@@ -15,19 +15,7 @@ public static class TradeManager
     private static bool _committed;
     private static DateTime? _closedAtUtc;
 
-    private static readonly string[] AllWorldNames = {
-        "Cerberus", "Louisoix", "Moogle", "Omega", "Phantom", "Ragnarok", "Sagittarius", "Spriggan",
-        "Alpha", "Lich", "Odin", "Phoenix", "Raiden", "Shiva", "Twintania", "Zodiark",
-        "Bismarck", "Ravana", "Sephirot", "Sophia", "Zurvan",
-        "Adamantoise", "Cactuar", "Faerie", "Gilgamesh", "Jenova", "Midgardsormr", "Sargatanas", "Siren",
-        "Balmung", "Brynhildr", "Coeurl", "Diabolos", "Goblin", "Malboro", "Mateus", "Zalera",
-        "Cuchulainn", "Golem", "Halicarnassus", "Kraken", "Maduin", "Marilith", "Rafflesia", "Seraph",
-        "Behemoth", "Excalibur", "Exodus", "Famfrit", "Hyperion", "Lamia", "Leviathan", "Ultros",
-        "Aegis", "Atomos", "Carbuncle", "Garuda", "Gungnir", "Kujata", "Tonberry", "Typhon",
-        "Alexander", "Bahamut", "Durandal", "Fenrir", "Ifrit", "Ridill", "Tiamat", "Ultima",
-        "Anima", "Asura", "Chocobo", "Hades", "Ixion", "Masamune", "Pandaemonium", "Titan",
-        "Belias", "Mandragora", "Ramuh", "Shinryu", "Unicorn", "Valefor", "Yojimbo", "Zeromus",
-    };
+    private static readonly string[] AllWorldNames = WorldNameManager.AllWorldNames;
 
     public static bool IsTradeActive => _isTradeActive;
     public static string? CurrentPartner => _currentPartner;
@@ -58,6 +46,7 @@ public static class TradeManager
             long before = p.Bank;
             p.Bank += _buffer;
             RecordTradeLine(p, before, p.Bank);
+            CompanionSyncManager.SendPlayerBankBetUpdate(Plugin.Instance.Configuration, p);
             var window = Plugin.Instance.GetMainWindow();
             window.AddDebugLog($"[TradeManager] Committed: {_currentPartner} → {p.Name} bank += {_buffer}");
         }
@@ -120,6 +109,7 @@ public static class TradeManager
                 long before = p.Bank;
                 p.Bank += _buffer;
                 RecordTradeLine(p, before, p.Bank);
+                CompanionSyncManager.SendPlayerBankBetUpdate(Plugin.Instance.Configuration, p);
                 window.AddDebugLog($"[TradeManager] Committed (fallback): {_currentPartner} bank += {_buffer}");
             }
         }
