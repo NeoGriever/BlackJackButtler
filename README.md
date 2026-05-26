@@ -294,19 +294,17 @@ Banks are also updated automatically through trade detection. When a player trad
 
 During the Payout phase, each player row shows a "Pay Out" button. Clicking it initiates a payout for that player's current bank balance.
 
-### 5.2 Dropbox Integration
+### 5.2 Payout Management
 
-If the **Dropbox** plugin is installed and loaded, and the **Open Dropbox instead of trade** setting is enabled (see [11.1 Gameplay Rules](#111-gameplay-rules)), payouts use the Dropbox IPC to pre-fill Gil amounts and open the Dropbox window.
+Payouts are handled by BlackJack Buttler's internal **Payout Management** system. It targets and focus-targets the payout player, opens trade, enters Gil in chunks capped at 1,000,000, and continues until the player's bank reaches 0 or the payout is cancelled.
 
-### 5.3 Manual Trade (Payout Helper)
+### 5.3 Payout Helper
 
-When Dropbox is unavailable or disabled, the plugin opens a floating **Payout Helper** window that:
+During an active payout, the plugin opens a floating **Payout Management** window that:
 
-- Copies the remaining bank amount to clipboard (capped at 1,000,000 per trade).
-- Initiates a `/trade <t>` command.
-- Automatically re-opens trade if the bank has remaining balance.
-- Shows a progress bar tracking payout completion.
-- Auto-closes 4 seconds after the bank reaches zero.
+- Shows remaining bank and current trade chunk.
+- Provides a cancel button that stops automatic continuation.
+- Uses manual trade confirmation by default, or auto-confirms when enabled in settings.
 
 ### 5.4 Bank to Tips
 
@@ -440,7 +438,7 @@ These settings require **Advanced** user level or higher.
 | Enable Charlie | Off | Enables configured-card-count Charlie hands. |
 | Charlie Instant Win | On | Charlie wins immediately against the dealer result when enabled. |
 | Autostart round only on multiple players | On | NextRound trigger only auto-starts with 2+ active player votes. With 1 player, highlights the button instead. |
-| Open Dropbox instead of trade | On | Uses the Dropbox plugin for payouts when available. |
+| Auto-confirm payout trades | Off | Lets Payout Management confirm prepared payout trades automatically after entering Gil. |
 | Small Result Message | Off | Sends one compressed result message instead of individual messages per player hand. |
 | Result Template | `${results}` | Template used for compressed results. Supports `<results>` and result variables. |
 
