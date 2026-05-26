@@ -1390,7 +1390,7 @@ public partial class BlackJackButtlerWindow
             if (clickedPay)
             {
                 p.HighlightPay = false;
-                DropboxIntegration.PayOut(p);
+                PayoutManagement.StartPayout(p);
             }
             return;
         }

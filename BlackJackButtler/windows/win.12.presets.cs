@@ -14,7 +14,7 @@ public partial class BlackJackButtlerWindow
 {
     // Granulare Settings-Felder nach Kategorie
     private static readonly string[] SettingsGeneralFields = {
-        "EnableBankInput", "CommandSpeedMultiplier", "OpenDropboxInsteadOfTrade",
+        "EnableBankInput", "CommandSpeedMultiplier", "PayoutAutoConfirmTrade",
         "SmallResult", "ResultTemplate", "AutostartRoundOnlyOnMultiplePlayers",
     };
     private static readonly string[] SettingsAutomationFields = {
@@ -886,7 +886,7 @@ public partial class BlackJackButtlerWindow
         {
             _config.EnableBankInput                     = snap.EnableBankInput;
             _config.CommandSpeedMultiplier              = snap.CommandSpeedMultiplier;
-            _config.OpenDropboxInsteadOfTrade           = snap.OpenDropboxInsteadOfTrade;
+            _config.PayoutAutoConfirmTrade              = snap.PayoutAutoConfirmTrade;
             _config.SmallResult                         = snap.SmallResult;
             _config.ResultTemplate                      = snap.ResultTemplate;
             _config.AutostartRoundOnlyOnMultiplePlayers = snap.AutostartRoundOnlyOnMultiplePlayers;

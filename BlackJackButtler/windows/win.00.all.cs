@@ -396,7 +396,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         ImGui.PopStyleColor(3);
 
         _fileDialogManager.Draw();
-        DropboxIntegration.DrawHelperWindow();
+        PayoutManagement.DrawHelperWindow();
         DrawSplitMoneyPopup();
         DrawDDMoneyPopup();
         DrawHandEditPopup();

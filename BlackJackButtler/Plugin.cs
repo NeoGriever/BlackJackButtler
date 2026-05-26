@@ -480,8 +480,8 @@ public sealed class Plugin : IDalamudPlugin
             }
         }
 
-        // Dropbox + Trade + JoinQueue + NearbyAlert
-        DropboxIntegration.Update();
+        // Payout + Trade + JoinQueue + NearbyAlert
+        PayoutManagement.Tick();
         TradeManager.Tick();
         JoinQueueManager.Tick(Configuration);
 
