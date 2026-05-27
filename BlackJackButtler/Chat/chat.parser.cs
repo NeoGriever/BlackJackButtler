@@ -35,13 +35,18 @@ public static class ChatMessageParser
   };
 
   private static readonly Rx DiceTextDe = new(
-    @"^Würfeln!\s*\(\d+\s*-\\s*\d+\)\s*\d+\s*$",
+    @"^Würfeln!\s*\(\d+\s*-\s*\d+\)\s*\d+\s*$",
     RxOpt.Compiled
   );
 
   private static readonly Rx DiceTextEn = new(
     @"\brolls?\s+a\s+\d+\b",
     RxOpt.Compiled | RxOpt.IgnoreCase
+  );
+
+  private static readonly Rx DiceTextRandom = new(
+    @"^Random!\s*\(\d+\s*-\s*\d+\)\s*\d+\s*$",
+    RxOpt.Compiled
   );
 
   public static ParsedChatMessage Parse(DateTime timestamp, SeString sender, SeString message, string localPlayerName, int chatType)
@@ -172,7 +177,9 @@ public static class ChatMessageParser
 
   private static bool IsDiceRoll(SeString message, string messageText)
   {
-    var textLooksLikeDice = DiceTextDe.IsMatch(messageText) || DiceTextEn.IsMatch(messageText);
+    var textLooksLikeDice = DiceTextDe.IsMatch(messageText)
+    || DiceTextEn.IsMatch(messageText)
+    || DiceTextRandom.IsMatch(messageText);
     if (!textLooksLikeDice)
     return false;
 

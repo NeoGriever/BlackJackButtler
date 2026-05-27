@@ -224,7 +224,8 @@ public static class DiceResultHandler
             CommandExecutor.NotifyDiceResult();
 
             if (!isDealer && GameEngine.CurrentPhase == GamePhase.PlayersTurn &&
-                !hand.IsBust && best < 21 && !hand.IsStand)
+                !hand.IsBust && best < 21 && !hand.IsStand &&
+                !CommandExecutor.CurrentGroupName.Equals("SplitDraw", StringComparison.OrdinalIgnoreCase))
             {
                 string promptGroup = GameEngine.GetStatePromptGroup(target, cfg);
                 CommandExecutor.SignalFollowUpPending();

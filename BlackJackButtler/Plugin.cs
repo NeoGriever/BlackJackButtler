@@ -53,6 +53,9 @@ public sealed class Plugin : IDalamudPlugin
 
     public static bool IsDebugMode = false;
     public static bool IsSpeedMode = false;
+    public static bool DebugAutoPlayers = false;
+    public static string DebugDiceSequence = "7,10,9,4,4,8,3,3,10,6,5,4,3,2";
+    private static int _debugDiceSequenceIndex = 0;
 
     private readonly WindowSystem windowSystem = new("BlackJackButtler");
     private readonly BlackJackButtlerWindow mainWindow;
@@ -89,6 +92,59 @@ public sealed class Plugin : IDalamudPlugin
     public static bool AutoContinueActive => Instance?._autoContinueWaiting ?? false;
     public static double AutoContinueElapsedSeconds => Instance != null && Instance._autoContinueWaiting
         ? (DateTime.Now - Instance._lastChatActivity).TotalSeconds : 0.0;
+    public static int DebugDiceSequenceIndex => Volatile.Read(ref _debugDiceSequenceIndex);
+
+    public static void ResetDebugDiceSequence()
+    {
+        Volatile.Write(ref _debugDiceSequenceIndex, 0);
+    }
+
+    public static bool TryGetNextDebugDiceRoll(int sides, out int rolled)
+    {
+        rolled = 0;
+        if (sides <= 0 || string.IsNullOrWhiteSpace(DebugDiceSequence))
+            return false;
+
+        var tokens = DebugDiceSequence
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToList();
+
+        if (tokens.Count == 0)
+            return false;
+
+        var starIndex = tokens.FindIndex(x => x == "*");
+        var prefixTokens = starIndex >= 0 ? tokens.Take(starIndex).ToList() : tokens;
+        var index = Interlocked.Increment(ref _debugDiceSequenceIndex) - 1;
+
+        if (starIndex >= 0 && index >= prefixTokens.Count)
+        {
+            rolled = Random.Shared.Next(1, sides + 1);
+            return true;
+        }
+
+        var sequenceTokens = starIndex >= 0 ? prefixTokens : tokens;
+        if (sequenceTokens.Count == 0)
+        {
+            rolled = Random.Shared.Next(1, sides + 1);
+            return true;
+        }
+
+        var token = sequenceTokens[index % sequenceTokens.Count];
+        if (token == "?")
+        {
+            rolled = Random.Shared.Next(1, sides + 1);
+            return true;
+        }
+
+        if (!int.TryParse(token, out var value) || value < 1 || value > sides)
+        {
+            rolled = Random.Shared.Next(1, sides + 1);
+            return true;
+        }
+
+        rolled = value;
+        return true;
+    }
 
     public void OpenDebugPopout() => debugLogWindow.IsOpen = true;
     public void OpenDrawLogicDebug() => drawLogicDebugWindow.IsOpen = true;
@@ -154,6 +210,7 @@ public sealed class Plugin : IDalamudPlugin
 
         StatsManager.Init(Configuration);
         RoundLogManager.Init(PluginInterface.GetPluginConfigDirectory());
+        StatsLogManager.Init(PluginInterface.GetPluginConfigDirectory());
         ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
         VipManager.Init(Path.GetDirectoryName(PluginInterface.GetPluginConfigDirectory())!);
         DrawLogicScriptManager.Init(PluginInterface.GetPluginConfigDirectory(), Configuration);
@@ -481,6 +538,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         // Payout + Trade + JoinQueue + NearbyAlert
+        DebugAutoPlayerManager.Tick(Configuration);
         PayoutManagement.Tick();
         TradeManager.Tick();
         JoinQueueManager.Tick(Configuration);
@@ -645,6 +703,9 @@ public sealed class Plugin : IDalamudPlugin
 
         if (ChatLogBuffer.IsPartyChatType(type) || parsed.IsDice)
             _lastChatActivity = DateTime.Now;
+
+        if (parsed.IsDice)
+            StatsLogManager.AppendDiceResult(parsed.Message);
 
         chatLog.Add(parsed);
         RegexEngine.ProcessIncoming(parsed, Configuration, mainWindow.GetPlayers(), mainWindow.GetDealer());

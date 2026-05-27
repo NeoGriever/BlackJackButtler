@@ -258,14 +258,17 @@ public static class CommandExecutor
         _currentGroupHasDice = group.Commands.Any(c =>
             c.Enabled && !string.IsNullOrWhiteSpace(c.Text) &&
             c.Text.TrimStart().StartsWith("/dice", StringComparison.OrdinalIgnoreCase));
+        var commandSnapshot = group.Commands.ToList();
+        window.AddDebugLog($"[Executor] Chain Snapshot: {groupName}, Commands={commandSnapshot.Count}, HasDice={_currentGroupHasDice}");
+        for (var i = 0; i < commandSnapshot.Count; i++)
+        {
+            var snapshotCmd = commandSnapshot[i];
+            var text = snapshotCmd.IsCommandRef ? $"ref:{snapshotCmd.CommandRefName}" : snapshotCmd.Text;
+            window.AddDebugLog($"[Executor] Snapshot Step {i + 1}: Enabled={snapshotCmd.Enabled}, GroupId={snapshotCmd.GroupId}, Text={text}");
+        }
         _delayCts = new CancellationTokenSource();
 
-        if (StateGroupNames.Contains(groupName))
-        {
-            LastStateGroupName = groupName;
-            LastStateTargetName = targetPlayerName;
-            LastStateFiredAt = DateTime.Now;
-        }
+        var isStatePromptGroup = StateGroupNames.Contains(groupName);
 
         _isRunning = true;
         _cancel = false;
@@ -276,7 +279,7 @@ public static class CommandExecutor
         if (!Plugin.IsDebugMode || !Plugin.IsSpeedMode)
             try { await Task.Delay(300, _delayCts.Token); } catch (OperationCanceledException) { }
 
-        foreach (var cmd in group.Commands)
+        foreach (var cmd in commandSnapshot)
         {
             step++;
 
@@ -384,8 +387,15 @@ public static class CommandExecutor
                     _wait = true;
                 }
 
-                ChatCommandRouter.Send(processedText, cfg, $"{groupName}:{step}");
-                _lastSentRawText = effectiveCmd.Text;
+                if (isDiceCommand && TryHandleDebugDice(processedText))
+                {
+                    _lastSentRawText = effectiveCmd.Text;
+                }
+                else
+                {
+                    ChatCommandRouter.Send(processedText, cfg, $"{groupName}:{step}");
+                    _lastSentRawText = effectiveCmd.Text;
+                }
 
                 if (isDiceCommand)
                 {
@@ -437,6 +447,12 @@ public static class CommandExecutor
         _preActionSnapshotIndex = -1;
         _delayCts?.Dispose();
         _delayCts = null;
+        if (isStatePromptGroup)
+        {
+            LastStateGroupName = groupName;
+            LastStateTargetName = targetPlayerName;
+            LastStateFiredAt = DateTime.Now;
+        }
         OnGroupCompleted?.Invoke();
         window.AddDebugLog($"[Executor] Chain End: {groupName}");
     }
@@ -500,18 +516,28 @@ public static class CommandExecutor
 
     private static bool TryHandleDebugDice(string processedText)
     {
+        if (!Plugin.IsDebugMode)
+            return false;
+
         var m = DicePartyRegex.Match(processedText.Trim());
         if (!m.Success) return false;
 
         if (!int.TryParse(m.Groups[1].Value, out var sides) || sides <= 0)
             return true;
 
-        var rolled = Random.Shared.Next(1, sides + 1);
+        var sequenceIndexBefore = Plugin.DebugDiceSequenceIndex;
+        var usedSequence = Plugin.TryGetNextDebugDiceRoll(sides, out var rolled);
+        if (!usedSequence)
+            rolled = Random.Shared.Next(1, sides + 1);
         var card = (sides == 13) ? GameEngine.MapDice13ToCardValue(rolled) : rolled;
 
-        Plugin.Log.Information($"[BJB][DebugOutput] {processedText} -> rolled={rolled}, cardValue={card}");
-
-        GameEngine.TryApplyCardToCurrentTargetFromRuntime(card);
+        var resultText = $"Random! (1-{sides}) {rolled}";
+        if (usedSequence)
+            Plugin.Instance.GetMainWindow().AddDebugLog($"[DebugDice] Sequence roll #{sequenceIndexBefore + 1}: {rolled}");
+        Plugin.Instance.GetMainWindow().AddDebugLog($"SYSTEM: {resultText}", isChat: true);
+        StatsLogManager.AppendDiceResult(resultText);
+        var window = Plugin.Instance.GetMainWindow();
+        DiceResultHandler.HandleDiceResult(card, Plugin.Instance.Configuration, window.GetPlayers(), window.GetDealer());
         return true;
     }
 

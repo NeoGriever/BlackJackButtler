@@ -13,6 +13,7 @@ public partial class BlackJackButtlerWindow
 {
     private int _clipHoursMode = -1;
     private long _editStartBankValue;
+    private bool _confirmEraseNormalStatsLog;
 
     private void DrawStatsPage()
     {
@@ -241,88 +242,82 @@ public partial class BlackJackButtlerWindow
     {
         ImGui.Spacing();
 
-        if (!_config.UtcOffsetConfigured)
+        if (ImGui.BeginTabBar("##stats_log_tabs"))
         {
-            ImGui.TextColored(new Vector4(1f, 1f, 0f, 1f), "Set your UTC offset for round log timestamps.");
-            ImGui.TextUnformatted("UTC Offset");
-            ImGui.SameLine(150f);
-            ImGui.SetNextItemWidth(100f);
-            int offset = _config.UtcOffsetHours;
-            if (BJBGui.InputInt("##utc_offset_prompt", ref offset, 1))
+            if (ImGui.BeginTabItem("Normal Log"))
             {
-                _config.UtcOffsetHours = Math.Clamp(offset, -12, 14);
-                _save();
+                DrawStatsLogViewer(debugLog: false);
+                ImGui.EndTabItem();
             }
-            ImGui.SameLine();
-            if (BJBGui.SmallButton("Confirm##utc_confirm"))
+
+            if (ImGui.BeginTabItem("Debug Log"))
             {
-                _config.UtcOffsetConfigured = true;
-                _save();
+                DrawStatsLogViewer(debugLog: true);
+                ImGui.EndTabItem();
             }
-            ImGui.Separator();
-        }
 
-        var io = ImGui.GetIO();
-        ImGui.BeginDisabled(!io.KeyCtrl);
-        if (BJBGui.SmallButton("Clear##roundlog_clear"))
-        {
-            RoundLogManager.ClearLog();
+            ImGui.EndTabBar();
         }
-        ImGui.EndDisabled();
-        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Hold CTRL to clear");
+    }
 
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("Copy All##roundlog_copy"))
+    private void DrawStatsLogViewer(bool debugLog)
+    {
+        var path = debugLog ? StatsLogManager.DebugLogPath : StatsLogManager.NormalLogPath;
+        ImGui.TextUnformatted(string.IsNullOrWhiteSpace(path) ? "No statistics log active." : path);
+
+        if (BJBGui.SmallButton($"Copy All##statslog_copy_{debugLog}"))
         {
-            var log = RoundLogManager.GetLog();
-            string separator = new string('=', 50);
             var sb = new StringBuilder();
             sb.AppendLine("```");
-            for (int i = log.Count - 1; i >= 0; i--)
-            {
-                var entry = log[i];
-                sb.AppendLine(separator);
-                sb.AppendLine(RoundLogManager.FormatTimestamp(entry.Timestamp, _config.UtcOffsetHours));
-                foreach (var line in entry.PreRoundEvents)
-                    sb.AppendLine(line);
-                foreach (var line in entry.Lines)
-                    sb.AppendLine(line);
-                foreach (var line in entry.PostRoundEvents)
-                    sb.AppendLine(line);
-            }
-            if (log.Count > 0)
-                sb.AppendLine(separator);
+            foreach (var line in StatsLogManager.ReadCurrentLines(debugLog))
+                sb.AppendLine(line);
             sb.AppendLine("```");
             ImGui.SetClipboardText(sb.ToString());
+        }
+        ImGui.SameLine();
+        if (BJBGui.SmallButton($"Export HTML##statslog_html_{debugLog}"))
+            StatsLogManager.ExportCurrentHtml(debugLog);
+
+        if (!debugLog)
+        {
+            ImGui.SameLine();
+            if (BJBGui.SmallButton("Erase Log##statslog_erase"))
+            {
+                _confirmEraseNormalStatsLog = true;
+                ImGui.OpenPopup("Erase current normal statistics log?");
+            }
+        }
+
+        if (ImGui.BeginPopupModal("Erase current normal statistics log?", ref _confirmEraseNormalStatsLog, ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.TextUnformatted("Delete the current normal statistics log file?");
+            ImGui.TextDisabled("This does not reset numbering and does not affect the debug log.");
+            ImGui.Spacing();
+
+            if (BJBGui.Button("Delete", new Vector2(120, 0)))
+            {
+                StatsLogManager.EraseNormalLog();
+                _confirmEraseNormalStatsLog = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.SameLine();
+            if (BJBGui.Button("Cancel", new Vector2(120, 0)))
+            {
+                _confirmEraseNormalStatsLog = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.EndPopup();
         }
 
         ImGui.Spacing();
 
         float logHeight = ImGui.GetContentRegionAvail().Y;
         if (logHeight < 60) logHeight = 60;
-        if (ImGui.BeginChild("##persistent_round_log", new Vector2(0, logHeight), true))
+        if (ImGui.BeginChild($"##persistent_stats_log_{debugLog}", new Vector2(0, logHeight), true))
         {
             ImGui.PushFont(UiBuilder.MonoFont);
-            var log = RoundLogManager.GetLog();
-            string separator = new string('=', 50);
-
-            for (int i = log.Count - 1; i >= 0; i--)
-            {
-                var entry = log[i];
-                ImGui.TextUnformatted(separator);
-                ImGui.TextUnformatted(RoundLogManager.FormatTimestamp(entry.Timestamp, _config.UtcOffsetHours));
-                foreach (var line in entry.PreRoundEvents)
-                    ImGui.TextUnformatted(line);
-                foreach (var line in entry.Lines)
-                    ImGui.TextUnformatted(line);
-                foreach (var line in entry.PostRoundEvents)
-                    ImGui.TextUnformatted(line);
-            }
-
-            if (log.Count > 0)
-                ImGui.TextUnformatted(separator);
-
+            foreach (var line in StatsLogManager.ReadCurrentLines(debugLog))
+                ImGui.TextUnformatted(line);
             ImGui.PopFont();
         }
         ImGui.EndChild();

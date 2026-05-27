@@ -41,7 +41,6 @@ public sealed class Configuration : IPluginConfiguration
     public string InsufficientBetCommandName = "";
     public float CommandSpeedMultiplier = 1.0f;
     public bool UnlockWaitTimer = false;
-    public bool OpenDropboxInsteadOfTrade = true;
     public bool PayoutAutoConfirmTrade = false;
     public bool DelaySecondSnapping = true;
     public float RecallUnlockSeconds = 20f;

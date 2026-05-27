@@ -27,6 +27,8 @@ public static class ChatCommandRouter
             return;
         }
 
+        StatsLogManager.AppendPartyCommand(commandText);
+
         if (Plugin.IsDebugMode)
         {
             var trimmed = commandText.TrimStart();

@@ -43,6 +43,15 @@ public enum RegexAction
     InviteNearby,
 }
 
+[Flags]
+public enum RegexChatSource
+{
+    Party = 1 << 0,
+    Tell = 1 << 1,
+    Say = 1 << 2,
+    System = 1 << 3,
+}
+
 [Serializable]
 public sealed class UserRegexEntry
 {
@@ -55,4 +64,5 @@ public sealed class UserRegexEntry
     public List<string> Patterns = new() { "" };
     public bool CaseSensitive = false;
     public bool ApplyToTells = false;
+    public RegexChatSource Sources = RegexChatSource.Party;
 }

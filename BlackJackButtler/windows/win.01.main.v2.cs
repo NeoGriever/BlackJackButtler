@@ -82,12 +82,14 @@ public partial class BlackJackButtlerWindow
             IsRecognitionActive = !IsRecognitionActive;
             if (IsRecognitionActive)
             {
+                StatsLogManager.OnGroupDetectorStarted();
                 SyncParty();
                 ViewDirectionManager.CaptureCurrentRotation(_config);
                 _groupDetectorActivatedAt = StatsManager.IsRunning ? null : DateTime.Now;
             }
             else
             {
+                StatsLogManager.OnGroupDetectorStopped();
                 if (!StatsManager.IsRunning)
                     SessionManager.ClearSession();
                 RemovePlayersWithCompanionErase(p => !p.IsActivePlayer && p.Bank == 0);

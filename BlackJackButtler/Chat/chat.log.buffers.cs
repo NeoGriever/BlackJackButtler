@@ -49,7 +49,21 @@ public sealed class ChatLogBuffer
 
   public static bool IsTellChatType(int t)
   {
-    return t == (int)XivChatType.TellIncoming;
+    return t == (int)XivChatType.TellIncoming
+        || t == (int)XivChatType.TellOutgoing;
+  }
+
+  public static bool IsSayChatType(int t)
+  {
+    return t == (int)XivChatType.Say;
+  }
+
+  public static bool IsSystemChatType(int t)
+  {
+    return t == (int)XivChatType.SystemMessage
+        || t == (int)XivChatType.SystemError
+        || t == (int)XivChatType.Notice
+        || t == (int)XivChatType.GatheringSystemMessage;
   }
 }
 

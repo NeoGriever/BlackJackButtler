@@ -69,12 +69,11 @@ public static class RegexEngine
     public static void ProcessIncoming(ParsedChatMessage msg, Configuration cfg, List<PlayerState> players, PlayerState dealer)
     {
         var cleanMessage = SanitizeForRegex(msg.Message);
-        var isTell = ChatLogBuffer.IsTellChatType(msg.ChatType);
 
         foreach (var entry in cfg.UserRegexes)
         {
             if (!entry.Enabled || entry.Patterns == null || entry.Patterns.Count == 0) continue;
-            if (isTell && !entry.ApplyToTells) continue;
+            if (!IsSourceAllowed(entry, msg)) continue;
 
             foreach (var pattern in entry.Patterns)
             {
@@ -106,6 +105,39 @@ public static class RegexEngine
                 }
             }
         }
+    }
+
+    private static bool IsSourceAllowed(UserRegexEntry entry, ParsedChatMessage msg)
+    {
+        if (entry.Action == RegexAction.DiceRollValue && msg.IsDice)
+            return true;
+
+        if (IsTradeAction(entry.Action) && ChatLogBuffer.IsSystemChatType(msg.ChatType))
+            return true;
+
+        var sources = entry.Sources;
+        if (entry.ApplyToTells)
+            sources |= RegexChatSource.Tell;
+
+        if (ChatLogBuffer.IsPartyChatType(msg.ChatType))
+            return sources.HasFlag(RegexChatSource.Party);
+        if (ChatLogBuffer.IsTellChatType(msg.ChatType))
+            return sources.HasFlag(RegexChatSource.Tell);
+        if (ChatLogBuffer.IsSayChatType(msg.ChatType))
+            return sources.HasFlag(RegexChatSource.Say);
+        if (ChatLogBuffer.IsSystemChatType(msg.ChatType))
+            return sources.HasFlag(RegexChatSource.System);
+
+        return false;
+    }
+
+    private static bool IsTradeAction(RegexAction action)
+    {
+        return action is RegexAction.TradePartner
+            or RegexAction.TradeGilIn
+            or RegexAction.TradeGilOut
+            or RegexAction.TradeCommit
+            or RegexAction.TradeCancel;
     }
 
     private static void ExecuteAction(UserRegexEntry entry, string matchedPattern, ParsedChatMessage msg, string cleanMessage, List<PlayerState> players, PlayerState dealer, Configuration cfg)
@@ -167,6 +199,7 @@ public static class RegexEngine
                 break;
 
             case RegexAction.TradeCancel:
+                PayoutManagement.NotifyTradeCancelled();
                 TradeManager.Reset();
                 break;
 
