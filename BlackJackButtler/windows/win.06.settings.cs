@@ -1149,7 +1149,6 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "ButtonBarFixedWidth",                    v => _config.ButtonBarFixedWidth = v);
         TryApply<float> (j, "ButtonBarFixedWidthValue",               v => _config.ButtonBarFixedWidthValue = v);
         TryApply<Vector4>(j, "ButtonBarBackgroundColor",              v => _config.ButtonBarBackgroundColor = v);
-        TryApply<bool>  (j, "OpenDropboxInsteadOfTrade",              v => _config.OpenDropboxInsteadOfTrade = v);
         TryApply<bool>  (j, "PayoutAutoConfirmTrade",                 v => _config.PayoutAutoConfirmTrade = v);
         TryApply<float> (j, "InitialViewDirection",                   v => _config.InitialViewDirection = v);
         TryApply<bool>  (j, "LookEveryTime",                         v => _config.LookEveryTime = v);

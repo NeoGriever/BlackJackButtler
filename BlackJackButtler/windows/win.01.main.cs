@@ -330,6 +330,7 @@ public partial class BlackJackButtlerWindow
             IsRecognitionActive = !IsRecognitionActive;
             if (IsRecognitionActive)
             {
+                StatsLogManager.OnGroupDetectorStarted();
                 SyncParty();
                 ViewDirectionManager.CaptureCurrentRotation(_config);
                 _groupDetectorActivatedAt = StatsManager.IsRunning ? null : DateTime.Now;
@@ -337,6 +338,7 @@ public partial class BlackJackButtlerWindow
 
             if (!IsRecognitionActive)
             {
+                StatsLogManager.OnGroupDetectorStopped();
                 if (!StatsManager.IsRunning)
                     SessionManager.ClearSession();
                 RemovePlayersWithCompanionErase(p => !p.IsActivePlayer && p.Bank == 0);
@@ -1678,6 +1680,7 @@ public partial class BlackJackButtlerWindow
 
     private void GenerateRandomDebugPlayers()
     {
+        Plugin.ResetDebugDiceSequence();
         RemovePlayersWithCompanionErase(p => p.IsDebugPlayer);
 
         var count = Random.Shared.Next(5, 9);

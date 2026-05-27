@@ -17,6 +17,7 @@ public static partial class GameEngine
     public static async Task StartInitialDeal(List<PlayerState> players, Configuration cfg)
     {
         Regex.RegexEngine.ClearNextRoundVotes();
+        StatsLogManager.OnRoundStarted();
 
         PlayerState? dealer;
         lock (_ctxLock) dealer = _ctxDealer;
@@ -213,10 +214,41 @@ public static partial class GameEngine
                         CommandExecutor.SetPreActionSnapshot(Chat.GameLog.CurrentIndex);
                         TargetPlayer(p.Name);
                         SetForcedRecipient(p.Name);
-                        try { await CommandExecutor.ExecuteGroup("SplitDraw", p.Name, cfg); }
-                        finally { ClearForcedRecipient(); }
+                        try
+                        {
+                            await CommandExecutor.ExecuteGroup("SplitDraw", p.Name, cfg);
+                            SaveSessionIfNeeded(players);
 
-                        SaveSessionIfNeeded(players);
+                            if (CurrentPhase == GamePhase.PlayersTurn
+                                && p.IsCurrentTurn
+                                && p.CurrentHandIndex >= 0
+                                && p.CurrentHandIndex < p.Hands.Count)
+                            {
+                                var hand = p.Hands[p.CurrentHandIndex];
+                                if (hand.Cards.Count >= 2
+                                    && !hand.IsStand
+                                    && !hand.IsBust
+                                    && !hand.IsNaturalBlackJack
+                                    && !hand.IsCharlie)
+                                {
+                                    var promptGroup = GetStatePromptGroup(p, cfg);
+                                    CommandExecutor.SignalFollowUpPending();
+                                    try
+                                    {
+                                        await CommandExecutor.ExecuteGroup(promptGroup, p.DisplayName, cfg);
+                                        SendCompanionTableUpdate(cfg, activePlayers);
+                                    }
+                                    finally
+                                    {
+                                        CommandExecutor.ClearFollowUpPending();
+                                    }
+                                }
+                            }
+                        }
+                        finally
+                        {
+                            ClearForcedRecipient();
+                        }
                     });
                 }
                 return;

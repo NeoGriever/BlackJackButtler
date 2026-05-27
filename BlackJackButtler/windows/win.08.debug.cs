@@ -27,11 +27,6 @@ public partial class BlackJackButtlerWindow
         }
 
         if (!Plugin.IsDebugMode) return;
-
-        if (line.Contains("/dice") && (line.Contains("SYSTEM:") || line.Contains("[Router-Dispatch]")))
-        {
-            TrySimulateDiceCommand(line);
-        }
     }
 
     private void DrawDebugPage()
@@ -46,6 +41,8 @@ public partial class BlackJackButtlerWindow
         {
             ImGui.SameLine();
             ImGui.Checkbox("Fast Tests", ref Plugin.IsSpeedMode);
+            ImGui.SameLine();
+            ImGui.Checkbox("Auto Players", ref Plugin.DebugAutoPlayers);
         }
 
         ImGui.SameLine();
@@ -77,6 +74,15 @@ public partial class BlackJackButtlerWindow
                 GenerateRandomDebugPlayers();
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Replace debug players with random numbered characters");
+
+            ImGui.SetNextItemWidth(-80);
+            if (ImGui.InputText("##debug_dice_sequence", ref Plugin.DebugDiceSequence, 1024))
+                Plugin.ResetDebugDiceSequence();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Comma-separated debug dice sequence. '?' is random and loops with the sequence. '*' switches to random rolls after the preceding entries.");
+            ImGui.SameLine();
+            if (BJBGui.SmallButton("Reset##debug_dice_sequence"))
+                Plugin.ResetDebugDiceSequence();
         }
 
         ImGui.Separator();
@@ -96,39 +102,13 @@ public partial class BlackJackButtlerWindow
         ImGui.EndChild();
     }
 
-    private void TrySimulateDiceCommand(string line)
-    {
-        if (!line.Contains("/dice")) return;
-
-        int max = 13;
-        var parts = line.Split(new[] { ' ', ':', ']', '/', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-
-        for (int i = 0; i < parts.Length; i++)
-        {
-            if (parts[i].Equals("party", StringComparison.OrdinalIgnoreCase) && i + 1 < parts.Length)
-            {
-                if (int.TryParse(parts[i + 1], out var val))
-                {
-                    max = val;
-                    break;
-                }
-            }
-        }
-
-        var rolled = Random.Shared.Next(1, max + 1);
-        string diceResultMessage = $"Random! (1-{max}) {rolled}";
-
-        Plugin.Framework.RunOnTick(() => {
-            Plugin.Instance.InjectChatMessage(2105, 0, "SYSTEM", "SYSTEM", diceResultMessage);
-        });
-    }
-
     public List<DebugEntry> GetDebugLog() => _debugLog;
     public object GetLogLock() => _logLock;
 
     private void EnableDebugMode()
     {
         Plugin.IsDebugMode = true;
+        Plugin.ResetDebugDiceSequence();
         GameEngine.SetDebugMode(true);
         CreateTestData();
         IsRecognitionActive = true;

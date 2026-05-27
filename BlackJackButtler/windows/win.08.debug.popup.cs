@@ -32,6 +32,8 @@ public class DebugLogWindow : Window
         {
             ImGui.SameLine();
             ImGui.Checkbox("Fast Tests", ref Plugin.IsSpeedMode);
+            ImGui.SameLine();
+            ImGui.Checkbox("Auto Players", ref Plugin.DebugAutoPlayers);
         }
 
         ImGui.SameLine();
@@ -42,6 +44,18 @@ public class DebugLogWindow : Window
         if (ImGui.IsItemHovered())
         {
             ImGui.SetTooltip("Copy all chat entries to clipboard in chronological order");
+        }
+
+        if (Plugin.IsDebugMode)
+        {
+            ImGui.SetNextItemWidth(-80);
+            if (ImGui.InputText("##popout_debug_dice_sequence", ref Plugin.DebugDiceSequence, 1024))
+                Plugin.ResetDebugDiceSequence();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Comma-separated debug dice sequence. '?' is random and loops with the sequence. '*' switches to random rolls after the preceding entries.");
+            ImGui.SameLine();
+            if (BJBGui.SmallButton("Reset##popout_debug_dice_sequence"))
+                Plugin.ResetDebugDiceSequence();
         }
 
         ImGui.Separator();

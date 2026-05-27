@@ -128,15 +128,16 @@ public partial class BlackJackButtlerWindow
                     ImGui.SetTooltip("Case sensitive");
 
                 ImGui.SameLine();
-
-                if (ImGui.Checkbox("##applyToTells", ref e.ApplyToTells)) _save();
-
-                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                    ImGui.SetTooltip("Apply this regex to incoming tells");
-
-                var entryName = e.Name ?? "";
+                DrawRegexSourceCheckbox(e, RegexChatSource.Party, "Party");
+                ImGui.SameLine();
+                DrawRegexSourceCheckbox(e, RegexChatSource.Tell, "Tell");
+                ImGui.SameLine();
+                DrawRegexSourceCheckbox(e, RegexChatSource.Say, "Say");
+                ImGui.SameLine();
+                DrawRegexSourceCheckbox(e, RegexChatSource.System, "System");
 
                 ImGui.SameLine();
+                var entryName = e.Name ?? "";
                 ImGui.SetNextItemWidth(300f);
 
                 if (isStd) ImGui.BeginDisabled();
@@ -298,6 +299,29 @@ public partial class BlackJackButtlerWindow
             }
             ImGui.PopID();
         }
+    }
+
+    private void DrawRegexSourceCheckbox(UserRegexEntry entry, RegexChatSource source, string label)
+    {
+        var enabled = entry.Sources.HasFlag(source) || (source == RegexChatSource.Tell && entry.ApplyToTells);
+        if (ImGui.Checkbox($"{label}##src_{label}", ref enabled))
+        {
+            if (enabled)
+                entry.Sources |= source;
+            else
+                entry.Sources &= ~source;
+
+            if (source == RegexChatSource.Tell)
+                entry.ApplyToTells = enabled;
+
+            if (entry.Sources == 0)
+                entry.Sources = RegexChatSource.Party;
+
+            _save();
+        }
+
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip($"Allow this regex to read {label} messages");
     }
 
     private bool IsStandardRegex(string name)
