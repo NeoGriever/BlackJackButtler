@@ -393,7 +393,7 @@ Switch between Beginner, Advanced, Dev, and Custom. Custom mode lets you choose 
 |---|---|
 | **Main View** | Switches between Main View Classic and Version 2. Version 2 adds reorganized header controls, auto-continue bar support, and in-world nearby numbering. |
 | **Version 2 Density** | Version 2 only. Switches between Normal and Compact. Compact reduces spacing, uses smaller text, hides the Alias column, removes numeric +/- buttons in player Bank/Bet inputs, and shows Bank-to-Tip / Max Bet only while Shift is held. |
-| **Burger Menu / Sidebar** | Chooses between compact burger navigation and the full left sidebar. |
+| **Menu Style** | Chooses between Burger Menu and Sidebar navigation. |
 
 ### 10.3 Command Speed and Recall Unlock
 
@@ -580,6 +580,11 @@ All default messages support context tokens like `<t>`, `<points>`, `<cards>`, a
 
 *Requires Advanced user level.*
 
+The **Commands** page contains two tabs:
+
+- **Commands**: built-in command chains used by the blackjack engine.
+- **Own Buttons**: custom command groups that appear as buttons above the dealer row.
+
 ### 13.1 Command Groups and Steps
 
 A command group is a named sequence of steps. Each step has:
@@ -610,6 +615,7 @@ These tokens are replaced with live game data during command execution:
 | `<t>` | Target player's alias (if set) or name. |
 | `<points>` | Current hand's point total (e.g., `15` or `11/21` for soft hands). |
 | `<cards>` | Card string (e.g., `Spades A, Hearts 5 and Clubs K`). |
+| `<dealerHand>` | Dealer card string. |
 | `<minbet>` | Configured minimum bet formatted as Gil. |
 | `<maxbet>` | Configured global maximum bet formatted as Gil. |
 | `<betrange>` | Bet range summary including active VIP limits. |
@@ -688,7 +694,7 @@ Command Line Groups are supported in both built-in command groups and Own Button
 
 ## 14 Own Buttons
 
-*Requires Advanced user level.* See also [13 Commands](#13-commands) for syntax.
+*Requires Advanced user level.* Own Buttons are managed in **Commands > Own Buttons**. See also [13 Commands](#13-commands) for syntax.
 
 Custom command groups that appear as buttons above the dealer row on the main page. They use the same step format and processing pipeline as built-in command groups, including support for Command Line Groups (see [13.6 Command Line Groups](#136-command-line-groups)).
 
@@ -767,7 +773,9 @@ Presets are configuration snapshots that save and restore your plugin setup. Use
 
 The currently active preset name is displayed in the window title. A `*` indicates the active config differs from the applied preset. Presets can be imported/exported individually or as one combined JSON file.
 
-Preset assignment category checkboxes can be shown or hidden with **Show Assigment Rule Options**. The preset preview is shown in a dedicated right-side column and starts from the current active configuration. Use **Use for Preview** to add presets to the temporary preview stack; each selected preset is numbered in application order. **Remove from Preview** removes a preset from that stack, **Back to current** clears the stack, and **Use as shown** applies the stacked presets in the displayed order.
+Preset assignment category checkboxes can be shown or hidden with **Show Assigment Rule Options**. Hovering a category checkbox subtly highlights the related navigation source in orange, such as Settings, Commands, Messages, Regex, or Draw Logic. The preset preview is shown in a dedicated right-side column and starts from the current active configuration. Use the `>` button next to **Use** to add presets to the temporary preview stack; each selected preset is numbered in application order. The button changes to `<` while selected and removes that preset from the preview stack. **Back to current** clears the stack, and **Use as shown** applies the stacked presets in the displayed order.
+
+The preview simulates the logical party-chat output in engine order and includes the fixed Debug dice sequence as simulated system rolls.
 
 ---
 
@@ -788,6 +796,8 @@ Each regex entry has:
 - **Action Param**: Additional parameter for certain actions (e.g., batch name for `TakeBatch`).
 
 Patterns are evaluated in order. The first matching pattern within an entry wins, and the first matching entry wins (no further entries are checked for that message).
+
+The Regex page separates built-in standard entries from custom entries. Custom regex entries are shown in their own list below the standard list and can be reordered with up/down controls for easier organization.
 
 ### 17.2 SetVariable Mode
 
@@ -868,6 +878,7 @@ These variables are set automatically by the game engine:
 | `betamount` | Player turn start / bank tell | Formatted bet (e.g., `50,000 Gil`). |
 | `lastwin` | Payout evaluation | Formatted last round result. |
 | `dealerpoints` | Dealer card draw | Dealer's current best score. |
+| `dealerHand` | Dealer card draw | Dealer card string. |
 | `HandIndex` | Command execution | `[Hand N] ` for split hands, empty string for single hands. |
 | `playerCards` | Context token processing | Card string for the current hand. |
 | `winners` | Payout evaluation | Formatted winner names (e.g., `Winner: Alice`). |

@@ -105,6 +105,8 @@ public partial class BlackJackButtlerWindow
 
     private void DrawPresetsPage()
     {
+        _presetNavHoverPage = null;
+
         // Migration-Trigger
         if (_config.Presets.Count > 0 && !_config.PresetsMigrated && !_presetMigrationPending)
             _presetMigrationPending = true;
@@ -295,6 +297,24 @@ public partial class BlackJackButtlerWindow
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Apply this preset");
             ImGui.SameLine(0, 5);
 
+            bool inPreview = _presetPreviewStack.Contains(preset.PresetId);
+            if (ImGui.Button(inPreview ? "<##preview" : ">##preview", new Vector2(24f, 0)))
+            {
+                if (inPreview)
+                    _presetPreviewStack.Remove(preset.PresetId);
+                else
+                    _presetPreviewStack.Add(preset.PresetId);
+                _presetPreviewCache.Clear();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip(inPreview ? "Remove from Preview" : "Use for Preview");
+            if (inPreview)
+            {
+                ImGui.SameLine(0, 3);
+                ImGui.TextDisabled($"{_presetPreviewStack.IndexOf(preset.PresetId) + 1}");
+            }
+            ImGui.SameLine(0, 5);
+
             if (_showPresetAssignmentRuleOptions)
             {
                 DrawPresetAssignmentCheckboxes(preset);
@@ -372,23 +392,6 @@ public partial class BlackJackButtlerWindow
 
                 // ── Aktions-Buttons ───────────────────────────────────────────
                 const float bw = 44f;
-                bool inPreview = _presetPreviewStack.Contains(preset.PresetId);
-                if (ImGui.Button(inPreview ? "Remove from Preview##preview" : "Use for Preview##preview", new Vector2(150f, 0)))
-                {
-                    if (inPreview)
-                        _presetPreviewStack.Remove(preset.PresetId);
-                    else
-                        _presetPreviewStack.Add(preset.PresetId);
-                    _presetPreviewCache.Clear();
-                }
-                if (inPreview)
-                {
-                    ImGui.SameLine();
-                    ImGui.TextDisabled($"{_presetPreviewStack.IndexOf(preset.PresetId) + 1}");
-                }
-
-                ImGui.Spacing();
-
                 if (ImGui.Button("Upd##upd", new Vector2(bw, 0)))
                 {
                     _presetPendingUpdateId = preset.PresetId;
@@ -592,7 +595,7 @@ public partial class BlackJackButtlerWindow
 
     private void DrawPresetAssignmentCheckboxes(PresetEntry preset)
     {
-        void CChk(string tip, ref bool val, Vector4 col)
+        void CChk(string tip, ref bool val, Vector4 col, Page hoverPage)
         {
             var bg = val
                 ? new Vector4(col.X * 0.22f, col.Y * 0.22f, col.Z * 0.22f, 0.90f)
@@ -608,7 +611,11 @@ public partial class BlackJackButtlerWindow
                 _save();
             }
             ImGui.PopStyleColor(3);
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip(tip);
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetTooltip(tip);
+                _presetNavHoverPage = hoverPage;
+            }
         }
 
         var cBlue = new Vector4(0.35f, 0.65f, 1.00f, 1f);
@@ -618,23 +625,23 @@ public partial class BlackJackButtlerWindow
         var cGreen = new Vector4(0.35f, 1.00f, 0.55f, 1f);
         var sepCol = new Vector4(0.40f, 0.40f, 0.40f, 0.60f);
 
-        CChk("Regex", ref preset.ApplyRegexes, cBlue); ImGui.SameLine(0, 2);
-        CChk("Messages Default", ref preset.ApplyMessagesDefault, cBlue); ImGui.SameLine(0, 2);
-        CChk("Messages Custom", ref preset.ApplyMessagesCustom, cBlue); ImGui.SameLine(0, 2);
-        CChk("Commands", ref preset.ApplyStandardCommands, cPurp); ImGui.SameLine(0, 2);
-        CChk("Own Buttons", ref preset.ApplyOwnButtons, cPurp);
+        CChk("Regex", ref preset.ApplyRegexes, cBlue, Page.Regexes); ImGui.SameLine(0, 2);
+        CChk("Messages Default", ref preset.ApplyMessagesDefault, cBlue, Page.Messages); ImGui.SameLine(0, 2);
+        CChk("Messages Custom", ref preset.ApplyMessagesCustom, cBlue, Page.Messages); ImGui.SameLine(0, 2);
+        CChk("Commands", ref preset.ApplyStandardCommands, cPurp, Page.Commands); ImGui.SameLine(0, 2);
+        CChk("Own Buttons", ref preset.ApplyOwnButtons, cPurp, Page.Commands);
         ImGui.SameLine(0, 4); ImGui.TextColored(sepCol, "|"); ImGui.SameLine(0, 4);
-        CChk("Settings > General", ref preset.ApplySettingsGeneral, cGold); ImGui.SameLine(0, 2);
-        CChk("Settings > Automation", ref preset.ApplySettingsAutomation, cGold); ImGui.SameLine(0, 2);
-        CChk("Settings > Rules", ref preset.ApplySettingsRules, cGold); ImGui.SameLine(0, 2);
-        CChk("Settings > Betting", ref preset.ApplySettingsBetting, cGold); ImGui.SameLine(0, 2);
-        CChk("Settings > Time & Delay", ref preset.ApplySettingsTimeDelay, cGold); ImGui.SameLine(0, 2);
-        CChk("Settings > Msg Settings", ref preset.ApplySettingsMessageSettings, cGold); ImGui.SameLine(0, 2);
-        CChk("Settings > Nearby Players", ref preset.ApplySettingsNearbyPlayers, cGold); ImGui.SameLine(0, 2);
-        CChk("Settings > Visual", ref preset.ApplySettingsVisual, cGold);
+        CChk("Settings > General", ref preset.ApplySettingsGeneral, cGold, Page.Settings); ImGui.SameLine(0, 2);
+        CChk("Settings > Automation", ref preset.ApplySettingsAutomation, cGold, Page.Settings); ImGui.SameLine(0, 2);
+        CChk("Settings > Rules", ref preset.ApplySettingsRules, cGold, Page.Settings); ImGui.SameLine(0, 2);
+        CChk("Settings > Betting", ref preset.ApplySettingsBetting, cGold, Page.Settings); ImGui.SameLine(0, 2);
+        CChk("Settings > Time & Delay", ref preset.ApplySettingsTimeDelay, cGold, Page.Settings); ImGui.SameLine(0, 2);
+        CChk("Settings > Msg Settings", ref preset.ApplySettingsMessageSettings, cGold, Page.Settings); ImGui.SameLine(0, 2);
+        CChk("Settings > Nearby Players", ref preset.ApplySettingsNearbyPlayers, cGold, Page.Settings); ImGui.SameLine(0, 2);
+        CChk("Settings > Visual", ref preset.ApplySettingsVisual, cGold, Page.Settings);
         ImGui.SameLine(0, 4); ImGui.TextColored(sepCol, "|"); ImGui.SameLine(0, 4);
-        CChk("Settings > System", ref preset.ApplySettingsSystem, cRed); ImGui.SameLine(0, 2);
-        CChk("Draw Logic", ref preset.ApplyDrawLogic, cGreen);
+        CChk("Settings > System", ref preset.ApplySettingsSystem, cRed, Page.Settings); ImGui.SameLine(0, 2);
+        CChk("Draw Logic", ref preset.ApplyDrawLogic, cGreen, Page.DrawLogic);
     }
 
     private void DrawPresetPreviewColumn()
@@ -715,6 +722,30 @@ public partial class BlackJackButtlerWindow
 
     private string BuildLogicalChatPreview(Configuration src)
     {
+        var previewPlayer = new PlayerState
+        {
+            Name = "Demo Player",
+            Alias = "Demo Player",
+            IsActivePlayer = true,
+            CurrentBet = 100000,
+            Hands = new List<HandState> { new(100000) },
+            CurrentHandIndex = 0
+        };
+        var previewDealer = new PlayerState
+        {
+            Name = "Dealer",
+            IsDealer = true,
+            IsActivePlayer = true,
+            Hands = new List<HandState> { new(0) },
+            CurrentHandIndex = 0
+        };
+        PlayerState currentTarget = previewDealer;
+        string previewWinners = string.Empty;
+        string previewPushed = string.Empty;
+        string previewLoosers = string.Empty;
+        string previewBusted = string.Empty;
+        string previewResults = string.Empty;
+
         string ResolveBatch(string raw)
             => _pvBatchRegex.Replace(raw, m =>
             {
@@ -724,16 +755,125 @@ public partial class BlackJackButtlerWindow
                 return b?.Messages.Count > 0 ? b.Messages[0] : $"[{bn}]";
             });
 
-        string Process(string raw, int pts, string cards, string playerName, int dealerPts)
+        static int BestScore(PlayerState state)
         {
+            if (state.Hands.Count == 0) return 0;
+            var (min, max) = state.CalculatePoints(state.CurrentHandIndex);
+            return (max.HasValue && max.Value <= 21) ? max.Value : min;
+        }
+
+        static string PointsText(PlayerState state)
+        {
+            if (state.Hands.Count == 0) return "0";
+            var (min, max) = state.CalculatePoints(state.CurrentHandIndex);
+            return max.HasValue ? $"{min}/{max}" : $"{min}";
+        }
+
+        static string CardsText(PlayerState state)
+            => state.Hands.Count == 0 ? string.Empty : state.GetCardsString(state.CurrentHandIndex);
+
+        static string ResultCategory(List<string> names, string singular, string plural)
+        {
+            if (names.Count == 0) return string.Empty;
+            return $"{(names.Count == 1 ? singular : plural)}: {string.Join(", ", names.Distinct())}";
+        }
+
+        void RecomputePreviewResults()
+        {
+            var winList = new List<string>();
+            var pushList = new List<string>();
+            var lossList = new List<string>();
+            var bustList = new List<string>();
+
+            var hand = previewPlayer.Hands.Count > 0 ? previewPlayer.Hands[previewPlayer.CurrentHandIndex] : null;
+            var pScore = BestScore(previewPlayer);
+            var dealerScore = BestScore(previewDealer);
+            var dealerHand = previewDealer.Hands.Count > 0 ? previewDealer.Hands[previewDealer.CurrentHandIndex] : null;
+            var dealerBust = dealerHand?.IsBust == true || dealerScore > 21;
+
+            if (hand == null)
+            {
+                // no-op
+            }
+            else if (hand.IsBust || pScore > 21)
+            {
+                bustList.Add(previewPlayer.DisplayName);
+            }
+            else if (dealerBust || pScore > dealerScore)
+            {
+                winList.Add(previewPlayer.DisplayName);
+            }
+            else if (pScore == dealerScore)
+            {
+                pushList.Add(previewPlayer.DisplayName);
+            }
+            else
+            {
+                lossList.Add(previewPlayer.DisplayName);
+            }
+
+            previewWinners = ResultCategory(winList, "Winner", "Winners");
+            previewPushed = ResultCategory(pushList, "Pushed", "Pushed");
+            previewLoosers = ResultCategory(lossList, "Lost", "Lost");
+            previewBusted = ResultCategory(bustList, "Busted", "Busted");
+
+            var parts = new List<string>();
+            if (winList.Any()) parts.Add(previewWinners);
+            if (pushList.Any()) parts.Add(previewPushed);
+            if (lossList.Any()) parts.Add(previewLoosers);
+            if (bustList.Any()) parts.Add(previewBusted);
+
+            var defaultResults = string.Join(" | ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
+            var resultTemplate = string.IsNullOrWhiteSpace(src.ResultTemplate) ? "${results}" : src.ResultTemplate;
+            previewResults = resultTemplate
+                .Replace("${results}", defaultResults)
+                .Replace("<results>", defaultResults)
+                .Replace("${winners}", previewWinners)
+                .Replace("${pushed}", previewPushed)
+                .Replace("${loosers}", previewLoosers)
+                .Replace("${busted}", previewBusted);
+        }
+
+        string GetPreviewResultGroup()
+        {
+            var hand = previewPlayer.Hands.Count > 0 ? previewPlayer.Hands[previewPlayer.CurrentHandIndex] : null;
+            if (hand == null) return "ResultPlayerLost";
+
+            var pScore = BestScore(previewPlayer);
+            var dealerScore = BestScore(previewDealer);
+            var dealerHand = previewDealer.Hands.Count > 0 ? previewDealer.Hands[previewDealer.CurrentHandIndex] : null;
+            var dealerBust = dealerHand?.IsBust == true || dealerScore > 21;
+
+            if (hand.IsBust || pScore > 21) return "ResultPlayerBusted";
+            if (dealerBust || pScore > dealerScore) return "ResultPlayerWin";
+            if (pScore == dealerScore) return "ResultPlayerPush";
+            return "ResultPlayerLost";
+        }
+
+        string Process(string raw, string playerName)
+        {
+            RecomputePreviewResults();
             raw = _pvSeRegex.Replace(raw, "");
             raw = ResolveBatch(raw);
+            var currentCards = CardsText(currentTarget);
+            var dealerCards = CardsText(previewDealer);
             return raw
-                .Replace("<points>", pts.ToString())
-                .Replace("<cards>", cards)
-                .Replace("${playerCards}", cards)
-                .Replace("${dealerpoints}", dealerPts.ToString())
-                .Replace("${results}", "Demo Player wins 100,000 Gil")
+                .Replace("<points>", PointsText(currentTarget))
+                .Replace("<cards>", currentCards)
+                .Replace("<dealerHand>", dealerCards)
+                .Replace("${playerCards}", currentCards)
+                .Replace("${dealerpoints}", BestScore(previewDealer).ToString())
+                .Replace("${dealerHand}", dealerCards)
+                .Replace("<winners>", previewWinners)
+                .Replace("<pushed>", previewPushed)
+                .Replace("<loosers>", previewLoosers)
+                .Replace("<busted>", previewBusted)
+                .Replace("<results>", previewResults)
+                .Replace("${winners}", previewWinners)
+                .Replace("${pushed}", previewPushed)
+                .Replace("${loosers}", previewLoosers)
+                .Replace("${busted}", previewBusted)
+                .Replace("${results}", previewResults)
                 .Replace("${HandIndex}", "")
                 .Replace("<t>", playerName)
                 .Replace("<.>", playerName)
@@ -750,29 +890,122 @@ public partial class BlackJackButtlerWindow
             return string.Empty;
         }
 
-        void AppendGroup(StringBuilder sb, string grpName, int pts, string cards, string playerName, int dealerPts)
+        bool IsDiceCommand(string text)
         {
-            var grp = src.CommandGroups.FirstOrDefault(
-                g => g.Name.Equals(grpName, StringComparison.OrdinalIgnoreCase));
-            if (grp == null) return;
-            foreach (var cmd in grp.Commands)
+            var t = text.TrimStart();
+            return t.StartsWith("/dice ", StringComparison.OrdinalIgnoreCase);
+        }
+
+        var dice = GetPreviewDiceRolls();
+        int diceIndex = 0;
+        string NextDiceLine()
+        {
+            var roll = dice.Count == 0 ? 0 : dice[Math.Min(diceIndex, dice.Count - 1)];
+            diceIndex++;
+            return $"SYSTEM: Random! You roll a {roll}.";
+        }
+
+        void ApplyPreviewRoll()
+        {
+            var roll = dice.Count == 0 ? 0 : dice[Math.Min(diceIndex - 1, dice.Count - 1)];
+            if (roll <= 0) return;
+            if (currentTarget.Hands.Count == 0)
+                currentTarget.Hands.Add(new HandState(currentTarget.CurrentBet));
+            currentTarget.Hands[currentTarget.CurrentHandIndex].Cards.Add(new DeckCard
             {
-                if (!cmd.Enabled || string.IsNullOrWhiteSpace(cmd.Text)) continue;
-                var chat = ExtractChat(Process(cmd.Text, pts, cards, playerName, dealerPts));
-                if (!string.IsNullOrWhiteSpace(chat)) sb.AppendLine(chat);
+                Value = GameEngine.MapDice13ToCardValue(roll),
+                Suit = CardSuit.Spades,
+                DrawnAt = DateTime.UtcNow
+            });
+            var hand = currentTarget.Hands[currentTarget.CurrentHandIndex];
+            var (min, max) = currentTarget.CalculatePoints(currentTarget.CurrentHandIndex);
+            hand.IsBust = min > 21 && (!max.HasValue || max.Value > 21);
+        }
+
+        CommandGroup? FindGroup(string grpName)
+            => src.CommandGroups.FirstOrDefault(g => g.Name.Equals(grpName, StringComparison.OrdinalIgnoreCase))
+               ?? src.CustomCommandGroups.FirstOrDefault(g => g.Name.Equals(grpName, StringComparison.OrdinalIgnoreCase));
+
+        PluginCommand? PickPreviewLineGroupCommand(CommandGroup grp, int groupId)
+            => grp.Commands.FirstOrDefault(c => c.GroupId == groupId
+                                                && c.Enabled
+                                                && (!string.IsNullOrWhiteSpace(c.Text)
+                                                    || (c.IsCommandRef && !string.IsNullOrWhiteSpace(c.CommandRefName))));
+
+        void AppendCommand(StringBuilder sb, PluginCommand cmd, string playerName, int depth)
+        {
+            if (depth > 5) return;
+
+            if (cmd.IsCommandRef && !string.IsNullOrWhiteSpace(cmd.CommandRefName))
+            {
+                AppendGroup(sb, cmd.CommandRefName, currentTarget, depth + 1);
+                return;
+            }
+
+            if (!cmd.Enabled || string.IsNullOrWhiteSpace(cmd.Text)) return;
+
+            var processed = Process(cmd.Text, playerName);
+            if (IsDiceCommand(processed))
+            {
+                sb.AppendLine(NextDiceLine());
+                ApplyPreviewRoll();
+                return;
+            }
+
+            var chat = ExtractChat(processed);
+            if (!string.IsNullOrWhiteSpace(chat))
+                sb.AppendLine(chat);
+        }
+
+        void AppendGroup(StringBuilder sb, string grpName, PlayerState target, int depth = 0)
+        {
+            var grp = FindGroup(grpName);
+            if (grp == null) return;
+            currentTarget = target;
+            var playerName = target.DisplayName;
+
+            var processedGroups = new HashSet<int>();
+            foreach (var rawCmd in grp.Commands)
+            {
+                PluginCommand? effectiveCmd;
+                if (rawCmd.GroupId == 0)
+                {
+                    effectiveCmd = rawCmd;
+                }
+                else
+                {
+                    if (!processedGroups.Add(rawCmd.GroupId))
+                        continue;
+                    effectiveCmd = PickPreviewLineGroupCommand(grp, rawCmd.GroupId);
+                    if (effectiveCmd == null) continue;
+                }
+
+                AppendCommand(sb, effectiveCmd, playerName, depth);
             }
         }
 
         var sb = new StringBuilder();
-        AppendGroup(sb, "DealStart", 6, "6S", "Dealer", 6);
-        AppendGroup(sb, "Initial", 15, "7S 8C", "Demo Player", 6);
-        AppendGroup(sb, "Hit", 20, "7S 8C 5D", "Demo Player", 6);
-        AppendGroup(sb, "PlayerBust", 24, "7S 8C 9D", "Demo Player", 6);
-        AppendGroup(sb, "DealHit", 17, "6S 5C 6D", "Dealer", 17);
-        AppendGroup(sb, "DealStand", 17, "6S 5C 6D", "Dealer", 17);
-        AppendGroup(sb, src.SmallResult ? "ResultSmall" : "ResultPlayerWin", 20, "7S 8C 5D", "Demo Player", 17);
+        AppendGroup(sb, "DealStart", previewDealer);
+        AppendGroup(sb, "Initial", previewPlayer);
+        AppendGroup(sb, "Hit", previewPlayer);
+        AppendGroup(sb, "PlayerBust", previewPlayer);
+        AppendGroup(sb, "DealHit", previewDealer);
+        AppendGroup(sb, "DealStand", previewDealer);
+        RecomputePreviewResults();
+        AppendGroup(sb, src.SmallResult ? "ResultSmall" : GetPreviewResultGroup(), src.SmallResult ? previewDealer : previewPlayer);
 
         return sb.ToString().TrimEnd();
+    }
+
+    private static List<int> GetPreviewDiceRolls()
+    {
+        var rolls = Plugin.DebugDiceSequence
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(token => int.TryParse(token, out var roll) ? roll : (int?)null)
+            .Where(roll => roll.HasValue)
+            .Select(roll => roll!.Value)
+            .ToList();
+        return rolls.Count > 0 ? rolls : new List<int> { 7, 10, 9, 4, 4, 8, 3, 3, 10, 6, 5, 4, 3, 2 };
     }
 
     private string BuildDealerDrawPreview(PresetEntry preset)
@@ -808,8 +1041,10 @@ public partial class BlackJackButtlerWindow
             return raw
                 .Replace("<points>",        pts.ToString())
                 .Replace("<cards>",         cards)
+                .Replace("<dealerHand>",    "6S 5C 6D")
                 .Replace("${playerCards}",  cards)
                 .Replace("${dealerpoints}", dealerPts.ToString())
+                .Replace("${dealerHand}",   "6S 5C 6D")
                 .Replace("${HandIndex}",    "")
                 .Replace("<t>",             playerName)
                 .Replace("<.>",             playerName)

@@ -172,7 +172,15 @@ public partial class BlackJackButtlerWindow
                 ImGui.SetTooltip("Classic keeps the current main page layout.\nVersion 2 uses the reorganized main page.");
 
             ImGui.Spacing();
-            if (ImGui.Checkbox("Use Burger Menu instead of Sidebar", ref _config.UseBurgerMenu)) _save();
+            ImGui.TextUnformatted("Menu Style");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            int menuModeIdx = _config.UseBurgerMenu ? 0 : 1;
+            if (BJBGui.Combo("##menu_style", ref menuModeIdx, "Burger Menu\0Sidebar\0"))
+            {
+                _config.UseBurgerMenu = menuModeIdx == 0;
+                _save();
+            }
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Replace the left sidebar with a compact burger-menu button at the top.\nUseful when window space is tight.");
 
