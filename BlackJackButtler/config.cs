@@ -107,6 +107,7 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool UseBurgerMenu = false;
     public int MainViewVersion = 1;
+    public bool MainViewV2SuperCompact = false;
 
     public bool ImportantNoticeAcknowledged = false;
 

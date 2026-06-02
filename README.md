@@ -1,4 +1,4 @@
-`v1.8.4.0`
+`v1.8.4.1`
 
 # BlackJack Buttler
 
@@ -139,7 +139,7 @@ The main window title bar contains quick-access buttons:
 
 ## 2 Main Game Page
 
-The main page can run in **Version 1** or **Version 2**, selected in **Settings > General > Main View**. Version 2 keeps the same game logic but reorganizes controls into clearer header groups, adds the Auto Continue bar, and displays nearby-player numbers in-world.
+The main page can run in **Classic** or **Version 2**, selected in **Settings > General > Main View**. Version 2 keeps the same game logic but reorganizes controls into clearer header groups, adds the Auto Continue bar, and displays nearby-player numbers in-world.
 
 The header includes a **Bank /tell** button that posts bank/bet info to party chat for all active players.
 
@@ -175,16 +175,17 @@ A 4-column table showing the dealer's name, cards, points, and controls. Above t
 
 ### 2.4 Player Table
 
-A 10-column table for all players:
+An 11-column table for all players:
 
 | Column | Description |
 |---|---|
 | **V** | VIP tier button. Cycles VIP tier for the player when VIP bet limits are configured. Tier affects the player's effective max bet. |
-| **A** | Alias button. Opens a popup to set a short display name. The alias replaces the character name in `<t>` token replacements and in the Name column. Clear the alias by saving an empty value or matching the original name. |
+| **A** | Alias button. Opens a popup to set a short display name. The alias replaces the character name in `<t>` token replacements and in the Name column. Clear the alias by saving an empty value or matching the original name. In Version 2 Compact, this column is hidden and double-clicking the player name opens the alias dialog. |
 | **J** | Join/Leave toggle. `>` to add inactive player, `X` to deactivate. |
+| **R** | Ready-skip toggle. Counts the player as ready for the next round when inter-round detectors can run. |
 | **P** | Hold/Bench button. Toggles hold (skip next round), bench (pause mid-round), or return. |
 | **Name** | Player display name (alias if set, otherwise character name). Yellow when it is their turn. |
-| **Bank** | Gil balance. Editable when the Bank Input checkbox is enabled. Includes a **"T" button** that executes the `BankTell` command group for this individual player, posting their bank/bet info to party chat. Ctrl-actions can move a leaving player's bank into tips. |
+| **Bank** | Gil balance. Editable when the Bank Input checkbox is enabled. Includes a **"T" button** that executes the `BankTell` command group for this individual player, posting their bank/bet info to party chat. Ctrl-actions can move a leaving player's bank into tips. In Version 2 Compact, Bank-to-Tip and Max Bet buttons are only shown while Shift is held. |
 | **Bet** | Current bet amount. Red `!` indicator appears when outside the configured min/max range. The effective max can come from global max bet or VIP tier. |
 | **Cards** | Visual card display with suit colors (red for Hearts/Diamonds, white for Spades/Clubs). |
 | **Points** | Calculated score. Shows "BJ" (green for natural, yellow for dirty), red strikethrough for busts, or min/max for soft hands. |
@@ -351,7 +352,7 @@ The **Stats** tab tracks a working bank session for venue accounting.
 | **Start Bank / Stop Bank** | Starts or stops the bank session. Start bank and start time are persisted with the session backup. |
 | **Start Bank edit** | Pencil button for correcting the captured starting bank. |
 | **Start Time edit** | Accepts `M/D/YYYY HH:MMam|pm` style input for correcting the session start time. |
-| **Tips** | Quick-add buttons for 50k, 100k, and 500k. Hold Shift to subtract instead. |
+| **Tips** | Quick-add buttons for 1k, 5k, 50k, 100k, 500k, plus Custom. Hold Shift to subtract instead. |
 | **Payout %** | Percentage of profit to pay out. Losses never create a positive payout. |
 | **Fixed Wage / Gil per Hour** | Either subtract a fixed wage or a time-based wage. |
 | **Clip hours** | Rounds elapsed time Up, Down, or Even for hourly wage calculation. |
@@ -390,7 +391,8 @@ Switch between Beginner, Advanced, Dev, and Custom. Custom mode lets you choose 
 
 | Setting | Description |
 |---|---|
-| **Main View** | Switches between Main View Version 1 and Version 2. Version 2 adds reorganized header controls, auto-continue bar support, and in-world nearby numbering. |
+| **Main View** | Switches between Main View Classic and Version 2. Version 2 adds reorganized header controls, auto-continue bar support, and in-world nearby numbering. |
+| **Version 2 Density** | Version 2 only. Switches between Normal and Compact. Compact reduces spacing, uses smaller text, hides the Alias column, removes numeric +/- buttons in player Bank/Bet inputs, and shows Bank-to-Tip / Max Bet only while Shift is held. |
 | **Burger Menu / Sidebar** | Chooses between compact burger navigation and the full left sidebar. |
 
 ### 10.3 Command Speed and Recall Unlock
@@ -765,6 +767,8 @@ Presets are configuration snapshots that save and restore your plugin setup. Use
 
 The currently active preset name is displayed in the window title. A `*` indicates the active config differs from the applied preset. Presets can be imported/exported individually or as one combined JSON file.
 
+Preset assignment category checkboxes can be shown or hidden with **Show Assigment Rule Options**. The preset preview is shown in a dedicated right-side column and starts from the current active configuration. Use **Use for Preview** to add presets to the temporary preview stack; each selected preset is numbered in application order. **Remove from Preview** removes a preset from that stack, **Back to current** clears the stack, and **Use as shown** applies the stacked presets in the displayed order.
+
 ---
 
 ## 17 Regex
@@ -891,7 +895,7 @@ Each variable row shows:
 
 ### 19.1 Debug Mode and Test Data
 
-Enabling Debug Mode creates test player data (7 mock players with varying bank/bet values) and allows playing a full game without a real party. Dice commands are simulated internally.
+Enabling Debug Mode creates test player data and allows playing a full game without a real party. Dice commands are simulated internally. **Generate new Players** adds mock players until the debug group has 7 players and is disabled once the group is full.
 
 **Fast Tests** mode reduces all command delays to 0.2 seconds.
 

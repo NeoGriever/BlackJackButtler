@@ -70,10 +70,16 @@ public partial class BlackJackButtlerWindow
         if (Plugin.IsDebugMode)
         {
             ImGui.SameLine();
-            if (BJBGui.Button("Generate Debug Players"))
+            int debugPlayerCount = _players.Count(p => p.IsDebugPlayer);
+            bool debugPartyFull = debugPlayerCount >= 7;
+            if (debugPartyFull) ImGui.BeginDisabled();
+            if (BJBGui.Button("Generate new Players"))
                 GenerateRandomDebugPlayers();
+            if (debugPartyFull) ImGui.EndDisabled();
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Replace debug players with random numbered characters");
+                ImGui.SetTooltip(debugPartyFull
+                    ? "Debug group is already full"
+                    : "Add random debug players until the group has 7 players");
 
             ImGui.SetNextItemWidth(-80);
             if (ImGui.InputText("##debug_dice_sequence", ref Plugin.DebugDiceSequence, 1024))

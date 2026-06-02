@@ -156,7 +156,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.PopStyleColor(5);
             }
         }
-        if (ImGui.BeginTable("bjb_main_table", 10, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
+        if (ImGui.BeginTable("bjb_main_table", 11, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
         {
             SetupTableColumns();
             ImGui.TableHeadersRow();
@@ -261,7 +261,7 @@ public partial class BlackJackButtlerWindow
 
     private void DrawAliasModal()
     {
-        if (ImGui.BeginPopupModal("bjb_alias_popup", ref _isAliasModalOpen, ImGuiWindowFlags.AlwaysAutoResize))
+        if (ImGui.BeginPopupModal("Set Player Alias##bjb_alias_popup", ref _isAliasModalOpen, ImGuiWindowFlags.AlwaysAutoResize))
         {
             if (_editingAliasPlayer == null)
             {
@@ -301,19 +301,29 @@ public partial class BlackJackButtlerWindow
         }
     }
 
+    private void OpenAliasPopupForPlayer(PlayerState p)
+    {
+        p.HighlightAlias = false;
+        _editingAliasPlayer = p;
+        _aliasInputBuffer = !string.IsNullOrWhiteSpace(p.Alias) ? p.Alias : p.Name;
+        _triggerAliasPopup = true;
+    }
+
     private void SetupTableColumns()
     {
+        bool compact = IsV2SuperCompact();
         ImGui.TableSetupColumn("V", ImGuiTableColumnFlags.WidthFixed, 25);
-        ImGui.TableSetupColumn("A", ImGuiTableColumnFlags.WidthFixed, 25);
+        if (!compact)
+            ImGui.TableSetupColumn("A", ImGuiTableColumnFlags.WidthFixed, 25);
         ImGui.TableSetupColumn("J", ImGuiTableColumnFlags.WidthFixed, 25);
         ImGui.TableSetupColumn("R", ImGuiTableColumnFlags.WidthFixed, 25);
         ImGui.TableSetupColumn("P", ImGuiTableColumnFlags.WidthFixed, 25);
-        ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, 130);
+        ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, compact ? 105 : 130);
         ImGui.TableSetupColumn("Bank", ImGuiTableColumnFlags.WidthStretch, 1.0f);
         ImGui.TableSetupColumn("Bet", ImGuiTableColumnFlags.WidthStretch, 1.0f);
-        ImGui.TableSetupColumn("Cards", ImGuiTableColumnFlags.WidthFixed, 100);
-        ImGui.TableSetupColumn("Points", ImGuiTableColumnFlags.WidthFixed, 55);
-        ImGui.TableSetupColumn("Controls", ImGuiTableColumnFlags.WidthFixed, 200);
+        ImGui.TableSetupColumn("Cards", ImGuiTableColumnFlags.WidthFixed, compact ? 82 : 100);
+        ImGui.TableSetupColumn("Points", ImGuiTableColumnFlags.WidthFixed, compact ? 42 : 55);
+        ImGui.TableSetupColumn("Controls", ImGuiTableColumnFlags.WidthFixed, compact ? 160 : 200);
     }
 
     private void DrawMainHeader()
@@ -741,17 +751,16 @@ public partial class BlackJackButtlerWindow
             }
         }
 
-        ImGui.TableNextColumn();
-        if (p.IsActivePlayer) {
-            bool hlAlias = p.HighlightAlias;
-            bool clickedAlias = hlAlias
-                ? BJBGui.ButtonHighlighted($"A##alias_btn_{p.UIID}", _config.HighlightColor, _config.HighlightTextColor)
-                : BJBGui.Button($"A##alias_btn_{p.UIID}");
-            if (clickedAlias) {
-                p.HighlightAlias = false;
-                _editingAliasPlayer = p;
-                _aliasInputBuffer = !string.IsNullOrWhiteSpace(p.Alias) ? p.Alias : p.Name;
-                _triggerAliasPopup = true;
+        bool compact = IsV2SuperCompact();
+        if (!compact)
+        {
+            ImGui.TableNextColumn();
+            if (p.IsActivePlayer) {
+                bool hlAlias = p.HighlightAlias;
+                bool clickedAlias = hlAlias
+                    ? BJBGui.ButtonHighlighted($"A##alias_btn_{p.UIID}", _config.HighlightColor, _config.HighlightTextColor)
+                    : BJBGui.Button($"A##alias_btn_{p.UIID}");
+                if (clickedAlias) OpenAliasPopupForPlayer(p);
             }
         }
 
@@ -942,21 +951,28 @@ public partial class BlackJackButtlerWindow
         else
             nameColor = new Vector4(1, 1, 1, 1);
         ImGui.TextColored(nameColor, p.DisplayName);
+        if (compact && p.IsActivePlayer && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+            OpenAliasPopupForPlayer(p);
         // Ready-skip wurde in die R-Spalte verschoben
 
         ImGui.TableNextColumn();
         {
             bool canTellPlayer = GameEngine.CanAcceptInterRoundDetectors();
             float tButtonWidth = 25f;
-            float heartButtonWidth = 25f;
-            float mButtonWidth = 25f;
+            bool showShiftOnlyActions = !compact || ImGui.GetIO().KeyShift;
+            float heartButtonWidth = showShiftOnlyActions ? 25f : 0f;
+            float mButtonWidth = showShiftOnlyActions ? 25f : 0f;
             float spacing = ImGui.GetStyle().ItemSpacing.X;
+            float reservedSpacing = spacing + (showShiftOnlyActions ? spacing * 2 : 0f);
 
             long bankBefore = p.Bank;
             bool removeRowAfterBankEdit = false;
             if (!_config.EnableBankInput) ImGui.BeginDisabled();
-            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - tButtonWidth - heartButtonWidth - mButtonWidth - spacing * 3);
-            if (BJBGui.InputLong($"##bank_{p.UIID}", ref p.Bank, 1000, 10000))
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - tButtonWidth - heartButtonWidth - mButtonWidth - reservedSpacing);
+            bool bankEdited = compact
+                ? BJBGui.InputLongNoButtons($"##bank_{p.UIID}", ref p.Bank)
+                : BJBGui.InputLong($"##bank_{p.UIID}", ref p.Bank, 1000, 10000);
+            if (bankEdited)
             {
                 _bankChanged.Add(p.UIID);
                 _save();
@@ -998,66 +1014,70 @@ public partial class BlackJackButtlerWindow
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                 ImGui.SetTooltip("Post bank/bet info for this player to party chat");
 
-            ImGui.SameLine();
-            bool hasUndo = _bankToTipUndo.TryGetValue(p.UIID, out var undoEntry)
-                           && (DateTime.Now - undoEntry.clickedAt).TotalSeconds < 10;
-            if (hasUndo)
+            if (showShiftOnlyActions)
             {
-                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1f));
-                if (BJBGui.SmallButton($"U##heart_{p.UIID}"))
+                ImGui.SameLine();
+                bool hasUndo = _bankToTipUndo.TryGetValue(p.UIID, out var undoEntry)
+                               && (DateTime.Now - undoEntry.clickedAt).TotalSeconds < 10;
+                if (hasUndo)
                 {
-                    p.Bank = undoEntry.amount;
-                    StatsManager.AddTip(-undoEntry.amount);
+                    ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1f));
+                    if (BJBGui.SmallButton($"U##heart_{p.UIID}"))
+                    {
+                        p.Bank = undoEntry.amount;
+                        StatsManager.AddTip(-undoEntry.amount);
+                        _bankToTipUndo.Remove(p.UIID);
+                        SaveSessionFromUI();
+                        CompanionSyncManager.SendPlayerBankBetUpdate(_config, p);
+                    }
+                    ImGui.PopStyleColor();
+                    if (ImGui.IsItemHovered())
+                    {
+                        int remaining = Math.Max(0, 10 - (int)(DateTime.Now - undoEntry.clickedAt).TotalSeconds);
+                        ImGui.SetTooltip($"Undo Bank->Tip ({remaining}s)");
+                    }
+                }
+                else
+                {
                     _bankToTipUndo.Remove(p.UIID);
-                    SaveSessionFromUI();
-                    CompanionSyncManager.SendPlayerBankBetUpdate(_config, p);
+                    bool canHeart = StatsManager.IsRunning && p.Bank > 0;
+                    bool ctrlDown = ImGui.GetIO().KeyCtrl;
+                    bool needsCtrl = !compact;
+                    if (!canHeart || (needsCtrl && !ctrlDown)) ImGui.BeginDisabled();
+                    ImGui.PushFont(UiBuilder.IconFont);
+                    if (BJBGui.SmallButton(FontAwesomeIcon.Heart.ToIconString() + $"##heart_{p.UIID}"))
+                    {
+                        long amount = p.Bank;
+                        StatsManager.AddTip(amount);
+                        p.Bank = 0;
+                        _bankToTipUndo[p.UIID] = (amount, DateTime.Now);
+                        SaveSessionFromUI();
+                        CompanionSyncManager.SendPlayerBankBetUpdate(_config, p);
+                    }
+                    ImGui.PopFont();
+                    if (!canHeart || (needsCtrl && !ctrlDown)) ImGui.EndDisabled();
+                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    {
+                        if (!StatsManager.IsRunning)
+                            ImGui.SetTooltip("Start a stats session first");
+                        else if (needsCtrl && !ctrlDown)
+                            ImGui.SetTooltip("Hold CTRL to transfer bank to tips");
+                        else
+                            ImGui.SetTooltip("Transfer entire bank to tips");
+                    }
                 }
-                ImGui.PopStyleColor();
-                if (ImGui.IsItemHovered())
-                {
-                    int remaining = Math.Max(0, 10 - (int)(DateTime.Now - undoEntry.clickedAt).TotalSeconds);
-                    ImGui.SetTooltip($"Undo Bank→Tip ({remaining}s)");
-                }
-            }
-            else
-            {
-                _bankToTipUndo.Remove(p.UIID);
-                bool canHeart = StatsManager.IsRunning && p.Bank > 0;
-                bool ctrlDown = ImGui.GetIO().KeyCtrl;
-                if (!canHeart || !ctrlDown) ImGui.BeginDisabled();
-                ImGui.PushFont(UiBuilder.IconFont);
-                if (BJBGui.SmallButton(FontAwesomeIcon.Heart.ToIconString() + $"##heart_{p.UIID}"))
-                {
-                    long amount = p.Bank;
-                    StatsManager.AddTip(amount);
-                    p.Bank = 0;
-                    _bankToTipUndo[p.UIID] = (amount, DateTime.Now);
-                    SaveSessionFromUI();
-                    CompanionSyncManager.SendPlayerBankBetUpdate(_config, p);
-                }
-                ImGui.PopFont();
-                if (!canHeart || !ctrlDown) ImGui.EndDisabled();
-                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                {
-                    if (!StatsManager.IsRunning)
-                        ImGui.SetTooltip("Start a stats session first");
-                    else if (!ctrlDown)
-                        ImGui.SetTooltip("Hold CTRL to transfer bank to tips");
-                    else
-                        ImGui.SetTooltip("Transfer entire bank to tips");
-                }
-            }
 
-            ImGui.SameLine();
-            if (BJBGui.SmallButton($"M##maxbet_{p.UIID}"))
-            {
-                p.CurrentBet = Math.Min(p.GetEffectiveMaxBet(_config), p.Bank);
-                _save();
-                SaveSessionFromUI();
-                CompanionSyncManager.SendPlayerBankBetUpdate(_config, p);
+                ImGui.SameLine();
+                if (BJBGui.SmallButton($"M##maxbet_{p.UIID}"))
+                {
+                    p.CurrentBet = Math.Min(p.GetEffectiveMaxBet(_config), p.Bank);
+                    _save();
+                    SaveSessionFromUI();
+                    CompanionSyncManager.SendPlayerBankBetUpdate(_config, p);
+                }
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip($"Set bet to lower value of max bet ({p.GetEffectiveMaxBet(_config):N0}) or bank ({p.Bank:N0})");
             }
-            if (ImGui.IsItemHovered())
-                ImGui.SetTooltip($"Set bet to lower value of max bet ({p.GetEffectiveMaxBet(_config):N0}) or bank ({p.Bank:N0})");
         }
 
         ImGui.TableNextColumn();
@@ -1097,7 +1117,10 @@ public partial class BlackJackButtlerWindow
         long betBefore = p.CurrentBet;
         ImGui.SetNextItemWidth(-1);
         // Use raw ImGui.InputLong when highlighted so HighlightTextColor is not overridden internally
-        if (hlBet ? ImGui.InputLong($"##bet_{p.UIID}", ref p.CurrentBet, 500, 5000) : BJBGui.InputLong($"##bet_{p.UIID}", ref p.CurrentBet, 500, 5000))
+        bool betEdited = compact
+            ? (hlBet ? ImGui.InputLong($"##bet_{p.UIID}", ref p.CurrentBet, 0, 0) : BJBGui.InputLongNoButtons($"##bet_{p.UIID}", ref p.CurrentBet))
+            : (hlBet ? ImGui.InputLong($"##bet_{p.UIID}", ref p.CurrentBet, 500, 5000) : BJBGui.InputLong($"##bet_{p.UIID}", ref p.CurrentBet, 500, 5000));
+        if (betEdited)
         {
             p.HighlightBet = false;
             _betChanged.Add(p.UIID);
@@ -1681,15 +1704,19 @@ public partial class BlackJackButtlerWindow
     private void GenerateRandomDebugPlayers()
     {
         Plugin.ResetDebugDiceSequence();
-        RemovePlayersWithCompanionErase(p => p.IsDebugPlayer);
 
-        var count = Random.Shared.Next(5, 9);
+        var existingDebugCount = _players.Count(p => p.IsDebugPlayer);
+        var count = Math.Max(0, 7 - existingDebugCount);
+        if (count == 0)
+            return;
+
         var worlds = WorldNameManager.SortedWorldNames.ToArray();
+        var activeExisting = _players.Count(p => p.IsDebugPlayer && p.IsActivePlayer);
         for (var i = 0; i < count; i++)
         {
             var world = worlds[Random.Shared.Next(worlds.Length)];
             var token = Random.Shared.Next(0x10000000, int.MaxValue).ToString("X8");
-            var active = i < 2;
+            var active = activeExisting + i < 2;
             _players.Add(new PlayerState
             {
                 Name = $"Player {token}@{world}",
@@ -1705,7 +1732,7 @@ public partial class BlackJackButtlerWindow
 
         CompanionSyncManager.SendPlayersUpdate(_config, _players.Where(p => p.IsDebugPlayer));
         GameEngine.SetRuntimeContext(_players, _dealer);
-        AddDebugLog($"[DEBUG] Generated {count} random debug players.", false);
+        AddDebugLog($"[DEBUG] Added {count} random debug players ({existingDebugCount + count}/7).", false);
         _save();
     }
 
