@@ -16,6 +16,7 @@ public partial class BlackJackButtlerWindow
     private static readonly string[] SettingsGeneralFields = {
         "EnableBankInput", "CommandSpeedMultiplier", "PayoutAutoConfirmTrade",
         "SmallResult", "ResultTemplate", "AutostartRoundOnlyOnMultiplePlayers",
+        "MainViewV2SuperCompact",
     };
     private static readonly string[] SettingsAutomationFields = {
         "EnableAutomation", "ShowAutoDealerDrawButton", "ShowAutoPlayerHandButton",
@@ -93,6 +94,8 @@ public partial class BlackJackButtlerWindow
     private string?  _presetMigrationStatus;
     private readonly HashSet<string>           _presetPreviewOpen  = new();
     private readonly Dictionary<string, string> _presetPreviewCache = new();
+    private readonly List<string> _presetPreviewStack = new();
+    private bool _showPresetAssignmentRuleOptions;
     // Deferred popup flags (OpenPopup und BeginPopupModal müssen im selben Fensterkontext sein)
     private bool _triggerApplyPopup;
     private bool _triggerUpdatePopup;
@@ -224,6 +227,15 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.Spacing();
+        ImGui.Checkbox("Show Assigment Rule Options", ref _showPresetAssignmentRuleOptions);
+        ImGui.Spacing();
+
+        if (ImGui.BeginTable("##preset_layout", 2, ImGuiTableFlags.Resizable | ImGuiTableFlags.SizingStretchProp))
+        {
+        ImGui.TableSetupColumn("Presets", ImGuiTableColumnFlags.WidthStretch, 0.58f);
+        ImGui.TableSetupColumn("Preview", ImGuiTableColumnFlags.WidthStretch, 0.42f);
+        ImGui.TableNextRow();
+        ImGui.TableNextColumn();
 
         // ── Preset-Liste ──────────────────────────────────────────────────────
         ImGui.BeginChild("##preset_scroll", new Vector2(0, ImGui.GetContentRegionAvail().Y), false);
@@ -282,6 +294,12 @@ public partial class BlackJackButtlerWindow
             ImGui.PopStyleColor(2);
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Apply this preset");
             ImGui.SameLine(0, 5);
+
+            if (_showPresetAssignmentRuleOptions)
+            {
+                DrawPresetAssignmentCheckboxes(preset);
+                ImGui.SameLine(0, 5);
+            }
 
             // Titelfarbe: Custom oder aus Checkbox-Kombination berechnet
             var titleColor = preset.CustomTitleColor ?? ComputePresetColor(preset);
@@ -352,81 +370,24 @@ public partial class BlackJackButtlerWindow
 
                 ImGui.Spacing();
 
-                // ── Kompakte Checkboxen mit Tooltips ──────────────────────────
-                void CChk(string tip, ref bool val, Vector4 col)
-                {
-                    var bg = val
-                        ? new Vector4(col.X * 0.22f, col.Y * 0.22f, col.Z * 0.22f, 0.90f)
-                        : new Vector4(0.13f, 0.13f, 0.13f, 0.80f);
-                    ImGui.PushStyleColor(ImGuiCol.CheckMark,     col);
-                    ImGui.PushStyleColor(ImGuiCol.FrameBg,       bg);
-                    ImGui.PushStyleColor(ImGuiCol.FrameBgHovered,
-                        new Vector4(col.X * 0.35f, col.Y * 0.35f, col.Z * 0.35f, 1f));
-                    if (ImGui.Checkbox($"##cc_{tip.GetHashCode()}", ref val))
-                    { _presetPreviewCache.Clear(); PresetStorage.Save(_config.Presets); _save(); }
-                    ImGui.PopStyleColor(3);
-                    if (ImGui.IsItemHovered()) ImGui.SetTooltip(tip);
-                }
-
-                var cBlue   = new Vector4(0.35f, 0.65f, 1.00f, 1f);
-                var cPurp   = new Vector4(0.75f, 0.45f, 1.00f, 1f);
-                var cGold   = new Vector4(1.00f, 0.80f, 0.20f, 1f);
-                var cRed    = new Vector4(1.00f, 0.35f, 0.35f, 1f);
-                var cGreen  = new Vector4(0.35f, 1.00f, 0.55f, 1f);
-                var sepCol  = new Vector4(0.40f, 0.40f, 0.40f, 0.60f);
-
-                // Gruppe 1: Daten / Inhalte
-                CChk("Regex", ref preset.ApplyRegexes, cBlue); ImGui.SameLine(0, 3);
-                CChk("Messages Default", ref preset.ApplyMessagesDefault, cBlue); ImGui.SameLine(0, 3);
-                CChk("Messages Custom",  ref preset.ApplyMessagesCustom,  cBlue); ImGui.SameLine(0, 3);
-                CChk("Commands",    ref preset.ApplyStandardCommands, cPurp); ImGui.SameLine(0, 3);
-                CChk("Own Buttons", ref preset.ApplyOwnButtons, cPurp);
-
-                // Trennstrich
-                ImGui.SameLine(0, 6);
-                ImGui.TextColored(sepCol, "|");
-                ImGui.SameLine(0, 6);
-
-                // Gruppe 2: Settings
-                CChk("Settings > General",       ref preset.ApplySettingsGeneral,        cGold); ImGui.SameLine(0, 3);
-                CChk("Settings > Automation",    ref preset.ApplySettingsAutomation,     cGold); ImGui.SameLine(0, 3);
-                CChk("Settings > Rules",         ref preset.ApplySettingsRules,          cGold); ImGui.SameLine(0, 3);
-                CChk("Settings > Betting",       ref preset.ApplySettingsBetting,        cGold); ImGui.SameLine(0, 3);
-                CChk("Settings > Time & Delay",  ref preset.ApplySettingsTimeDelay,      cGold); ImGui.SameLine(0, 3);
-                CChk("Settings > Msg Settings",  ref preset.ApplySettingsMessageSettings,cGold); ImGui.SameLine(0, 3);
-                CChk("Settings > Nearby Players",ref preset.ApplySettingsNearbyPlayers,  cGold); ImGui.SameLine(0, 3);
-                CChk("Settings > Visual",        ref preset.ApplySettingsVisual,         cGold);
-
-                // Trennstrich
-                ImGui.SameLine(0, 6);
-                ImGui.TextColored(sepCol, "|");
-                ImGui.SameLine(0, 6);
-
-                // Gruppe 3: Spezial
-                CChk("Settings > System", ref preset.ApplySettingsSystem, cRed);  ImGui.SameLine(0, 3);
-                CChk("Draw Logic",        ref preset.ApplyDrawLogic,      cGreen);
-                ImGui.NewLine();
-
-                ImGui.Spacing();
-
-                // ── Preview ───────────────────────────────────────────────────
-                bool pvOpen = _presetPreviewOpen.Contains(preset.PresetId);
-                if (ImGui.SmallButton(pvOpen ? "▼ Command Preview" : "▶ Command Preview"))
-                {
-                    if (pvOpen) _presetPreviewOpen.Remove(preset.PresetId);
-                    else        _presetPreviewOpen.Add(preset.PresetId);
-                }
-                if (pvOpen)
-                {
-                    var pvText = BuildDealerDrawPreview(preset);
-                    ImGui.InputTextMultiline("##pv", ref pvText, 65536,
-                        new Vector2(ImGui.GetContentRegionAvail().X, 130f));
-                }
-
-                ImGui.Spacing();
-
                 // ── Aktions-Buttons ───────────────────────────────────────────
                 const float bw = 44f;
+                bool inPreview = _presetPreviewStack.Contains(preset.PresetId);
+                if (ImGui.Button(inPreview ? "Remove from Preview##preview" : "Use for Preview##preview", new Vector2(150f, 0)))
+                {
+                    if (inPreview)
+                        _presetPreviewStack.Remove(preset.PresetId);
+                    else
+                        _presetPreviewStack.Add(preset.PresetId);
+                    _presetPreviewCache.Clear();
+                }
+                if (inPreview)
+                {
+                    ImGui.SameLine();
+                    ImGui.TextDisabled($"{_presetPreviewStack.IndexOf(preset.PresetId) + 1}");
+                }
+
+                ImGui.Spacing();
 
                 if (ImGui.Button("Upd##upd", new Vector2(bw, 0)))
                 {
@@ -482,6 +443,7 @@ public partial class BlackJackButtlerWindow
                     { _config.ActivePresetId = string.Empty; _config.ActivePresetName = null; _presetChangeCount = 0; }
                     _config.Presets.Remove(preset);
                     _presetPreviewOpen.Remove(preset.PresetId);
+                    _presetPreviewStack.Remove(preset.PresetId);
                     _presetPreviewCache.Clear();
                     PresetStorage.Save(_config.Presets);
                     _save();
@@ -510,6 +472,11 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.EndChild();
+
+        ImGui.TableNextColumn();
+        DrawPresetPreviewColumn();
+        ImGui.EndTable();
+        }
 
         // Deferred OpenPopup — muss im selben Fensterkontext wie BeginPopupModal sein
         if (_triggerApplyPopup)  { ImGui.OpenPopup("preset_apply_confirm");  _triggerApplyPopup  = false; }
@@ -622,6 +589,191 @@ public partial class BlackJackButtlerWindow
     }
 
     // ─── Command Preview Simulation ────────────────────────────────────────────
+
+    private void DrawPresetAssignmentCheckboxes(PresetEntry preset)
+    {
+        void CChk(string tip, ref bool val, Vector4 col)
+        {
+            var bg = val
+                ? new Vector4(col.X * 0.22f, col.Y * 0.22f, col.Z * 0.22f, 0.90f)
+                : new Vector4(0.13f, 0.13f, 0.13f, 0.80f);
+            ImGui.PushStyleColor(ImGuiCol.CheckMark, col);
+            ImGui.PushStyleColor(ImGuiCol.FrameBg, bg);
+            ImGui.PushStyleColor(ImGuiCol.FrameBgHovered,
+                new Vector4(col.X * 0.35f, col.Y * 0.35f, col.Z * 0.35f, 1f));
+            if (ImGui.Checkbox($"##cc_{preset.PresetId}_{tip.GetHashCode()}", ref val))
+            {
+                _presetPreviewCache.Clear();
+                PresetStorage.Save(_config.Presets);
+                _save();
+            }
+            ImGui.PopStyleColor(3);
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(tip);
+        }
+
+        var cBlue = new Vector4(0.35f, 0.65f, 1.00f, 1f);
+        var cPurp = new Vector4(0.75f, 0.45f, 1.00f, 1f);
+        var cGold = new Vector4(1.00f, 0.80f, 0.20f, 1f);
+        var cRed = new Vector4(1.00f, 0.35f, 0.35f, 1f);
+        var cGreen = new Vector4(0.35f, 1.00f, 0.55f, 1f);
+        var sepCol = new Vector4(0.40f, 0.40f, 0.40f, 0.60f);
+
+        CChk("Regex", ref preset.ApplyRegexes, cBlue); ImGui.SameLine(0, 2);
+        CChk("Messages Default", ref preset.ApplyMessagesDefault, cBlue); ImGui.SameLine(0, 2);
+        CChk("Messages Custom", ref preset.ApplyMessagesCustom, cBlue); ImGui.SameLine(0, 2);
+        CChk("Commands", ref preset.ApplyStandardCommands, cPurp); ImGui.SameLine(0, 2);
+        CChk("Own Buttons", ref preset.ApplyOwnButtons, cPurp);
+        ImGui.SameLine(0, 4); ImGui.TextColored(sepCol, "|"); ImGui.SameLine(0, 4);
+        CChk("Settings > General", ref preset.ApplySettingsGeneral, cGold); ImGui.SameLine(0, 2);
+        CChk("Settings > Automation", ref preset.ApplySettingsAutomation, cGold); ImGui.SameLine(0, 2);
+        CChk("Settings > Rules", ref preset.ApplySettingsRules, cGold); ImGui.SameLine(0, 2);
+        CChk("Settings > Betting", ref preset.ApplySettingsBetting, cGold); ImGui.SameLine(0, 2);
+        CChk("Settings > Time & Delay", ref preset.ApplySettingsTimeDelay, cGold); ImGui.SameLine(0, 2);
+        CChk("Settings > Msg Settings", ref preset.ApplySettingsMessageSettings, cGold); ImGui.SameLine(0, 2);
+        CChk("Settings > Nearby Players", ref preset.ApplySettingsNearbyPlayers, cGold); ImGui.SameLine(0, 2);
+        CChk("Settings > Visual", ref preset.ApplySettingsVisual, cGold);
+        ImGui.SameLine(0, 4); ImGui.TextColored(sepCol, "|"); ImGui.SameLine(0, 4);
+        CChk("Settings > System", ref preset.ApplySettingsSystem, cRed); ImGui.SameLine(0, 2);
+        CChk("Draw Logic", ref preset.ApplyDrawLogic, cGreen);
+    }
+
+    private void DrawPresetPreviewColumn()
+    {
+        if (_presetPreviewStack.Count > 0)
+        {
+            for (int i = 0; i < _presetPreviewStack.Count; i++)
+            {
+                var preset = _config.Presets.FirstOrDefault(p => p.PresetId == _presetPreviewStack[i]);
+                if (preset == null) continue;
+                ImGui.TextDisabled($"{i + 1}. {preset.Name}");
+            }
+            ImGui.Spacing();
+        }
+
+        var pvText = BuildPresetStackPreview();
+        ImGui.InputTextMultiline("##preset_stack_preview", ref pvText, 65536,
+            new Vector2(ImGui.GetContentRegionAvail().X, Math.Max(180f, ImGui.GetContentRegionAvail().Y - 36f)),
+            ImGuiInputTextFlags.ReadOnly);
+
+        if (BJBGui.Button("Back to current##preset_preview_current", new Vector2(130f, 0)))
+        {
+            _presetPreviewStack.Clear();
+            _presetPreviewCache.Clear();
+        }
+        ImGui.SameLine();
+        if (_presetPreviewStack.Count == 0) ImGui.BeginDisabled();
+        if (BJBGui.Button("Use as shown##preset_preview_apply", new Vector2(130f, 0)))
+        {
+            var stack = _presetPreviewStack
+                .Select(id => _config.Presets.FirstOrDefault(p => p.PresetId == id))
+                .Where(p => p != null)
+                .Cast<PresetEntry>()
+                .ToList();
+            foreach (var preset in stack)
+                ApplyPreset(preset);
+            _presetPreviewStack.Clear();
+            _presetPreviewCache.Clear();
+        }
+        if (_presetPreviewStack.Count == 0) ImGui.EndDisabled();
+    }
+
+    private string BuildPresetStackPreview()
+    {
+        var previewConfig = JsonConvert.DeserializeObject<Configuration>(
+            JObject.FromObject(_config).ToString(Formatting.None)) ?? _config;
+        previewConfig.Presets = new List<PresetEntry>();
+
+        foreach (var id in _presetPreviewStack)
+        {
+            var preset = _config.Presets.FirstOrDefault(p => p.PresetId == id);
+            if (preset == null) continue;
+            Configuration snap;
+            try { snap = JsonConvert.DeserializeObject<Configuration>(preset.SnapshotJson) ?? previewConfig; }
+            catch { continue; }
+
+            if (preset.ApplyStandardCommands && snap.CommandGroups.Count > 0)
+                previewConfig.CommandGroups = snap.CommandGroups;
+
+            if (preset.ApplyMessagesDefault || preset.ApplyMessagesCustom)
+            {
+                var standardNames = Configuration.StandardBatchNames.ToHashSet();
+                if (preset.ApplyMessagesDefault)
+                {
+                    previewConfig.MessageBatches.RemoveAll(b => standardNames.Contains(b.Name));
+                    previewConfig.MessageBatches.AddRange(snap.MessageBatches.Where(b => standardNames.Contains(b.Name)));
+                }
+                if (preset.ApplyMessagesCustom)
+                {
+                    previewConfig.MessageBatches.RemoveAll(b => !standardNames.Contains(b.Name));
+                    previewConfig.MessageBatches.AddRange(snap.MessageBatches.Where(b => !standardNames.Contains(b.Name)));
+                }
+            }
+        }
+
+        return BuildLogicalChatPreview(previewConfig);
+    }
+
+    private string BuildLogicalChatPreview(Configuration src)
+    {
+        string ResolveBatch(string raw)
+            => _pvBatchRegex.Replace(raw, m =>
+            {
+                var bn = m.Groups[1].Value.Trim();
+                var b = src.MessageBatches.FirstOrDefault(
+                    x => x.Name.Equals(bn, StringComparison.OrdinalIgnoreCase));
+                return b?.Messages.Count > 0 ? b.Messages[0] : $"[{bn}]";
+            });
+
+        string Process(string raw, int pts, string cards, string playerName, int dealerPts)
+        {
+            raw = _pvSeRegex.Replace(raw, "");
+            raw = ResolveBatch(raw);
+            return raw
+                .Replace("<points>", pts.ToString())
+                .Replace("<cards>", cards)
+                .Replace("${playerCards}", cards)
+                .Replace("${dealerpoints}", dealerPts.ToString())
+                .Replace("${results}", "Demo Player wins 100,000 Gil")
+                .Replace("${HandIndex}", "")
+                .Replace("<t>", playerName)
+                .Replace("<.>", playerName)
+                .Trim();
+        }
+
+        static string ExtractChat(string text)
+        {
+            var t = text.TrimStart();
+            if (t.StartsWith("/p ", StringComparison.OrdinalIgnoreCase)) return t[3..].Trim();
+            if (t.StartsWith("/e ", StringComparison.OrdinalIgnoreCase)) return $"[/e] {t[3..].Trim()}";
+            if (t.StartsWith("/s ", StringComparison.OrdinalIgnoreCase)) return $"[/s] {t[3..].Trim()}";
+            if (t.StartsWith("/sh ", StringComparison.OrdinalIgnoreCase)) return $"[/sh] {t[4..].Trim()}";
+            return string.Empty;
+        }
+
+        void AppendGroup(StringBuilder sb, string grpName, int pts, string cards, string playerName, int dealerPts)
+        {
+            var grp = src.CommandGroups.FirstOrDefault(
+                g => g.Name.Equals(grpName, StringComparison.OrdinalIgnoreCase));
+            if (grp == null) return;
+            foreach (var cmd in grp.Commands)
+            {
+                if (!cmd.Enabled || string.IsNullOrWhiteSpace(cmd.Text)) continue;
+                var chat = ExtractChat(Process(cmd.Text, pts, cards, playerName, dealerPts));
+                if (!string.IsNullOrWhiteSpace(chat)) sb.AppendLine(chat);
+            }
+        }
+
+        var sb = new StringBuilder();
+        AppendGroup(sb, "DealStart", 6, "6S", "Dealer", 6);
+        AppendGroup(sb, "Initial", 15, "7S 8C", "Demo Player", 6);
+        AppendGroup(sb, "Hit", 20, "7S 8C 5D", "Demo Player", 6);
+        AppendGroup(sb, "PlayerBust", 24, "7S 8C 9D", "Demo Player", 6);
+        AppendGroup(sb, "DealHit", 17, "6S 5C 6D", "Dealer", 17);
+        AppendGroup(sb, "DealStand", 17, "6S 5C 6D", "Dealer", 17);
+        AppendGroup(sb, src.SmallResult ? "ResultSmall" : "ResultPlayerWin", 20, "7S 8C 5D", "Demo Player", 17);
+
+        return sb.ToString().TrimEnd();
+    }
 
     private string BuildDealerDrawPreview(PresetEntry preset)
     {
@@ -890,6 +1042,7 @@ public partial class BlackJackButtlerWindow
             _config.SmallResult                         = snap.SmallResult;
             _config.ResultTemplate                      = snap.ResultTemplate;
             _config.AutostartRoundOnlyOnMultiplePlayers = snap.AutostartRoundOnlyOnMultiplePlayers;
+            _config.MainViewV2SuperCompact              = snap.MainViewV2SuperCompact;
         }
 
         if (preset.ApplySettingsAutomation)

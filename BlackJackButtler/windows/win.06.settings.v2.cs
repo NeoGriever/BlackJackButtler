@@ -75,11 +75,23 @@ public partial class BlackJackButtlerWindow
         ImGui.Spacing();
         ImGui.TextUnformatted("Main View");
         int mainView = _config.MainViewVersion == 2 ? 1 : 0;
-        DrawEnumButtons("main_view_v2", ref mainView, new[] { "Version 1", "Version 2" }, idx =>
+        DrawEnumButtons("main_view_v2", ref mainView, new[] { "Classic", "Version 2" }, idx =>
         {
             _config.MainViewVersion = idx == 1 ? 2 : 1;
             _save();
         });
+
+        if (_config.MainViewVersion == 2)
+        {
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Version 2 Density");
+            int compact = _config.MainViewV2SuperCompact ? 1 : 0;
+            DrawEnumButtons("main_view_v2_compact", ref compact, new[] { "Normal", "Compact" }, idx =>
+            {
+                _config.MainViewV2SuperCompact = idx == 1;
+                _save();
+            });
+        }
 
         ImGui.Spacing();
         ImGui.TextUnformatted("Burger-Menu");
@@ -198,7 +210,6 @@ public partial class BlackJackButtlerWindow
         Header("Natural");
         Indent(() =>
         {
-        CheckSave("Enable Dirty Blackjack##v2_dirty_from_natural", ref _config.EnableDirtyBlackjack);
         MultiplierInput("Payout", ref _config.MultiplierBlackjackWin, 2.5f, "v2_natbj");
         });
 

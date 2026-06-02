@@ -4,12 +4,12 @@
     "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
     "Description": "/bjb - opens the blackjack buttler tool",
     "InternalName": "BlackJackButtler",
-    "AssemblyVersion": "1.8.4.0",
+    "AssemblyVersion": "1.8.4.1",
     "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "TestingDalamudApiLevel": 15,
     "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/BlackJackButtler/images/icon.png",
     "Tags": ["BlackJack", "Helper", "Chat"],
-    "Changelog": "v1.8.4.0:\n- Feature: Numbered statistics logs for party messages, dice and trades\n- Feature: Full payout state machine (auto-confirm, Dropbox-preferred)\n- Feature: Debug Auto Players (basic strategy AI) and configurable dice sequence\n- Feature: Table/Nearby popout windows; compact V2 header row\n- Feature: Regex per-entry chat sources (Party/Tell/Say/System)\n- Feature: Preset migration to presets.json with 15 apply-categories\n- Feature: Card-Companion App sync integration\n- Feature: Auto-start blocking for underfunded players\n- Fix: ImGui transparent text recovery (startup + periodic monitor)\n- Fix: German dice regex, debug dice pipeline, SplitDraw follow-up prompt"
+    "Changelog": "v1.8.4.1:\n- Feature: Added Version 2 Compact density mode with smaller spacing/text, hidden alias column, double-click alias editing, and simplified Bank/Bet inputs\n- Feature: Added Bank input unlock and Notepad access to the Version 2 main header\n- Feature: Reworked preset previews into a right-side live preview stack with ordered temporary preset application\n- Feature: Added 1k, 5k, and Custom tip buttons to Stats\n- Feature: Updated the default Draw Logic visualizer script\n- Fix: Corrected the Classic player table column count so row contents align properly\n- Fix: Settings now consistently label the main views as Classic and Version 2\n- Fix: Corrected the Natural/Dirty Blackjack settings label duplication\n- Fix: Debug player generation now fills up to 7 players instead of replacing the whole debug group"
 }

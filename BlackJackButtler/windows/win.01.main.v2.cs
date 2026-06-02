@@ -13,6 +13,15 @@ public partial class BlackJackButtlerWindow
 {
     private void DrawMainPageV2()
     {
+        bool compact = IsV2SuperCompact();
+        if (compact)
+        {
+            ImGui.SetWindowFontScale(0.9f);
+            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(1.5f, 0.8f));
+            ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(1.5f, 0.8f));
+            ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new Vector2(1.5f, 0.8f));
+        }
+
         DrawMainHeaderV2();
         ImGui.Spacing();
         DrawCustomButtonBarV2();
@@ -30,7 +39,15 @@ public partial class BlackJackButtlerWindow
             DrawNearbyPlayersSection(true);
 
         DrawMainSharedPopupsV2();
+
+        if (compact)
+        {
+            ImGui.PopStyleVar(3);
+            ImGui.SetWindowFontScale(1.0f);
+        }
     }
+
+    private bool IsV2SuperCompact() => _config.MainViewVersion == 2 && _config.MainViewV2SuperCompact;
 
     private void DrawMainHeaderV2()
     {
@@ -177,6 +194,24 @@ public partial class BlackJackButtlerWindow
         }
         if (!canTell) ImGui.EndDisabled();
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Bank /tell cycle");
+
+        ImGui.SameLine();
+        float square = ImGui.GetFrameHeight();
+        if (!_notepadWindow.IsOpen)
+        {
+            ImGui.PushFont(UiBuilder.IconFont);
+            if (BJBGui.Button(FontAwesomeIcon.StickyNote.ToIconString() + "##v2_notepad_btn", new Vector2(square, square)))
+            {
+                if (!_notepadLoaded) { _notepadLoaded = true; _notepadWindow.LoadContent(); }
+                _notepadWindow.IsOpen = true;
+            }
+            ImGui.PopFont();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Open Notepad");
+            ImGui.SameLine();
+        }
+
+        if (ImGui.Checkbox("##v2_enable_bank_input", ref _config.EnableBankInput)) _save();
+        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Enable Bank input");
 
         // STOP
         ImGui.SameLine();
@@ -337,7 +372,8 @@ public partial class BlackJackButtlerWindow
     internal void DrawPlayersPanelV2(string idSuffix = "")
     {
         _partyDissolved = _players.Count > 0 && !_players.Any(x => x.IsInParty);
-        if (ImGui.BeginTable($"bjb_main_table_v2{idSuffix}", 11, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
+        int columnCount = IsV2SuperCompact() ? 10 : 11;
+        if (ImGui.BeginTable($"bjb_main_table_v2{idSuffix}", columnCount, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
         {
             SetupTableColumns();
             ImGui.TableHeadersRow();

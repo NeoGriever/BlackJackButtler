@@ -14,6 +14,7 @@ public partial class BlackJackButtlerWindow
     private int _clipHoursMode = -1;
     private long _editStartBankValue;
     private bool _confirmEraseNormalStatsLog;
+    private long _customTipValue = 100000;
 
     private void DrawStatsPage()
     {
@@ -136,6 +137,36 @@ public partial class BlackJackButtlerWindow
         {
             StatsManager.AddTip(holdingShift ? -500000 : 500000);
             SaveSessionFromUI();
+        }
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("1k"))
+        {
+            StatsManager.AddTip(holdingShift ? -1000 : 1000);
+            SaveSessionFromUI();
+        }
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("5k"))
+        {
+            StatsManager.AddTip(holdingShift ? -5000 : 5000);
+            SaveSessionFromUI();
+        }
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("Custom"))
+            ImGui.OpenPopup("custom_tip_popup");
+
+        if (ImGui.BeginPopup("custom_tip_popup"))
+        {
+            ImGui.TextUnformatted("Tip amount:");
+            ImGui.SetNextItemWidth(180f);
+            BJBGui.InputLong("##custom_tip_value", ref _customTipValue, 1000, 10000);
+            if (_customTipValue < 0) _customTipValue = 0;
+            if (BJBGui.SmallButton("Add##custom_tip_add") || ImGui.IsKeyPressed(ImGuiKey.Enter))
+            {
+                StatsManager.AddTip(holdingShift ? -_customTipValue : _customTipValue);
+                SaveSessionFromUI();
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.EndPopup();
         }
 
         if (holdingShift)

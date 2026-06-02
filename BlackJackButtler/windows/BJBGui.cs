@@ -113,6 +113,14 @@ internal static class BJBGui
         return r;
     }
 
+    public static bool InputLongNoButtons(string label, ref long v)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
+        var r = ImGui.InputLong(label, ref v, 0, 0);
+        ImGui.PopStyleColor();
+        return r;
+    }
+
     public static bool InputFloat(string label, ref float v, float step, float step_fast, string format)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
