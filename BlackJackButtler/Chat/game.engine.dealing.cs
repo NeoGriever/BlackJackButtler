@@ -51,7 +51,7 @@ public static partial class GameEngine
         var benchSeed = DateTime.UtcNow;
         foreach (var p in heldPlayers)
         {
-            p.IsOnBench = true;
+            p.IsOnBench = false;
             p.BenchedAt = benchSeed;
             p.WasOnHoldThisRound = true;
             p.HasInitialHandDealt = false;
@@ -86,6 +86,7 @@ public static partial class GameEngine
                 var (min, max) = dealer.CalculatePoints(0);
                 int dealerScore = (max.HasValue && max.Value <= 21) ? max.Value : min;
                 VariableManager.SetVariable("dealerpoints", dealerScore.ToString());
+                VariableManager.SetVariable("dealerHand", dealer.GetCardsString(0));
             }
         }
         finally
@@ -345,6 +346,7 @@ public static partial class GameEngine
                         var (min, max) = _ctxDealer.CalculatePoints(0);
                         int dealerScore = (max.HasValue && max.Value <= 21) ? max.Value : min;
                         VariableManager.SetVariable("dealerpoints", dealerScore.ToString());
+                        VariableManager.SetVariable("dealerHand", _ctxDealer.GetCardsString(0));
                     }
                 }
                 SendCompanionTableUpdate(cfg, allActivePlayers);
@@ -637,7 +639,7 @@ public static partial class GameEngine
 
     private static List<PlayerState> GetBenchPlayers(List<PlayerState> players)
     {
-        return players.Where(p => p.IsActivePlayer && p.IsOnBench).ToList();
+        return players.Where(p => p.IsActivePlayer && p.IsOnBench && !p.IsOnHold).ToList();
     }
 
     public static bool CanMovePlayerToBench(PlayerState player, List<PlayerState> allPlayers)
@@ -659,6 +661,7 @@ public static partial class GameEngine
         if (!CanMovePlayerToBench(player, allPlayers)) return;
 
         player.IsOnBench = true;
+        player.IsOnHold = false;
         player.BenchedAt = DateTime.UtcNow;
         player.WasOnHoldThisRound = true;
         if (player.IsCurrentTurn)

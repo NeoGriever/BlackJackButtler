@@ -51,6 +51,23 @@ public class TablePopoutWindow : Window
     private void DrawTablePopoutControls()
     {
         float btnW = 80f;
+        var io = ImGui.GetIO();
+        bool canPanic = io.KeyCtrl && io.KeyShift;
+
+        if (canPanic)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.55f, 0.0f, 0.0f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.75f, 0.0f, 0.0f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.40f, 0.0f, 0.0f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(1f, 1f, 0f, 1f));
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 2.0f);
+            if (ImGui.Button("PANIC##tbl_panic_full", new Vector2(-1f, 0)))
+                _mainWindow.TriggerPanicStage1();
+            ImGui.PopStyleVar();
+            ImGui.PopStyleColor(5);
+            return;
+        }
 
         // STOP — permanent sichtbar, nur klickbar wenn Command läuft
         if (!CommandExecutor.IsRunning) ImGui.BeginDisabled();
@@ -67,8 +84,6 @@ public class TablePopoutWindow : Window
 
         // PANIC — permanent sichtbar, nur klickbar bei Ctrl+Shift
         ImGui.SameLine();
-        var io = ImGui.GetIO();
-        bool canPanic = io.KeyCtrl && io.KeyShift;
         if (!canPanic) ImGui.BeginDisabled();
         ImGui.PushStyleColor(ImGuiCol.Button, canPanic
             ? new Vector4(0.5f, 0.0f, 0.0f, 1.0f)

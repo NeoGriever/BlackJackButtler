@@ -18,7 +18,7 @@ public class UpdatePopupWindow : Window
         "Main View:\n" +
         "- Feature: Added Version 2 Compact density mode with reduced spacing, smaller text, hidden alias column, and simplified Bank/Bet inputs\n" +
         "- Feature: Version 2 Compact opens alias editing by double-clicking the player name\n" +
-        "- Feature: Version 2 now exposes Bank input unlock and Notepad access in the main header\n" +
+        "- Feature: Bank input unlock now lives directly in the player table Bank header\n" +
         "- Change: Version 2 Compact only shows Bank-to-Tip and Max Bet actions while Shift is held\n" +
         "- Fix: Classic player table now uses the correct column count, preventing shifted row contents\n" +
         "\n" +
@@ -29,10 +29,17 @@ public class UpdatePopupWindow : Window
         "\n" +
         "Presets:\n" +
         "- Feature: Preset assignment category checkboxes can now be shown or hidden above the list\n" +
+        "- Feature: Hovering preset assignment checkboxes subtly highlights the related navigation source\n" +
         "- Feature: Preset preview now lives in a right-side column and previews the current active configuration by default\n" +
         "- Feature: Multiple presets can be added to a numbered temporary preview stack and applied in that order\n" +
-        "- Feature: Preview stack supports Remove from Preview, Back to current, and Use as shown actions\n" +
+        "- Feature: Preset preview now includes simulated Debug dice rolls\n" +
+        "- Feature: Preview stack uses compact >/< controls next to Use, plus Back to current and Use as shown actions\n" +
         "- Change: Preview output now shows the logical party-chat lines without section headers\n" +
+        "\n" +
+        "Regex & Commands:\n" +
+        "- Feature: Custom regex entries now render in a separate list below standard entries and can be manually reordered\n" +
+        "- Feature: Own Buttons are now grouped into the Commands page as a second tab\n" +
+        "- Feature: Commands now has a Variables tab with Popout and new <dealerHand> / ${dealerHand} support\n" +
         "\n" +
         "Stats & Debug:\n" +
         "- Feature: Added 1k, 5k, and Custom tip buttons to Stats\n" +

@@ -94,9 +94,9 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.Spacing();
-        ImGui.TextUnformatted("Burger-Menu");
+        ImGui.TextUnformatted("Menu Style");
         int menuMode = _config.UseBurgerMenu ? 0 : 1;
-        DrawEnumButtons("burger_v2", ref menuMode, new[] { "Use Burger Menu", "Use Sidebar" }, idx =>
+        DrawEnumButtons("burger_v2", ref menuMode, new[] { "Burger Menu", "Sidebar" }, idx =>
         {
             _config.UseBurgerMenu = idx == 0;
             _save();

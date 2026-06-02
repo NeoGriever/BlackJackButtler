@@ -89,216 +89,284 @@ public partial class BlackJackButtlerWindow
 
         ImGui.Spacing();
 
-        for (var i = 0; i < _config.UserRegexes.Count; i++)
+        var standardIndices = _config.UserRegexes
+            .Select((entry, index) => (entry, index))
+            .Where(x => IsStandardRegex(x.entry.Name))
+            .Select(x => x.index)
+            .ToList();
+        var customIndices = _config.UserRegexes
+            .Select((entry, index) => (entry, index))
+            .Where(x => !IsStandardRegex(x.entry.Name))
+            .Select(x => x.index)
+            .ToList();
+
+        ImGui.TextDisabled("Standard Regex Entries");
+        foreach (var index in standardIndices)
         {
-            var e = _config.UserRegexes[i];
-            bool isStd = IsStandardRegex(e.Name);
+            if (DrawRegexEntry(index, true, -1, customIndices))
+                break;
+        }
 
-            if (!BJBGui.MatchesFilter(_filterRegex, e.Name, e.Patterns)) continue;
-
-            ImGui.PushID(i);
-
-            if (isStd) ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.1f, 0.3f, 0.1f, 1f));
-
-            var headerLabel = isStd ? $"● {e.Name}" : e.Name;
-            if (string.IsNullOrWhiteSpace(e.Name)) headerLabel = $"Entry {i + 1}";
-
-            if (!string.IsNullOrEmpty(_filterRegex))
-                ImGui.SetNextItemOpen(true, ImGuiCond.Always);
-
-            bool open = ImGui.CollapsingHeader($"{headerLabel}###regex_{i}");
-
-            if (isStd) ImGui.PopStyleColor();
-
-            if (open)
+        ImGui.Spacing();
+        ImGui.Separator();
+        ImGui.Spacing();
+        ImGui.TextDisabled("Custom Regex Entries");
+        if (customIndices.Count == 0)
+        {
+            ImGui.TextDisabled("No custom regex entries.");
+        }
+        else
+        {
+            for (int orderIndex = 0; orderIndex < customIndices.Count; orderIndex++)
             {
-                bool disableEditing = isStd && !_config.AllowEditingStandardRegex;
-                if (disableEditing) ImGui.BeginDisabled();
+                var index = customIndices[orderIndex];
+                if (DrawRegexEntry(index, false, orderIndex, customIndices))
+                    break;
+            }
+        }
+    }
 
-                if (ImGui.Checkbox("##enabled", ref e.Enabled)) _save();
+    private bool DrawRegexEntry(int i, bool isStd, int customOrderIndex, System.Collections.Generic.List<int> customIndices)
+    {
+        var e = _config.UserRegexes[i];
+        if (!BJBGui.MatchesFilter(_filterRegex, e.Name, e.Patterns)) return false;
 
-                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                    ImGui.SetTooltip("Enabled");
+        ImGui.PushID(i);
 
-                ImGui.SameLine();
+        if (!isStd)
+        {
+            bool isFirst = customOrderIndex <= 0;
+            bool isLast = customOrderIndex >= customIndices.Count - 1;
 
-                if (ImGui.Checkbox("##caseSensitive", ref e.CaseSensitive)) { RegexEngine.InvalidateCache(); _save(); }
+            if (isFirst) ImGui.BeginDisabled();
+            if (BJBGui.SmallButton("^##regex_order_up"))
+            {
+                int prevIndex = customIndices[customOrderIndex - 1];
+                (_config.UserRegexes[prevIndex], _config.UserRegexes[i]) = (_config.UserRegexes[i], _config.UserRegexes[prevIndex]);
+                RegexEngine.InvalidateCache();
+                _save();
+                ImGui.PopID();
+                return true;
+            }
+            if (isFirst) ImGui.EndDisabled();
 
-                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                    ImGui.SetTooltip("Case sensitive");
+            ImGui.SameLine();
+            if (isLast) ImGui.BeginDisabled();
+            if (BJBGui.SmallButton("v##regex_order_down"))
+            {
+                int nextIndex = customIndices[customOrderIndex + 1];
+                (_config.UserRegexes[nextIndex], _config.UserRegexes[i]) = (_config.UserRegexes[i], _config.UserRegexes[nextIndex]);
+                RegexEngine.InvalidateCache();
+                _save();
+                ImGui.PopID();
+                return true;
+            }
+            if (isLast) ImGui.EndDisabled();
 
-                ImGui.SameLine();
-                DrawRegexSourceCheckbox(e, RegexChatSource.Party, "Party");
-                ImGui.SameLine();
-                DrawRegexSourceCheckbox(e, RegexChatSource.Tell, "Tell");
-                ImGui.SameLine();
-                DrawRegexSourceCheckbox(e, RegexChatSource.Say, "Say");
-                ImGui.SameLine();
-                DrawRegexSourceCheckbox(e, RegexChatSource.System, "System");
+            ImGui.SameLine();
+        }
 
-                ImGui.SameLine();
-                var entryName = e.Name ?? "";
-                ImGui.SetNextItemWidth(300f);
+        if (isStd) ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.1f, 0.3f, 0.1f, 1f));
 
-                if (isStd) ImGui.BeginDisabled();
-                if (ImGui.InputText("##entryName", ref entryName, 64))
+        var headerLabel = isStd ? $"● {e.Name}" : e.Name;
+        if (string.IsNullOrWhiteSpace(e.Name)) headerLabel = $"Entry {i + 1}";
+
+        if (!string.IsNullOrEmpty(_filterRegex))
+            ImGui.SetNextItemOpen(true, ImGuiCond.Always);
+
+        bool open = ImGui.CollapsingHeader($"{headerLabel}###regex_{i}");
+
+        if (isStd) ImGui.PopStyleColor();
+
+        if (open)
+        {
+            bool disableEditing = isStd && !_config.AllowEditingStandardRegex;
+            if (disableEditing) ImGui.BeginDisabled();
+
+            if (ImGui.Checkbox("##enabled", ref e.Enabled)) _save();
+
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                ImGui.SetTooltip("Enabled");
+
+            ImGui.SameLine();
+
+            if (ImGui.Checkbox("##caseSensitive", ref e.CaseSensitive)) { RegexEngine.InvalidateCache(); _save(); }
+
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                ImGui.SetTooltip("Case sensitive");
+
+            ImGui.SameLine();
+            DrawRegexSourceCheckbox(e, RegexChatSource.Party, "Party");
+            ImGui.SameLine();
+            DrawRegexSourceCheckbox(e, RegexChatSource.Tell, "Tell");
+            ImGui.SameLine();
+            DrawRegexSourceCheckbox(e, RegexChatSource.Say, "Say");
+            ImGui.SameLine();
+            DrawRegexSourceCheckbox(e, RegexChatSource.System, "System");
+
+            ImGui.SameLine();
+            var entryName = e.Name ?? "";
+            ImGui.SetNextItemWidth(300f);
+
+            if (isStd) ImGui.BeginDisabled();
+            if (ImGui.InputText("##entryName", ref entryName, 64))
+            {
+                e.Name = entryName;
+                _save();
+            }
+            if (isStd) ImGui.EndDisabled();
+
+            int modeInt = (int)e.Mode;
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(250f);
+            if (BJBGui.Combo("##opMode", ref modeInt, "Regex-To-Variable\0Regex-Trigger\0"))
+            {
+                e.Mode = (RegexEntryMode)modeInt;
+                _save();
+            }
+
+            ImGui.Separator();
+
+            for (int pIdx = 0; pIdx < e.Patterns.Count; pIdx++)
+            {
+                ImGui.PushID(pIdx);
+                var pStr = e.Patterns[pIdx] ?? "";
+
+                ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 70f);
+                if (ImGui.InputText("##pat", ref pStr, 512))
                 {
-                    e.Name = entryName;
+                    e.Patterns[pIdx] = pStr;
+                    RegexEngine.InvalidateCache();
                     _save();
                 }
-                if (isStd) ImGui.EndDisabled();
 
-                int modeInt = (int)e.Mode;
                 ImGui.SameLine();
-                ImGui.SetNextItemWidth(250f);
-                if (BJBGui.Combo("##opMode", ref modeInt, "Regex-To-Variable\0Regex-Trigger\0"))
+                if (BJBGui.Button("+"))
                 {
-                    e.Mode = (RegexEntryMode)modeInt;
+                    e.Patterns.Insert(pIdx + 1, "");
                     _save();
                 }
 
-                ImGui.Separator();
+                ImGui.SameLine();
 
-                for (int pIdx = 0; pIdx < e.Patterns.Count; pIdx++)
+                bool canDeletePattern = e.Patterns.Count > 1;
+                if (!canDeletePattern) ImGui.BeginDisabled();
+                if (BJBGui.Button("X"))
                 {
-                    ImGui.PushID(pIdx);
-                    var pStr = e.Patterns[pIdx] ?? "";
-
-                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 70f);
-                    if (ImGui.InputText("##pat", ref pStr, 512))
-                    {
-                        e.Patterns[pIdx] = pStr;
-                        RegexEngine.InvalidateCache();
-                        _save();
-                    }
-
-                    ImGui.SameLine();
-                    if (BJBGui.Button("+"))
-                    {
-                        e.Patterns.Insert(pIdx + 1, "");
-                        _save();
-                    }
-
-                    ImGui.SameLine();
-
-                    bool canDeletePattern = e.Patterns.Count > 1;
-                    if (!canDeletePattern) ImGui.BeginDisabled();
-                    if (BJBGui.Button("X"))
-                    {
-                        e.Patterns.RemoveAt(pIdx);
-                        RegexEngine.InvalidateCache();
-                        _save();
-                        ImGui.PopID();
-                        break;
-                    }
-                    if (!canDeletePattern) ImGui.EndDisabled();
-
+                    e.Patterns.RemoveAt(pIdx);
+                    RegexEngine.InvalidateCache();
+                    _save();
                     ImGui.PopID();
+                    break;
+                }
+                if (!canDeletePattern) ImGui.EndDisabled();
+
+                ImGui.PopID();
+            }
+
+            ImGui.Spacing();
+
+            if (e.Mode == RegexEntryMode.Trigger)
+            {
+                ImGui.TextColored(new Vector4(0.4f, 1f, 0.4f, 1f), "Action Settings");
+                var action = (int)e.Action;
+                if (BJBGui.Combo(
+                    "Trigger Action",
+                    ref action,
+                    "None\0" +
+                    "BetChange\0" +
+                    "Auto Hit\0" +
+                    "Auto Stand\0" +
+                    "Auto DD\0" +
+                    "Auto Split\0" +
+                    "BankOut\0" +
+                    "TradePartner\0" +
+                    "TradeGilIn\0" +
+                    "TradeGilOut\0" +
+                    "TradeCommit\0" +
+                    "TradeCancel\0" +
+                    "TakeBatch\0" +
+                    "DiceRollValue\0" +
+                    "HighlightBet\0" +
+                    "HighlightPayout\0" +
+                    "HighlightAlias\0" +
+                    "HighlightPause\0" +
+                    "HighlightLeave\0" +
+                    "HighlightJoin\0" +
+                    "Highlight Hit\0" +
+                    "Highlight Stand\0" +
+                    "Highlight DD\0" +
+                    "Highlight Split\0" +
+                    "NextRound\0" +
+                    "BankTell\0" +
+                    "Own Button\0" +
+                    "SetBet\0" +
+                    "Invite Nearby\0"
+                ))
+                {
+                    e.Action = (RegexAction)action;
+                    _save();
                 }
 
-                ImGui.Spacing();
-
-                if (e.Mode == RegexEntryMode.Trigger)
+                if (e.Action == RegexAction.TakeBatch)
                 {
-                    ImGui.TextColored(new Vector4(0.4f, 1f, 0.4f, 1f), "Action Settings");
-                    var action = (int)e.Action;
-                    if (BJBGui.Combo(
-                        "Trigger Action",
-                        ref action,
-                        "None\0" +
-                        "BetChange\0" +
-                        "Auto Hit\0" +
-                        "Auto Stand\0" +
-                        "Auto DD\0" +
-                        "Auto Split\0" +
-                        "BankOut\0" +
-                        "TradePartner\0" +
-                        "TradeGilIn\0" +
-                        "TradeGilOut\0" +
-                        "TradeCommit\0" +
-                        "TradeCancel\0" +
-                        "TakeBatch\0" +
-                        "DiceRollValue\0" +
-                        "HighlightBet\0" +
-                        "HighlightPayout\0" +
-                        "HighlightAlias\0" +
-                        "HighlightPause\0" +
-                        "HighlightLeave\0" +
-                        "HighlightJoin\0" +
-                        "Highlight Hit\0" +
-                        "Highlight Stand\0" +
-                        "Highlight DD\0" +
-                        "Highlight Split\0" +
-                        "NextRound\0" +
-                        "BankTell\0" +
-                        "Own Button\0" +
-                        "SetBet\0" +
-                        "Invite Nearby\0"
-                    ))
+                    var param = e.ActionParam ?? "";
+                    if (ImGui.InputText("Target Batch Name", ref param, 64))
                     {
-                        e.Action = (RegexAction)action;
+                        e.ActionParam = param;
                         _save();
                     }
-
-                    if (e.Action == RegexAction.TakeBatch)
-                    {
-                        var param = e.ActionParam ?? "";
-                        if (ImGui.InputText("Target Batch Name", ref param, 64))
-                        {
-                            e.ActionParam = param;
-                            _save();
-                        }
-                    }
-
-                    if (e.Action == RegexAction.ExecuteOwnButton)
-                    {
-                        var allGroups = _config.CustomCommandGroups;
-                        if (allGroups.Count == 0)
-                        {
-                            ImGui.TextDisabled("No Own Buttons defined.");
-                        }
-                        else
-                        {
-                            var groupNames = allGroups.Select(g => g.Name).ToArray();
-                            int selectedIdx = Array.FindIndex(groupNames, n => n.Equals(e.ActionParam, StringComparison.OrdinalIgnoreCase));
-                            if (selectedIdx < 0) selectedIdx = 0;
-                            ImGui.SetNextItemWidth(300f);
-                            if (BJBGui.Combo("Target Button##ownbtn_combo", ref selectedIdx, groupNames, groupNames.Length))
-                            {
-                                e.ActionParam = groupNames[selectedIdx];
-                                _save();
-                            }
-                        }
-                    }
                 }
 
-                if (disableEditing) ImGui.EndDisabled();
-
-                if (!isStd)
+                if (e.Action == RegexAction.ExecuteOwnButton)
                 {
-                    ImGui.Spacing();
-                    ImGui.Separator();
-                    if (ImGui.GetIO().KeyCtrl)
+                    var allGroups = _config.CustomCommandGroups;
+                    if (allGroups.Count == 0)
                     {
-                        if (BJBGui.Button("Delete Entry", new Vector2(-1, 0)))
-                        {
-                            _config.UserRegexes.RemoveAt(i);
-                            RegexEngine.InvalidateCache();
-                            _save();
-                            ImGui.PopID();
-                            break;
-                        }
+                        ImGui.TextDisabled("No Own Buttons defined.");
                     }
                     else
                     {
-                        ImGui.BeginDisabled();
-                        BJBGui.Button("Delete (Hold CTRL)", new Vector2(-1, 0));
-                        ImGui.EndDisabled();
+                        var groupNames = allGroups.Select(g => g.Name).ToArray();
+                        int selectedIdx = Array.FindIndex(groupNames, n => n.Equals(e.ActionParam, StringComparison.OrdinalIgnoreCase));
+                        if (selectedIdx < 0) selectedIdx = 0;
+                        ImGui.SetNextItemWidth(300f);
+                        if (BJBGui.Combo("Target Button##ownbtn_combo", ref selectedIdx, groupNames, groupNames.Length))
+                        {
+                            e.ActionParam = groupNames[selectedIdx];
+                            _save();
+                        }
                     }
                 }
             }
-            ImGui.PopID();
+
+            if (disableEditing) ImGui.EndDisabled();
+
+            if (!isStd)
+            {
+                ImGui.Spacing();
+                ImGui.Separator();
+                if (ImGui.GetIO().KeyCtrl)
+                {
+                    if (BJBGui.Button("Delete Entry", new Vector2(-1, 0)))
+                    {
+                        _config.UserRegexes.RemoveAt(i);
+                        RegexEngine.InvalidateCache();
+                        _save();
+                        ImGui.PopID();
+                        return true;
+                    }
+                }
+                else
+                {
+                    ImGui.BeginDisabled();
+                    BJBGui.Button("Delete (Hold CTRL)", new Vector2(-1, 0));
+                    ImGui.EndDisabled();
+                }
+            }
         }
+        ImGui.PopID();
+        return false;
     }
 
     private void DrawRegexSourceCheckbox(UserRegexEntry entry, RegexChatSource source, string label)

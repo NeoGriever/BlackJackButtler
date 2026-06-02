@@ -11,9 +11,30 @@ public partial class BlackJackButtlerWindow
 
     private void DrawCommandsPage()
     {
+        if (ImGui.BeginTabBar("##commands_tabs"))
+        {
+            if (ImGui.BeginTabItem("Commands"))
+            {
+                DrawCommandChainsTab();
+                ImGui.EndTabItem();
+            }
+            if (ImGui.BeginTabItem("Own Buttons"))
+            {
+                DrawOwnButtonsPage();
+                ImGui.EndTabItem();
+            }
+            if (ImGui.BeginTabItem("Variables"))
+            {
+                DrawVariableReferenceTab();
+                ImGui.EndTabItem();
+            }
+            ImGui.EndTabBar();
+        }
+    }
+
+    private void DrawCommandChainsTab()
+    {
         ImGui.TextUnformatted("Command Chains");
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("?##varref_cmd")) _showVarRefPanel = !_showVarRefPanel;
         ImGui.SameLine();
 
         var io = ImGui.GetIO();

@@ -159,7 +159,7 @@ public partial class BlackJackButtlerWindow
         if (ImGui.BeginTable("bjb_main_table", 11, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
         {
             SetupTableColumns();
-            ImGui.TableHeadersRow();
+            DrawPlayerTableHeaders();
 
             _partyDissolved = _players.Count > 0 && !_players.Any(x => x.IsInParty);
             var playerSnapshot = _players.ToList();
@@ -318,17 +318,58 @@ public partial class BlackJackButtlerWindow
         ImGui.TableSetupColumn("J", ImGuiTableColumnFlags.WidthFixed, 25);
         ImGui.TableSetupColumn("R", ImGuiTableColumnFlags.WidthFixed, 25);
         ImGui.TableSetupColumn("P", ImGuiTableColumnFlags.WidthFixed, 25);
-        ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, compact ? 105 : 130);
+        ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, compact ? 105 : 120);
         ImGui.TableSetupColumn("Bank", ImGuiTableColumnFlags.WidthStretch, 1.0f);
         ImGui.TableSetupColumn("Bet", ImGuiTableColumnFlags.WidthStretch, 1.0f);
-        ImGui.TableSetupColumn("Cards", ImGuiTableColumnFlags.WidthFixed, compact ? 82 : 100);
-        ImGui.TableSetupColumn("Points", ImGuiTableColumnFlags.WidthFixed, compact ? 42 : 55);
-        ImGui.TableSetupColumn("Controls", ImGuiTableColumnFlags.WidthFixed, compact ? 160 : 200);
+        ImGui.TableSetupColumn("Cards", ImGuiTableColumnFlags.WidthFixed, compact ? 120 : 150);
+        ImGui.TableSetupColumn("Points", ImGuiTableColumnFlags.WidthFixed, compact ? 55 : 80);
+        ImGui.TableSetupColumn("Controls", ImGuiTableColumnFlags.WidthFixed, compact ? 110 : 120);
+    }
+
+    private void DrawPlayerTableHeaders()
+    {
+        static void CenteredHeader(string text)
+        {
+            float width = ImGui.GetContentRegionAvail().X;
+            float textWidth = ImGui.CalcTextSize(text).X;
+            float offset = MathF.Max(0f, (width - textWidth) * 0.5f);
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + offset);
+            ImGui.TextUnformatted(text);
+        }
+
+        ImGui.TableNextRow(ImGuiTableRowFlags.Headers);
+        int columnCount = ImGui.TableGetColumnCount();
+        for (int column = 0; column < columnCount; column++)
+        {
+            ImGui.TableSetColumnIndex(column);
+            string? name = ImGui.TableGetColumnName(column);
+            if (name is "V" or "A" or "J" or "R" or "P")
+            {
+                CenteredHeader(name);
+            }
+            else if (name == "Bank")
+            {
+                if (ImGui.Checkbox("##bank_header_unlock", ref _config.EnableBankInput)) _save();
+                if (ImGui.IsItemHovered()) ImGui.SetTooltip("Enable Bank input");
+                ImGui.SameLine(0f, 4f);
+                ImGui.TableHeader("Bank");
+            }
+            else
+            {
+                ImGui.TableHeader(name ?? string.Empty);
+            }
+        }
     }
 
     private void DrawMainHeader()
     {
         var io = ImGui.GetIO();
+        if (io.KeyCtrl && io.KeyShift)
+        {
+            DrawProminentPanicButton("classic_header");
+            return;
+        }
+
         bool canStop = io.KeyCtrl && io.KeyShift;
 
         var recon_text = IsRecognitionActive ? "● Group Detector" : "○ Group Detector";
@@ -543,6 +584,22 @@ public partial class BlackJackButtlerWindow
                 Plugin.Instance.UpdateEventHooks();
             }
         }
+    }
+
+    private void DrawProminentPanicButton(string id)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.55f, 0.0f, 0.0f, 1.0f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.75f, 0.0f, 0.0f, 1.0f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.40f, 0.0f, 0.0f, 1.0f));
+        ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(1f, 1f, 0f, 1f));
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 2.0f);
+
+        if (ImGui.Button($"PANIC##panic_full_{id}", new Vector2(-1f, 0)))
+            _panicConfirmStage = 1;
+
+        ImGui.PopStyleVar();
+        ImGui.PopStyleColor(5);
     }
 
     private void DrawCustomButtonBar()
@@ -804,7 +861,6 @@ public partial class BlackJackButtlerWindow
                     p.IsCurrentTurn = false;
                     p.ReadySkip = false;
                 }
-                p.CurrentBet = 0;
                 SaveSessionFromUI();
                 if (TryRemoveEmptyInactiveDebugPlayer(p))
                     removeRowAfterLeave = true;

@@ -65,6 +65,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
     private bool _showRestoreSessionButton = false;
     private bool _showVarRefPanel = false;
+    private Page? _presetNavHoverPage;
     private int _panicConfirmStage = 0;
     private bool _highlightNewRound = false;
     private bool _partyDissolved = false;
@@ -292,7 +293,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             if(ShouldShowPage(Page.Regexes, level))                     NavButton(Page.Regexes, "Regex");
             if(ShouldShowPage(Page.Messages, level))                    NavButton(Page.Messages, "Messages");
             if(ShouldShowPage(Page.Commands, level))                    NavButton(Page.Commands, "Commands");
-            if(ShouldShowPage(Page.OwnButtons, level))                  NavButton(Page.OwnButtons, "Own Buttons");
             if(ShouldShowPage(Page.Presets, level))                     NavButton(Page.Presets, "Presets");
             ImGui.Separator();
             if(ShouldShowPage(Page.Settings, level))                    NavButton(Page.Settings, "Settings");
@@ -379,7 +379,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             case Page.Regexes:      DrawRegexPage(); break;
             case Page.Messages:     DrawMessagesPage(); break;
             case Page.Commands:     DrawCommandsPage(); break;
-            case Page.OwnButtons:   DrawOwnButtonsPage(); break;
+            case Page.OwnButtons:   _page = Page.Commands; DrawCommandsPage(); break;
             case Page.Settings:     DrawSettingsPage(); break;
             case Page.Vars:         DrawVarsPage(); break;
             case Page.RoundLog:     DrawRoundLogPage(); break;
@@ -456,6 +456,9 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.15f, 0.35f, 0.65f, 0.9f));
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.2f, 0.4f, 0.75f, 1f));
         }
+        bool highlightSource = _presetNavHoverPage == page;
+        if (highlightSource)
+            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.62f, 0.2f, 1f));
 
         if (_customEditMode && _config.CurrentLevel == UserLevel.Custom && page != Page.Main)
         {
@@ -475,6 +478,9 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             if (ImGui.Button(label, new Vector2(-1, 40)) && CanNavigateFromCurrentPage(page)) _page = page;
         }
 
+        if (highlightSource)
+            ImGui.PopStyleColor();
+
         if (selected)
         {
             ImGui.PopStyleColor(2);
@@ -490,7 +496,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         return page switch
         {
             Page.Regexes or Page.Vars or Page.Debug or Page.DrawLogic => level >= UserLevel.Dev,
-            Page.Messages or Page.Commands or Page.OwnButtons or Page.Presets => level >= UserLevel.Advanced,
+            Page.Messages or Page.Commands or Page.Presets => level >= UserLevel.Advanced,
+            Page.OwnButtons => false,
             _ => true,
         };
     }
@@ -512,7 +519,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         if (ShouldShowPage(Page.Regexes, level))     NavButtonBurger(Page.Regexes, "Regex");
         if (ShouldShowPage(Page.Messages, level))    NavButtonBurger(Page.Messages, "Messages");
         if (ShouldShowPage(Page.Commands, level))    NavButtonBurger(Page.Commands, "Commands");
-        if (ShouldShowPage(Page.OwnButtons, level))  NavButtonBurger(Page.OwnButtons, "Own Buttons");
         if (ShouldShowPage(Page.Presets, level))     NavButtonBurger(Page.Presets, "Presets");
         ImGui.Separator();
         if (ShouldShowPage(Page.Settings, level))    NavButtonBurger(Page.Settings, "Settings");
@@ -532,6 +538,9 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     {
         var selected = _page == page;
         if (selected) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.15f, 0.35f, 0.65f, 0.9f));
+        bool highlightSource = _presetNavHoverPage == page;
+        if (highlightSource)
+            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 0.62f, 0.2f, 1f));
 
         if (_customEditMode && _config.CurrentLevel == UserLevel.Custom && page != Page.Main)
         {
@@ -548,6 +557,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
         if (ImGui.Button(label, new Vector2(220, 28)) && CanNavigateFromCurrentPage(page)) { _page = page; ImGui.CloseCurrentPopup(); }
 
+        if (highlightSource) ImGui.PopStyleColor();
         if (selected) ImGui.PopStyleColor();
     }
 

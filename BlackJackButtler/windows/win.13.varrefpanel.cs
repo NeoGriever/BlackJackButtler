@@ -19,14 +19,30 @@ public partial class BlackJackButtlerWindow
             return;
         }
 
+        DrawVariableReferenceContent();
+
+        ImGui.End();
+    }
+
+    private void DrawVariableReferenceTab()
+    {
+        if (BJBGui.Button("Popout##varref_popout"))
+            _showVarRefPanel = true;
+        ImGui.Separator();
+        DrawVariableReferenceContent();
+    }
+
+    private void DrawVariableReferenceContent()
+    {
         var culture = CultureInfo.GetCultureInfo("en-US");
 
         ImGui.TextColored(new Vector4(1f, 0.85f, 0.4f, 1f), "Context Tokens");
         ImGui.Separator();
         CopyRow("<t>", "Target player name (alias-aware)");
-        CopyRow("<.>", "Protected <t> — unaffected by replacements (for /tell target)");
+        CopyRow("<.>", "Protected <t> - unaffected by replacements (for /tell target)");
         CopyRow("<points>", "Current hand points (e.g. 15/25)");
         CopyRow("<cards>", "Current hand cards");
+        CopyRow("<dealerHand>", "Dealer cards");
         CopyRow("<minbet>", $"Min bet ({_config.MinBet.ToString("N0", culture)} Gil)");
         CopyRow("<maxbet>", $"Max bet ({_config.MaxBet.ToString("N0", culture)} Gil)");
         CopyRow("<betrange>", "Bet range with VIP tiers");
@@ -53,6 +69,7 @@ public partial class BlackJackButtlerWindow
         CopyRow("${betamount}", "Player current bet");
         CopyRow("${lastwin}", "Player last win amount");
         CopyRow("${dealerpoints}", "Dealer best score");
+        CopyRow("${dealerHand}", "Dealer cards");
         CopyRow("${HandIndex}", "Hand label for splits (e.g. [Hand 1])");
         CopyRow("${playerCards}", "Same as <cards>");
 
@@ -62,8 +79,6 @@ public partial class BlackJackButtlerWindow
         ImGui.TextDisabled("${name}  = persistent (keeps value)");
         ImGui.TextDisabled("$${name} = consumed (cleared after use)");
         ImGui.TextDisabled("Set via regex action or Variables page.");
-
-        ImGui.End();
     }
 
     private static void CopyRow(string token, string description)

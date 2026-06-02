@@ -160,6 +160,13 @@ public static class CommandExecutor
             text = text.Replace("${playerCards}", cardString);
         }
 
+        if (text.Contains("<dealerHand>"))
+        {
+            var dealer = Plugin.Instance.GetMainWindow().GetDealer();
+            var dealerCards = dealer.Hands.Count > 0 ? dealer.GetCardsString(0) : string.Empty;
+            text = text.Replace("<dealerHand>", dealerCards);
+        }
+
         text = text.Replace("<minbet>", cfg.MinBet.ToString("N0", CultureInfo.GetCultureInfo("en-US")) + " Gil");
         text = text.Replace("<maxbet>", cfg.MaxBet.ToString("N0", CultureInfo.GetCultureInfo("en-US")) + " Gil");
 

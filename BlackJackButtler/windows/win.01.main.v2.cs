@@ -84,9 +84,17 @@ public partial class BlackJackButtlerWindow
         var phaseText = GameEngine.CurrentPhase.ToString();
         var phaseSize = ImGui.CalcTextSize(phaseText);
         var savedCursor = ImGui.GetCursorPos();
-        ImGui.SetCursorPos(new Vector2(ImGui.GetWindowWidth() - phaseSize.X - 10f, savedCursor.Y + 2f));
+        float rightPadding = 10f;
+        ImGui.SetCursorPos(new Vector2(ImGui.GetWindowWidth() - phaseSize.X - rightPadding, savedCursor.Y + 2f));
         ImGui.TextColored(new Vector4(1f, 0.65f, 0.2f, 1f), phaseText);
         ImGui.SetCursorPos(savedCursor);
+
+        var io = ImGui.GetIO();
+        if (io.KeyCtrl && io.KeyShift)
+        {
+            DrawProminentPanicButton("v2_header");
+            return;
+        }
 
         // Open / Closed
         bool isOn = IsRecognitionActive;
@@ -195,24 +203,6 @@ public partial class BlackJackButtlerWindow
         if (!canTell) ImGui.EndDisabled();
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Bank /tell cycle");
 
-        ImGui.SameLine();
-        float square = ImGui.GetFrameHeight();
-        if (!_notepadWindow.IsOpen)
-        {
-            ImGui.PushFont(UiBuilder.IconFont);
-            if (BJBGui.Button(FontAwesomeIcon.StickyNote.ToIconString() + "##v2_notepad_btn", new Vector2(square, square)))
-            {
-                if (!_notepadLoaded) { _notepadLoaded = true; _notepadWindow.LoadContent(); }
-                _notepadWindow.IsOpen = true;
-            }
-            ImGui.PopFont();
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Open Notepad");
-            ImGui.SameLine();
-        }
-
-        if (ImGui.Checkbox("##v2_enable_bank_input", ref _config.EnableBankInput)) _save();
-        if (ImGui.IsItemHovered()) ImGui.SetTooltip("Enable Bank input");
-
         // STOP
         ImGui.SameLine();
         if (CommandExecutor.IsRunning)
@@ -263,7 +253,6 @@ public partial class BlackJackButtlerWindow
             : "Open Nearby Players as popup window");
 
         // PANIC (nur bei Ctrl+Shift)
-        var io = ImGui.GetIO();
         if (io.KeyCtrl && io.KeyShift)
         {
             ImGui.SameLine();
@@ -376,7 +365,7 @@ public partial class BlackJackButtlerWindow
         if (ImGui.BeginTable($"bjb_main_table_v2{idSuffix}", columnCount, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
         {
             SetupTableColumns();
-            ImGui.TableHeadersRow();
+            DrawPlayerTableHeaders();
 
             var playerSnapshot = _players.ToList();
             foreach (var player in playerSnapshot)
