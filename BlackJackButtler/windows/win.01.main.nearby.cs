@@ -39,7 +39,8 @@ public partial class BlackJackButtlerWindow
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1f, 1f), "NEARBY PLAYERS");
         ImGui.SameLine();
 
-        if (JoinQueueManager.Count > 0)
+        var allianceMode = GroupContextManager.IsAllianceMode(_config);
+        if (!allianceMode && JoinQueueManager.Count > 0)
         {
             ImGui.TextColored(new Vector4(1f, 0.8f, 0f, 1f), $"Queue: {JoinQueueManager.Count}");
             ImGui.SameLine();
@@ -48,13 +49,16 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.TextColored(NearbyColorWorld, "(click name to /tell)");
-        ImGui.SameLine(ImGui.GetContentRegionAvail().X - 50f);
-        if (ImGui.Checkbox("Sticky", ref _config.NearbySticky)) _save();
+        if (!version2)
+        {
+            ImGui.SameLine(ImGui.GetContentRegionAvail().X - 50f);
+            if (ImGui.Checkbox("Sticky", ref _config.NearbySticky)) _save();
 
-        if (BJBGui.SmallButton("Cfg##nearby_settings"))
-            _showNearbySettingsWindow = true;
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Nearby settings (range, shape, etc.)");
+            if (BJBGui.SmallButton("CFG##nearby_settings"))
+                _showNearbySettingsWindow = true;
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Detection Radius and Nearby Players configuration");
+        }
 
         DrawNearbySettingsWindow();
 
@@ -164,10 +168,26 @@ public partial class BlackJackButtlerWindow
                 }
                 else
                 {
-                    if (partyFull) ImGui.BeginDisabled();
-                    if (BJBGui.SmallButton($"J##nearby_join_{i}"))
-                        JoinQueueManager.Enqueue(p.Name, p.World);
-                    if (partyFull) ImGui.EndDisabled();
+                    if (allianceMode)
+                    {
+                        var canRun = !string.IsNullOrWhiteSpace(_config.AllianceNearbyCommandName)
+                            && !GameActionQueueManager.IsBusy;
+                        if (!canRun) ImGui.BeginDisabled();
+                        if (BJBGui.SmallButton($"J##nearby_join_{i}"))
+                            ExecuteNearbyCommand(p, _config.AllianceNearbyCommandName, "AllianceNearbyJ");
+                        if (!canRun) ImGui.EndDisabled();
+                        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                            ImGui.SetTooltip(string.IsNullOrWhiteSpace(_config.AllianceNearbyCommandName)
+                                ? "Select an Alliance Nearby J Command under Settings > Alliance"
+                                : $"Run {_config.AllianceNearbyCommandName} for {p.FullKey}");
+                    }
+                    else
+                    {
+                        if (partyFull) ImGui.BeginDisabled();
+                        if (BJBGui.SmallButton($"J##nearby_join_{i}"))
+                            JoinQueueManager.Enqueue(p.Name, p.World);
+                        if (partyFull) ImGui.EndDisabled();
+                    }
                 }
 
                 ImGui.SameLine(0, 4);
@@ -181,7 +201,7 @@ public partial class BlackJackButtlerWindow
 
                 if (version2 && !string.IsNullOrWhiteSpace(_config.NearbyQuestionCommandName))
                 {
-                    bool canRunQuestion = !CommandExecutor.IsRunning;
+                    bool canRunQuestion = !GameActionQueueManager.IsBusy && !CommandExecutor.IsRunning;
                     if (!canRunQuestion) ImGui.BeginDisabled();
                     if (BJBGui.SmallButton($"?##nearby_question_{i}"))
                         ExecuteNearbyQuestionCommand(p);
@@ -255,19 +275,36 @@ public partial class BlackJackButtlerWindow
     {
         if (string.IsNullOrWhiteSpace(_config.NearbyQuestionCommandName)) return;
 
+        ExecuteNearbyCommand(p, _config.NearbyQuestionCommandName, "NearbyQuestion");
+    }
+
+    private void ExecuteNearbyCommand(NearbyPlayerInfo p, string commandName, string context)
+    {
+        if (string.IsNullOrWhiteSpace(commandName)) return;
+
         var currentTarget = Plugin.TargetManager.Target;
         string previousName = currentTarget?.Name.TextValue ?? string.Empty;
         string previousWorld = currentTarget is Dalamud.Game.ClientState.Objects.SubKinds.IPlayerCharacter pc
             ? pc.HomeWorld.Value.Name.ToString()
             : string.Empty;
 
-        GameEngine.TargetPlayer(p.Name, p.World);
-        Task.Run(async () =>
-        {
-            await CommandExecutor.ExecuteGroup(_config.NearbyQuestionCommandName, p.Name, _config);
-            if (!string.IsNullOrWhiteSpace(previousName))
-                GameEngine.TargetPlayer(previousName, previousWorld);
-        });
+        GameActionQueueManager.Enqueue(
+            $"{context}:{p.FullKey}",
+            async () =>
+            {
+                try
+                {
+                    GameEngine.TargetPlayer(p.Name, p.World);
+                    var targetName = string.IsNullOrWhiteSpace(p.World) ? p.Name : $"{p.Name}@{p.World}";
+                    await CommandExecutor.ExecuteGroup(commandName, targetName, _config);
+                }
+                finally
+                {
+                    if (!string.IsNullOrWhiteSpace(previousName))
+                        GameEngine.TargetPlayer(previousName, previousWorld);
+                }
+            },
+            $"NearbyCommand:{p.FullKey}");
     }
 
     private void DrawDistanceCircle()

@@ -63,15 +63,25 @@ public partial class BlackJackButtlerWindow
         for (int i = 0; i < _config.CustomCommandGroups.Count; i++)
         {
             var group = _config.CustomCommandGroups[i];
+            var shouldOpen = string.Equals(
+                _pendingOwnButtonGroupName,
+                group.Name,
+                StringComparison.OrdinalIgnoreCase);
 
-            if (!BJBGui.MatchesFilter(_filterOwnButtons, group.Name, group.Commands.Select(c => c.Text))) continue;
+            if (!shouldOpen && !BJBGui.MatchesFilter(_filterOwnButtons, group.Name, group.Commands.Select(c => c.Text))) continue;
 
             ImGui.PushID($"custom_group_{i}");
 
-            if (!string.IsNullOrEmpty(_filterOwnButtons))
+            if (shouldOpen || !string.IsNullOrEmpty(_filterOwnButtons))
                 ImGui.SetNextItemOpen(true, ImGuiCond.Always);
 
             bool headerOpen = ImGui.CollapsingHeader($"{group.Name}###custom_grp_{i}");
+            if (shouldOpen && headerOpen)
+            {
+                _pendingOwnButtonGroupName = null;
+                _filterOwnButtons = string.Empty;
+                ImGui.SetScrollHereY();
+            }
 
             if (headerOpen)
             {

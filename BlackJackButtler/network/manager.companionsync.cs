@@ -28,7 +28,7 @@ public static class CompanionSyncManager
         var uid = GetUid(player);
         var payload = PackPlayerData(player, cfg);
         LogGeneratedPayload("SendPlayerUpdate", player, uid, payload);
-        SendUpdate(cfg.CompanionServerAddress, uid, payload, cfg.CompanionTimeoutMs);
+        SendUpdate(cfg, uid, payload);
     }
 
     public static void SendPlayerBankBetUpdate(Configuration cfg, PlayerState? player)
@@ -39,7 +39,7 @@ public static class CompanionSyncManager
         var uid = GetUid(player);
         var payload = PackPlayerData(player, cfg, true);
         LogGeneratedPayload("SendPlayerBankBetUpdate", player, uid, payload);
-        SendUpdate(cfg.CompanionServerAddress, uid, payload, cfg.CompanionTimeoutMs);
+        SendUpdate(cfg, uid, payload);
     }
 
     public static void ClearPlayer(Configuration cfg, PlayerState? player)
@@ -47,7 +47,7 @@ public static class CompanionSyncManager
         if (!cfg.EnableCompanionSync || player == null)
             return;
 
-        SendUpdate(cfg.CompanionServerAddress, GetUid(player), null, cfg.CompanionTimeoutMs);
+        SendUpdate(cfg, GetUid(player), null);
     }
 
     public static void SendPlayersUpdate(Configuration cfg, IEnumerable<PlayerState> players)
@@ -68,7 +68,7 @@ public static class CompanionSyncManager
             })
             .ToList();
 
-        SendBatchUpdate(cfg.CompanionServerAddress, batch, cfg.CompanionTimeoutMs);
+        SendBatchUpdate(cfg, batch);
     }
 
     public static byte[] PackPlayerData(PlayerState player, Configuration cfg, bool forceEmptyHand = false)
@@ -101,7 +101,6 @@ public static class CompanionSyncManager
         {
             var lName = Plugin.PlayerState.CharacterName ?? string.Empty;
             var lWorld = Plugin.PlayerState.HomeWorld.RowId;
-            Plugin.Log.Debug($"[CompanionSync] GetUid(dealer) Name='{lName}' HomeWorld={lWorld}");
             return GetUidForSource(lName, lWorld);
         }
 
@@ -132,18 +131,23 @@ public static class CompanionSyncManager
         return 1;
     }
 
-    private static async void SendUpdate(string server, string uid, byte[]? data, int timeoutMs)
+    private static async void SendUpdate(Configuration cfg, string uid, byte[]? data)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(server) || string.IsNullOrWhiteSpace(uid))
+            if (!cfg.EnableCompanionSync
+                || string.IsNullOrWhiteSpace(cfg.CompanionServerAddress)
+                || string.IsNullOrWhiteSpace(uid))
                 return;
 
-            var baseAddress = server.TrimEnd('/');
+            var baseAddress = cfg.CompanionServerAddress.TrimEnd('/');
             await SendGate.WaitAsync().ConfigureAwait(false);
             try
             {
-                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(Math.Clamp(timeoutMs, 1, 1000)));
+                if (!cfg.EnableCompanionSync)
+                    return;
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(Math.Clamp(cfg.CompanionTimeoutMs, 1, 1000)));
                 using var request = new HttpRequestMessage(HttpMethod.Get, $"{baseAddress}/update");
                 request.Headers.Add("X-UID", uid);
                 request.Headers.Add("X-DATA", data != null ? Convert.ToBase64String(data) : string.Empty);
@@ -157,22 +161,28 @@ public static class CompanionSyncManager
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"Companion Sync Error: {ex.Message}");
+            if (cfg.EnableCompanionSync)
+                Plugin.Log.Error($"Companion Sync Error: {ex.Message}");
         }
     }
 
-    private static async void SendBatchUpdate(string server, IReadOnlyList<CompanionBatchEntry> entries, int timeoutMs)
+    private static async void SendBatchUpdate(Configuration cfg, IReadOnlyList<CompanionBatchEntry> entries)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(server) || entries.Count == 0)
+            if (!cfg.EnableCompanionSync
+                || string.IsNullOrWhiteSpace(cfg.CompanionServerAddress)
+                || entries.Count == 0)
                 return;
 
-            var baseAddress = server.TrimEnd('/');
+            var baseAddress = cfg.CompanionServerAddress.TrimEnd('/');
             await SendGate.WaitAsync().ConfigureAwait(false);
             try
             {
-                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(Math.Clamp(timeoutMs, 1, 1000)));
+                if (!cfg.EnableCompanionSync)
+                    return;
+
+                using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(Math.Clamp(cfg.CompanionTimeoutMs, 1, 1000)));
                 using var request = new HttpRequestMessage(HttpMethod.Get, $"{baseAddress}/update");
                 var json = JsonSerializer.Serialize(entries);
                 request.Headers.Add("X-BATCH", Convert.ToBase64String(Encoding.UTF8.GetBytes(json)));
@@ -186,7 +196,8 @@ public static class CompanionSyncManager
         }
         catch (Exception ex)
         {
-            Plugin.Log.Error($"Companion Sync Batch Error: {ex.Message}");
+            if (cfg.EnableCompanionSync)
+                Plugin.Log.Error($"Companion Sync Batch Error: {ex.Message}");
         }
     }
 

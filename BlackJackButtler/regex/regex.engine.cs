@@ -44,7 +44,9 @@ public static class RegexEngine
             Plugin.Instance.RunAutoAction(
                 "ReadyStart",
                 () => GameEngine.StartInitialDeal(players, cfg),
-                () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
+                () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun
+                    && GameEngine.CanAcceptInterRoundDetectors(),
+                "RoundStart");
         }
         else
             Plugin.Instance.GetMainWindow().SetHighlightNewRound();
@@ -73,7 +75,7 @@ public static class RegexEngine
         foreach (var entry in cfg.UserRegexes)
         {
             if (!entry.Enabled || entry.Patterns == null || entry.Patterns.Count == 0) continue;
-            if (!IsSourceAllowed(entry, msg)) continue;
+            if (!IsSourceAllowed(entry, msg, cfg)) continue;
 
             foreach (var pattern in entry.Patterns)
             {
@@ -107,10 +109,10 @@ public static class RegexEngine
         }
     }
 
-    private static bool IsSourceAllowed(UserRegexEntry entry, ParsedChatMessage msg)
+    private static bool IsSourceAllowed(UserRegexEntry entry, ParsedChatMessage msg, Configuration cfg)
     {
         if (entry.Action == RegexAction.DiceRollValue && msg.IsDice)
-            return true;
+            return msg.Event || Plugin.IsDebugMode;
 
         if (IsTradeAction(entry.Action) && ChatLogBuffer.IsSystemChatType(msg.ChatType))
             return true;
@@ -119,7 +121,7 @@ public static class RegexEngine
         if (entry.ApplyToTells)
             sources |= RegexChatSource.Tell;
 
-        if (ChatLogBuffer.IsPartyChatType(msg.ChatType))
+        if (ChatLogBuffer.IsSupportedGroupChatType(msg.ChatType, cfg))
             return sources.HasFlag(RegexChatSource.Party);
         if (ChatLogBuffer.IsTellChatType(msg.ChatType))
             return sources.HasFlag(RegexChatSource.Tell);
@@ -142,7 +144,9 @@ public static class RegexEngine
 
     private static void ExecuteAction(UserRegexEntry entry, string matchedPattern, ParsedChatMessage msg, string cleanMessage, List<PlayerState> players, PlayerState dealer, Configuration cfg)
     {
-        var p = players.FirstOrDefault(x => x.Name.Equals(msg.Name, StringComparison.OrdinalIgnoreCase));
+        var p = players.FirstOrDefault(x =>
+            x.Name.Equals(msg.Name, StringComparison.OrdinalIgnoreCase)
+            && (msg.WorldId <= 0 || x.WorldId == (uint)msg.WorldId));
 
         var options = entry.CaseSensitive ? RRX.RegexOptions.None : RRX.RegexOptions.IgnoreCase;
         var match = RRX.Regex.Match(cleanMessage, matchedPattern, options);
@@ -226,7 +230,9 @@ public static class RegexEngine
                         Plugin.Instance.RunAutoAction(
                             "RegexHit",
                             () => GameEngine.ActionHit(p, cfg, players),
-                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
+                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun
+                                && p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn,
+                            $"PlayerAction:{p.Name}");
                     }
                 }
                 break;
@@ -249,7 +255,9 @@ public static class RegexEngine
                         Plugin.Instance.RunAutoAction(
                             "RegexStand",
                             () => GameEngine.ActionStand(p, cfg, players),
-                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
+                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun
+                                && p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn,
+                            $"PlayerAction:{p.Name}");
                     }
                 }
                 break;
@@ -276,7 +284,9 @@ public static class RegexEngine
                         Plugin.Instance.RunAutoAction(
                             "RegexDD",
                             () => GameEngine.ActionDD(p, cfg, players),
-                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
+                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun
+                                && p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn,
+                            $"PlayerAction:{p.Name}");
                     }
                 }
                 break;
@@ -307,7 +317,9 @@ public static class RegexEngine
                             Plugin.Instance.RunAutoAction(
                                 "RegexSplit",
                                 () => GameEngine.ActionSplit(p, cfg, players),
-                                () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
+                                () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun
+                                    && p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn,
+                                $"PlayerAction:{p.Name}");
                         }
                     }
                 }
@@ -315,6 +327,11 @@ public static class RegexEngine
 
             case RegexAction.BankOut:
                 if (p != null) p.HighlightPay = true;
+                break;
+
+            case RegexAction.Payout:
+                if (p != null)
+                    PayoutManagement.StartPayout(p);
                 break;
 
             case RegexAction.TakeBatch:
@@ -386,7 +403,9 @@ public static class RegexEngine
                         Plugin.Instance.RunAutoAction(
                             "RegexNextRound",
                             () => GameEngine.StartInitialDeal(players, cfg),
-                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun);
+                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun
+                                && GameEngine.CanAcceptInterRoundDetectors(),
+                            "RoundStart");
                     }
                     else
                     {
@@ -424,7 +443,8 @@ public static class RegexEngine
                         }
                         await CommandExecutor.ExecuteGroup(groupName, targetName, cfg);
                         GameEngine.TargetPlayer(obWindow.GetDealer().Name);
-                    });
+                    },
+                    queueKey: $"OwnButton:{groupName}:{targetName}");
                 break;
             }
 
@@ -487,6 +507,11 @@ public static class RegexEngine
 
             case RegexAction.InviteNearby:
             {
+                if (GroupContextManager.IsAllianceMode(cfg))
+                {
+                    Plugin.Instance.GetMainWindow().AddDebugLog("[RegexEngine] InviteNearby ignored in alliance mode");
+                    break;
+                }
                 if (string.IsNullOrWhiteSpace(msg.Name))
                     break;
 

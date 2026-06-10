@@ -61,7 +61,7 @@ public partial class BlackJackButtlerWindow
     };
     private static readonly string[] SettingsSystemFields = {
         "EnableCompanionSync", "CompanionServerAddress", "CompanionTimeoutMs",
-        "DisableUpdatePopup", "HashedStats",
+        "DisableUpdatePopup", "HashedStats", "AllianceNearbyCommandName",
     };
     private static readonly string[] DrawLogicFields = {
         "DrawLogicEntries", "DrawLogicStartEntry",
@@ -985,12 +985,61 @@ public partial class BlackJackButtlerWindow
         }
 
         var sb = new StringBuilder();
+
+        // Dealer opening draw.
         AppendGroup(sb, "DealStart", previewDealer);
+
+        // Player opening draw.
         AppendGroup(sb, "Initial", previewPlayer);
-        AppendGroup(sb, "Hit", previewPlayer);
-        AppendGroup(sb, "PlayerBust", previewPlayer);
-        AppendGroup(sb, "DealHit", previewDealer);
-        AppendGroup(sb, "DealStand", previewDealer);
+
+        // Player state prompt followed by the selected preview action: Stand.
+        var playerHand = previewPlayer.Hands[previewPlayer.CurrentHandIndex];
+        var stateGroup = GameEngine.GetStatePromptGroup(previewPlayer, src);
+        if (!string.IsNullOrWhiteSpace(stateGroup))
+            AppendGroup(sb, stateGroup, previewPlayer);
+        playerHand.IsStand = true;
+        playerHand.ActionLog.Add("Stand");
+        AppendGroup(sb, "Stand", previewPlayer);
+
+        // Dealer turn using the same hard/soft threshold rule as Auto Dealer Draw.
+        const int maxDealerPreviewTurns = 20;
+        for (var turn = 0; turn < maxDealerPreviewTurns; turn++)
+        {
+            var dealerHand = previewDealer.Hands[previewDealer.CurrentHandIndex];
+            var (min, max) = previewDealer.CalculatePoints(previewDealer.CurrentHandIndex);
+            var dealerScore = max.HasValue && max.Value <= 21 ? max.Value : min;
+            var dealerBust = dealerHand.IsBust || dealerScore > 21;
+            if (dealerBust)
+            {
+                dealerHand.IsBust = true;
+                AppendGroup(sb, "DealerBust", previewDealer);
+                break;
+            }
+
+            var isSoft = max.HasValue && max.Value <= 21 && max.Value != min;
+            var shouldHit = dealerScore < src.DealerDrawsUntil
+                            || (src.DealerSoftRule && isSoft && dealerScore == src.DealerDrawsUntil);
+            if (!shouldHit)
+            {
+                dealerHand.IsStand = true;
+                dealerHand.ActionLog.Add("Stand");
+                AppendGroup(sb, "DealStand", previewDealer);
+                break;
+            }
+
+            var cardsBefore = dealerHand.Cards.Count;
+            dealerHand.ActionLog.Add("Hit");
+            AppendGroup(sb, "DealHit", previewDealer);
+
+            // A custom DealHit group without /dice cannot advance the simulated hand.
+            if (dealerHand.Cards.Count == cardsBefore)
+            {
+                dealerHand.IsStand = true;
+                AppendGroup(sb, "DealStand", previewDealer);
+                break;
+            }
+        }
+
         RecomputePreviewResults();
         AppendGroup(sb, src.SmallResult ? "ResultSmall" : GetPreviewResultGroup(), src.SmallResult ? previewDealer : previewPlayer);
 
@@ -1398,6 +1447,7 @@ public partial class BlackJackButtlerWindow
             _config.CompanionServerAddress   = snap.CompanionServerAddress;
             _config.CompanionTimeoutMs       = snap.CompanionTimeoutMs;
             _config.DisableUpdatePopup       = snap.DisableUpdatePopup;
+            _config.AllianceNearbyCommandName = snap.AllianceNearbyCommandName;
         }
 
         if (preset.ApplyDrawLogic)

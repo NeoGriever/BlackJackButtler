@@ -301,7 +301,8 @@ public partial class BlackJackButtlerWindow
                     "BankTell\0" +
                     "Own Button\0" +
                     "SetBet\0" +
-                    "Invite Nearby\0"
+                    "Invite Nearby\0" +
+                    "Payout\0"
                 ))
                 {
                     e.Action = (RegexAction)action;
@@ -320,14 +321,14 @@ public partial class BlackJackButtlerWindow
 
                 if (e.Action == RegexAction.ExecuteOwnButton)
                 {
-                    var allGroups = _config.CustomCommandGroups;
-                    if (allGroups.Count == 0)
+                    var groupNames = _config.CustomCommandGroups
+                        .Select(g => g.Name)
+                        .Append("Payout")
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                        .ToArray();
+                    if (groupNames.Length > 0)
                     {
-                        ImGui.TextDisabled("No Own Buttons defined.");
-                    }
-                    else
-                    {
-                        var groupNames = allGroups.Select(g => g.Name).ToArray();
                         int selectedIdx = Array.FindIndex(groupNames, n => n.Equals(e.ActionParam, StringComparison.OrdinalIgnoreCase));
                         if (selectedIdx < 0) selectedIdx = 0;
                         ImGui.SetNextItemWidth(300f);

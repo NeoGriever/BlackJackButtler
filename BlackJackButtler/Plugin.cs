@@ -73,7 +73,6 @@ public sealed class Plugin : IDalamudPlugin
     private VariablesPopupWindow variablesPopupWindow = null!;
     private DateTime _lastSync = DateTime.MinValue;
     private DateTime _lastIdleTick = DateTime.MinValue;
-    private volatile bool _autoActionInFlight = false;
     private bool _frameworkHooked = false;
     private bool _chatHooked = false;
     private int _autoActionGeneration = 0;
@@ -151,36 +150,26 @@ public sealed class Plugin : IDalamudPlugin
     public void OpenButtonBar() { buttonBarWindow.RequestRepositioning(); buttonBarWindow.IsOpen = true; }
     public void CloseButtonBar() => buttonBarWindow.IsOpen = false;
     public void OpenChatBox() { chatBoxWindow.IsOpen = true; UpdateEventHooks(); }
+    public void OpenChangelog() => updatePopupWindow.IsOpen = true;
     public BlackJackButtlerWindow GetMainWindow() => mainWindow;
     public int CurrentAutoActionGeneration => Volatile.Read(ref _autoActionGeneration);
     public bool IsAutoActionGenerationCurrent(int generation) => generation == CurrentAutoActionGeneration;
-    public void RunAutoAction(string context, Func<Task> action, Func<bool>? isStillEnabled = null)
+    public void RunAutoAction(string context, Func<Task> action, Func<bool>? isStillEnabled = null, string? queueKey = null)
     {
         var generation = CurrentAutoActionGeneration;
-        Task.Run(async () =>
-        {
-            try
-            {
-                if (!IsAutoActionGenerationCurrent(generation) || (isStillEnabled != null && !isStillEnabled()))
-                    return;
-
-                await action();
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, $"[AutoAction] {context} failed");
-            }
-        });
+        GameActionQueueManager.Enqueue(
+            context,
+            action,
+            queueKey ?? context,
+            () => IsAutoActionGenerationCurrent(generation)
+                && (isStillEnabled == null || isStillEnabled()));
     }
 
     public void ResetAutoActionState(bool cancelCurrentGroup)
     {
         Interlocked.Increment(ref _autoActionGeneration);
         _autoContinueWaiting = false;
-        _autoActionInFlight = false;
-
-        if (cancelCurrentGroup && CommandExecutor.IsRunning)
-            CommandExecutor.CancelCurrentGroup();
+        GameActionQueueManager.CancelAll(cancelCurrentGroup);
     }
     private string _cachedLocalName = string.Empty;
 
@@ -191,6 +180,12 @@ public sealed class Plugin : IDalamudPlugin
         ECommonsMain.Init(PluginInterface, this);
 
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+
+        if (!Configuration.EnableAllianceSupport)
+        {
+            Configuration.EnableAllianceSupport = true;
+            Configuration.Save();
+        }
 
         if (DefaultsMigration.RunMigration(Configuration))
             Configuration.Save();
@@ -209,6 +204,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         StatsManager.Init(Configuration);
+        UserStatisticsManager.Init(PluginInterface.GetPluginConfigDirectory());
         RoundLogManager.Init(PluginInterface.GetPluginConfigDirectory());
         StatsLogManager.Init(PluginInterface.GetPluginConfigDirectory());
         ActivityLogManager.Init(PluginInterface.GetPluginConfigDirectory());
@@ -391,6 +387,7 @@ public sealed class Plugin : IDalamudPlugin
 
             _cachedLocalName = ObjectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
             GameEngine.SetRuntimeContext(mainWindow.GetPlayers(), mainWindow.GetDealer());
+            GroupContextManager.Refresh(Configuration);
             return;
         }
 
@@ -420,30 +417,25 @@ public sealed class Plugin : IDalamudPlugin
         if (Configuration.EnableAutomation && Configuration.ShowAutoPlayerHandButton
             && Configuration.AutoInitialDeal && GameEngine.CurrentPhase == GamePhase.InitialDeal)
         {
-            if (!CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending && !_autoActionInFlight)
+            if (!CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending)
             {
                 var players = mainWindow.GetPlayers();
                 var currentPlayer = players.FirstOrDefault(p => p.IsCurrentTurn);
                 if (currentPlayer != null && currentPlayer.IsActivePlayer && !currentPlayer.IsOnHold && !currentPlayer.HasInitialHandDealt)
                 {
                     mainWindow.AddDebugLog($"[AutoDeal] Starting deal for {currentPlayer.DisplayName}");
-                    var generation = CurrentAutoActionGeneration;
-                    _autoActionInFlight = true;
-                    Task.Run(async () => {
-                        try
+                    RunAutoAction(
+                        $"AutoDeal:{currentPlayer.Name}",
+                        async () =>
                         {
-                            if (!IsAutoActionGenerationCurrent(generation) || !Configuration.AutoInitialDeal)
-                                return;
-
                             await GameEngine.ActionDealHand(currentPlayer, Configuration, players);
                             mainWindow.AddDebugLog($"[AutoDeal] Deal completed for {currentPlayer.DisplayName}");
-                        }
-                        finally
-                        {
-                            if (IsAutoActionGenerationCurrent(generation))
-                                _autoActionInFlight = false;
-                        }
-                    });
+                        },
+                        () => Configuration.AutoInitialDeal
+                            && GameEngine.CurrentPhase == GamePhase.InitialDeal
+                            && currentPlayer.IsCurrentTurn
+                            && !currentPlayer.HasInitialHandDealt,
+                        $"AutoDeal:{currentPlayer.Name}");
                 }
                 else
                 {
@@ -458,7 +450,7 @@ public sealed class Plugin : IDalamudPlugin
             {
                 if ((DateTime.Now - _lastAutoLog).TotalSeconds >= 2)
                 {
-                    mainWindow.AddDebugLog($"[AutoDeal] Blocked: IsRunning={CommandExecutor.IsRunning}, FollowUp={CommandExecutor.IsFollowUpPending}, InFlight={_autoActionInFlight}");
+                    mainWindow.AddDebugLog($"[AutoDeal] Blocked: IsRunning={CommandExecutor.IsRunning}, FollowUp={CommandExecutor.IsFollowUpPending}");
                     _lastAutoLog = DateTime.Now;
                 }
             }
@@ -468,7 +460,7 @@ public sealed class Plugin : IDalamudPlugin
         if (Configuration.EnableAutomation && Configuration.ShowAutoDealerDrawButton
             && Configuration.AutoDealerDraw && GameEngine.CurrentPhase == GamePhase.DealerTurn)
         {
-            if (!CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending && !_autoActionInFlight)
+            if (!CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending)
             {
                 var dealer = mainWindow.GetDealer();
                 if (dealer != null && dealer.Hands.Count > 0 && dealer.Hands[0].Cards.Count > 0)
@@ -484,45 +476,27 @@ public sealed class Plugin : IDalamudPlugin
                         if (shouldHit)
                         {
                             mainWindow.AddDebugLog($"[AutoDealer] Hit: score={score} (soft={isSoft}) vs {(Configuration.DealerSoftRule ? "soft" : "hard")} {Configuration.DealerDrawsUntil}");
-                            var generation = CurrentAutoActionGeneration;
-                            _autoActionInFlight = true;
                             var players = mainWindow.GetPlayers();
-                            Task.Run(async () => {
-                                try
-                                {
-                                    if (!IsAutoActionGenerationCurrent(generation) || !Configuration.AutoDealerDraw)
-                                        return;
-
-                                    await GameEngine.DealerHit(Configuration, players);
-                                }
-                                finally
-                                {
-                                    if (IsAutoActionGenerationCurrent(generation))
-                                        _autoActionInFlight = false;
-                                }
-                            });
+                            RunAutoAction(
+                                "AutoDealerHit",
+                                () => GameEngine.DealerHit(Configuration, players),
+                                () => Configuration.AutoDealerDraw && GameEngine.CurrentPhase == GamePhase.DealerTurn,
+                                "AutoDealerAction");
                         }
                         else
                         {
                             mainWindow.AddDebugLog($"[AutoDealer] Stand: score={score} (soft={isSoft}) vs {(Configuration.DealerSoftRule ? "soft" : "hard")} {Configuration.DealerDrawsUntil}");
-                            var generation = CurrentAutoActionGeneration;
-                            _autoActionInFlight = true;
                             var players = mainWindow.GetPlayers();
-                            Task.Run(async () => {
-                                try {
-                                    if (!IsAutoActionGenerationCurrent(generation) || !Configuration.AutoDealerDraw)
-                                        return;
-
+                            RunAutoAction(
+                                "AutoDealerStand",
+                                async () =>
+                                {
                                     await GameEngine.DealerStand(Configuration, players);
                                     await GameEngine.EvaluateFinalResults(players, dealer, Configuration);
                                     mainWindow.AddDebugLog("[AutoDealer] DealerStand + EvaluateFinalResults completed");
-                                }
-                                finally
-                                {
-                                    if (IsAutoActionGenerationCurrent(generation))
-                                        _autoActionInFlight = false;
-                                }
-                            });
+                                },
+                                () => Configuration.AutoDealerDraw && GameEngine.CurrentPhase == GamePhase.DealerTurn,
+                                "AutoDealerAction");
                         }
                     }
                 }
@@ -531,7 +505,7 @@ public sealed class Plugin : IDalamudPlugin
             {
                 if ((DateTime.Now - _lastAutoLog).TotalSeconds >= 2)
                 {
-                    mainWindow.AddDebugLog($"[AutoDealer] Blocked: IsRunning={CommandExecutor.IsRunning}, FollowUp={CommandExecutor.IsFollowUpPending}, InFlight={_autoActionInFlight}");
+                    mainWindow.AddDebugLog($"[AutoDealer] Blocked: IsRunning={CommandExecutor.IsRunning}, FollowUp={CommandExecutor.IsFollowUpPending}");
                     _lastAutoLog = DateTime.Now;
                 }
             }
@@ -558,9 +532,7 @@ public sealed class Plugin : IDalamudPlugin
         if (Configuration.EnableAutomation && Configuration.ShowAutoContinueButton
             && Configuration.AutoContinue && mainWindow.IsRecognitionActive)
         {
-            if (GameEngine.CanAcceptInterRoundDetectors()
-                && !CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending && !_autoActionInFlight
-                && !InsufficientBetQueueManager.IsProcessing)
+            if (GameEngine.CanAcceptInterRoundDetectors())
             {
                 if (!_autoContinueWaiting)
                 {
@@ -583,22 +555,11 @@ public sealed class Plugin : IDalamudPlugin
                             return;
                         }
 
-                        var generation = CurrentAutoActionGeneration;
-                        _autoActionInFlight = true;
-                        Task.Run(async () => {
-                            try
-                            {
-                                if (!IsAutoActionGenerationCurrent(generation) || !Configuration.AutoContinue)
-                                    return;
-
-                                await GameEngine.StartInitialDeal(players, Configuration);
-                            }
-                            finally
-                            {
-                                if (IsAutoActionGenerationCurrent(generation))
-                                    _autoActionInFlight = false;
-                            }
-                        });
+                        RunAutoAction(
+                            "AutoContinue",
+                            () => GameEngine.StartInitialDeal(players, Configuration),
+                            () => Configuration.AutoContinue && GameEngine.CanAcceptInterRoundDetectors(),
+                            "RoundStart");
                     }
                 }
             }
@@ -701,7 +662,10 @@ public sealed class Plugin : IDalamudPlugin
 
         var parsed = ChatMessageParser.Parse(DateTime.Now, s, m, localName, type);
 
-        if (ChatLogBuffer.IsPartyChatType(type) || parsed.IsDice)
+        if (ChatLogBuffer.IsSystemChatType(type))
+            GroupContextManager.ObserveSystemMessage(parsed.Message);
+
+        if (ChatLogBuffer.IsSupportedGroupChatType(type, Configuration) || parsed.IsDice)
             _lastChatActivity = DateTime.Now;
 
         if (parsed.IsDice)

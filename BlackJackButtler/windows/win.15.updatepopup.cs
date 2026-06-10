@@ -13,41 +13,57 @@ public class UpdatePopupWindow : Window
     private bool _triggerMigratePopup = false;
 
     private static readonly string CurrentChangelog =
-        "v1.8.4.1 — Changes since v1.8.4.0\n" +
+        "v1.8.4.2 — Changes since v1.8.4.0\n" +
         "\n" +
-        "Main View:\n" +
-        "- Feature: Added Version 2 Compact density mode with reduced spacing, smaller text, hidden alias column, and simplified Bank/Bet inputs\n" +
-        "- Feature: Version 2 Compact opens alias editing by double-clicking the player name\n" +
-        "- Feature: Bank input unlock now lives directly in the player table Bank header\n" +
-        "- Change: Version 2 Compact only shows Bank-to-Tip and Max Bet actions while Shift is held\n" +
-        "- Fix: Classic player table now uses the correct column count, preventing shifted row contents\n" +
+        "NEW — Alliance & Large Table Support:\n" +
+        "- Full alliance support is now always active: one dealer can manage up to 23 players\n" +
+        "- Party and alliance members are detected and synchronized automatically\n" +
+        "- Party chat commands and group /dice commands automatically use alliance chat while an alliance is active\n" +
+        "- Group mode is detected once before each command chain, keeping large-table command execution responsive\n" +
+        "- Added an Alliance settings tab for configuring the Nearby J action\n" +
+        "- Added Create Alliance Invite Button, which creates and opens a reusable Alliance Invite custom command\n" +
         "\n" +
-        "Settings:\n" +
-        "- Change: Main View selection is now consistently labeled Classic / Version 2\n" +
-        "- Feature: Added Normal / Compact density switch below the Version 2 main view setting\n" +
-        "- Fix: Natural and Dirty Blackjack settings no longer duplicate the Dirty Blackjack label\n" +
+        "NEW:\n" +
+        "- Added Version 2 Compact view for denser player and dealer controls\n" +
+        "- Added /skip to omit command rows when a resolved variable such as <winners> is empty\n" +
+        "- Added Payout to command references, Own Button actions, regex actions, and reaction command selections\n" +
+        "- Added a session-only Allow 0 bet setting; it resets when the plugin reloads\n" +
+        "- Added Standard Message and Fast Message preset creation buttons\n" +
+        "- Added stacked preset previews with ordered temporary application and simulated Debug dice rolls\n" +
+        "- Added <dealerHand> and ${dealerHand} command variables\n" +
+        "- Added 1k, 5k, and Custom tip buttons to Stats\n" +
+        "- Added live User Statistics with per-player traded-in, paid-out, and profit/loss totals\n" +
+        "- Group Detector startup can create a new User Statistics file or continue the current one without duplicate players\n" +
+        "- User Statistics sessions are stored as timestamped text files and can be reviewed or exported after Group Detector stops\n" +
+        "- Added an Open Changelog button to System settings\n" +
+        "- Added Full Debug command tracing and complete Verbose logs with millisecond timestamps\n" +
         "\n" +
-        "Presets:\n" +
-        "- Feature: Preset assignment category checkboxes can now be shown or hidden above the list\n" +
-        "- Feature: Hovering preset assignment checkboxes subtly highlights the related navigation source\n" +
-        "- Feature: Preset preview now lives in a right-side column and previews the current active configuration by default\n" +
-        "- Feature: Multiple presets can be added to a numbered temporary preview stack and applied in that order\n" +
-        "- Feature: Preset preview now includes simulated Debug dice rolls\n" +
-        "- Feature: Preview stack uses compact >/< controls next to Use, plus Back to current and Use as shown actions\n" +
-        "- Change: Preview output now shows the logical party-chat lines without section headers\n" +
+        "CHANGED:\n" +
+        "- Player names now always show the full character name; double-click a name to edit its alias\n" +
+        "- Aliases are displayed in yellow and regular names in light blue\n" +
+        "- Removed the Alias column and the Bank/Bet +/- controls\n" +
+        "- Bank and Bet fields now use thousands separators; invalid bets are shown in orange\n" +
+        "- Bank input locking is now controlled from the Bank table header\n" +
+        "- Version 2 header controls are grouped more clearly and include CFG and STI Nearby controls\n" +
+        "- Own Buttons now live in the Commands page\n" +
+        "- Variables now lives under DEBUG, while Round History now lives under Stats\n" +
+        "- Custom regex entries are separated from standard entries and can be reordered\n" +
+        "- Preset previews now simulate a complete round: dealer draw, player draw, state, stand, rule-based dealer turns, and result\n" +
+        "- Debug logs are chronological, with new entries displayed at the bottom\n" +
+        "- Main View selection is now consistently labeled Classic / Version 2\n" +
         "\n" +
-        "Regex & Commands:\n" +
-        "- Feature: Custom regex entries now render in a separate list below standard entries and can be manually reordered\n" +
-        "- Feature: Own Buttons are now grouped into the Commands page as a second tab\n" +
-        "- Feature: Commands now has a Variables tab with Popout and new <dealerHand> / ${dealerHand} support\n" +
-        "\n" +
-        "Stats & Debug:\n" +
-        "- Feature: Added 1k, 5k, and Custom tip buttons to Stats\n" +
-        "- Change: Generate new Players now fills debug players up to 7 instead of replacing the full debug group\n" +
-        "- Fix: Generate new Players is disabled once the debug group is full\n" +
-        "\n" +
-        "Draw Logic:\n" +
-        "- Feature: Updated the default visualizer script with camera-facing rounded cards and dynamic line thickness\n";
+        "FIXED:\n" +
+        "- Fixed stale party/alliance members remaining after players leave or a group is dissolved\n" +
+        "- Group Detector activation and deactivation now strictly validates every listed player against the current group\n" +
+        "- Fixed rounds and queued actions failing because game operations ran outside the main thread\n" +
+        "- Fixed Bank Tell execution after Bet Change and other queued actions\n" +
+        "- Fixed round starts with active zero-bet players unless Allow 0 bet is enabled\n" +
+        "- Fixed empty result variables producing unwanted chat rows when used with /skip\n" +
+        "- Fixed party/alliance /dice routing in command chains and referenced commands\n" +
+        "- Fixed shifted Classic table columns and player header alignment\n" +
+        "- Fixed Natural and Dirty Blackjack setting labels\n" +
+        "- Fixed Debug player generation replacing existing players or exceeding the group limit\n" +
+        "- Expanded diagnostics for blocked, rejected, stale, skipped, and failed queued actions\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",

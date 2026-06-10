@@ -62,6 +62,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _isSidebarVisible = true;
     private string? _pendingSettingsFocus;
     private string? _pendingSettingsTab;
+    private string? _pendingCommandsTab;
+    private string? _pendingOwnButtonGroupName;
 
     private bool _showRestoreSessionButton = false;
     private bool _showVarRefPanel = false;
@@ -69,6 +71,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private int _panicConfirmStage = 0;
     private bool _highlightNewRound = false;
     private bool _partyDissolved = false;
+    private bool _lastAllianceMode = false;
+    private bool _panicInProgress = false;
 
     private bool _notepadLoaded = false;
     private readonly NotepadWindow _notepadWindow;
@@ -298,8 +302,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             if(ShouldShowPage(Page.Settings, level))                    NavButton(Page.Settings, "Settings");
             if(ShouldShowPage(Page.Stats, level))                       NavButton(Page.Stats, "Stats");
             ImGui.Separator();
-            if(ShouldShowPage(Page.RoundLog, level))                    NavButton(Page.RoundLog, "Round History");
-            if(ShouldShowPage(Page.Vars, level))                        NavButton(Page.Vars, "Variables");
             if(ShouldShowPage(Page.Debug, level))                       NavButton(Page.Debug, "DEBUG");
             if(ShouldShowPage(Page.DrawLogic, level))                   NavButton(Page.DrawLogic, "Draw Logic");
 
@@ -395,6 +397,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         ImGui.EndChild();
         ImGui.PopStyleColor(3);
 
+        DrawUserStatsSessionPrompt();
         _fileDialogManager.Draw();
         PayoutManagement.DrawHelperWindow();
         DrawSplitMoneyPopup();
@@ -524,8 +527,6 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         if (ShouldShowPage(Page.Settings, level))    NavButtonBurger(Page.Settings, "Settings");
         if (ShouldShowPage(Page.Stats, level))       NavButtonBurger(Page.Stats, "Stats");
         ImGui.Separator();
-        if (ShouldShowPage(Page.RoundLog, level))    NavButtonBurger(Page.RoundLog, "Round History");
-        if (ShouldShowPage(Page.Vars, level))        NavButtonBurger(Page.Vars, "Variables");
         if (ShouldShowPage(Page.Debug, level))       NavButtonBurger(Page.Debug, "DEBUG");
         if (ShouldShowPage(Page.DrawLogic, level))   NavButtonBurger(Page.DrawLogic, "Draw Logic");
         ImGui.Separator();

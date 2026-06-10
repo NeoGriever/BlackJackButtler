@@ -23,6 +23,7 @@ public class SessionSnapshot
     public DateTime? StatsEndTime { get; set; }
     public long StatsTips { get; set; }
     public bool StatsIsRunning { get; set; }
+    public string? UserStatisticsFilePath { get; set; }
 }
 
 public static class SessionManager
@@ -61,7 +62,8 @@ public static class SessionManager
                 StatsStartTime = StatsManager.StartTime,
                 StatsEndTime = StatsManager.EndTime,
                 StatsTips = StatsManager.Tips,
-                StatsIsRunning = StatsManager.IsRunning
+                StatsIsRunning = StatsManager.IsRunning,
+                UserStatisticsFilePath = UserStatisticsManager.CurrentFilePath
             };
 
             var json = JsonConvert.SerializeObject(snapshot, Formatting.Indented, new JsonSerializerSettings
@@ -161,6 +163,11 @@ public static class SessionManager
             StatsManager.EndTime = snapshot.StatsEndTime;
             StatsManager.Tips = snapshot.StatsTips;
             StatsManager.IsRunning = snapshot.StatsIsRunning;
+            if (!string.IsNullOrWhiteSpace(snapshot.UserStatisticsFilePath)
+                && File.Exists(snapshot.UserStatisticsFilePath))
+                UserStatisticsManager.ResumeSession(snapshot.UserStatisticsFilePath);
+            else
+                UserStatisticsManager.ContinueCurrentOrLatestSession();
 
             Plugin.Log.Information($"[SessionManager] Session restored successfully - {players.Count} players, Phase: {phase}");
             return true;

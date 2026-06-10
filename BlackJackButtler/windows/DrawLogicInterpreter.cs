@@ -181,7 +181,7 @@ public static class DrawLogicInterpreter
             HandCount = player.Hands.Count,
             IsFocused = player.IsCurrentTurn,
             IsInGroup = player.IsInParty,
-            GroupExists = Plugin.PartyList.Length > 0,
+            GroupExists = GroupContextManager.GetCurrentMembers(Plugin.Instance.Configuration).Count > 0,
             IsDone = player.IsDone,
             SourcePlayer = player,
             Config = config,
@@ -244,7 +244,7 @@ public static class DrawLogicInterpreter
     {
         var ctx = new DrawLogicContext
         {
-            GroupExists = Plugin.PartyList.Length > 0,
+            GroupExists = GroupContextManager.GetCurrentMembers(Plugin.Instance.Configuration).Count > 0,
             Config = config,
         };
 

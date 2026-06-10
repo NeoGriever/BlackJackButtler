@@ -13,19 +13,22 @@ public partial class BlackJackButtlerWindow
     {
         if (ImGui.BeginTabBar("##commands_tabs"))
         {
-            if (ImGui.BeginTabItem("Commands"))
+            var commandsFlags = _pendingCommandsTab == "Commands"
+                ? ImGuiTabItemFlags.SetSelected
+                : ImGuiTabItemFlags.None;
+            if (ImGui.BeginTabItem("Commands", commandsFlags))
             {
+                if (_pendingCommandsTab == "Commands") _pendingCommandsTab = null;
                 DrawCommandChainsTab();
                 ImGui.EndTabItem();
             }
-            if (ImGui.BeginTabItem("Own Buttons"))
+            var ownButtonsFlags = _pendingCommandsTab == "OwnButtons"
+                ? ImGuiTabItemFlags.SetSelected
+                : ImGuiTabItemFlags.None;
+            if (ImGui.BeginTabItem("Own Buttons", ownButtonsFlags))
             {
+                if (_pendingCommandsTab == "OwnButtons") _pendingCommandsTab = null;
                 DrawOwnButtonsPage();
-                ImGui.EndTabItem();
-            }
-            if (ImGui.BeginTabItem("Variables"))
-            {
-                DrawVariableReferenceTab();
                 ImGui.EndTabItem();
             }
             ImGui.EndTabBar();
@@ -243,10 +246,13 @@ public partial class BlackJackButtlerWindow
             ImGui.SameLine();
             if (cmd.IsCommandRef)
             {
-                var allGroups = _config.CommandGroups.Concat(_config.CustomCommandGroups)
+                var groupNames = _config.CommandGroups.Concat(_config.CustomCommandGroups)
                     .Where(g => !g.Name.Equals(group.Name, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-                var groupNames = allGroups.Select(g => g.Name).ToArray();
+                    .Select(g => g.Name)
+                    .Append("Payout")
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
                 int selectedIdx = Array.FindIndex(groupNames, n => n.Equals(cmd.CommandRefName, StringComparison.OrdinalIgnoreCase));
                 if (selectedIdx < 0) selectedIdx = 0;
                 ImGui.SetNextItemWidth(-1);

@@ -47,6 +47,17 @@ public sealed class ChatLogBuffer
         || t == 64;
   }
 
+  public static bool IsAllianceChatType(int t)
+  {
+    return t == (int)XivChatType.Alliance;
+  }
+
+  public static bool IsSupportedGroupChatType(int t, Configuration config)
+  {
+    return IsPartyChatType(t)
+        || (GroupContextManager.IsAllianceMode(config) && IsAllianceChatType(t));
+  }
+
   public static bool IsTellChatType(int t)
   {
     return t == (int)XivChatType.TellIncoming

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
+using System.IO;
 using System.Text;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -15,6 +16,7 @@ public partial class BlackJackButtlerWindow
     private long _editStartBankValue;
     private bool _confirmEraseNormalStatsLog;
     private long _customTipValue = 100000;
+    private string? _selectedUserStatisticsPath;
 
     private void DrawStatsPage()
     {
@@ -31,6 +33,16 @@ public partial class BlackJackButtlerWindow
             if (ImGui.BeginTabItem("Round Log"))
             {
                 DrawRoundLogTab();
+                ImGui.EndTabItem();
+            }
+            if (ImGui.BeginTabItem("Round History"))
+            {
+                DrawRoundLogPage();
+                ImGui.EndTabItem();
+            }
+            if (ImGui.BeginTabItem("User Statistics"))
+            {
+                DrawUserStatisticsTab();
                 ImGui.EndTabItem();
             }
             ImGui.EndTabBar();
@@ -52,7 +64,7 @@ public partial class BlackJackButtlerWindow
         ImGui.SameLine();
 
         ImGui.BeginDisabled(!StatsManager.IsRunning);
-        if (BJBGui.Button("Stop Bank"))
+        if (BJBGui.Button("End Bank"))
         {
             StatsManager.StopSession();
             SaveSessionFromUI();
@@ -267,6 +279,112 @@ public partial class BlackJackButtlerWindow
         {
             DrawCalculation(timePassed);
         }
+    }
+
+    private void DrawUserStatisticsTab()
+    {
+        var sessions = UserStatisticsManager.GetSessions();
+        if (sessions.Count == 0)
+        {
+            ImGui.TextDisabled("No user statistics sessions have been recorded yet.");
+            ImGui.TextWrapped("A new text file is created under userstats when Group Detector starts.");
+            return;
+        }
+
+        var currentPath = UserStatisticsManager.CurrentFilePath;
+        if (string.IsNullOrWhiteSpace(_selectedUserStatisticsPath)
+            || sessions.All(session => !session.FilePath.Equals(_selectedUserStatisticsPath, StringComparison.OrdinalIgnoreCase)))
+        {
+            _selectedUserStatisticsPath = UserStatisticsManager.IsActive
+                                          && !string.IsNullOrWhiteSpace(currentPath)
+                                          && sessions.Any(session => session.FilePath.Equals(currentPath, StringComparison.OrdinalIgnoreCase))
+                ? currentPath
+                : sessions[0].FilePath;
+        }
+
+        var selected = sessions.FirstOrDefault(session =>
+                           session.FilePath.Equals(_selectedUserStatisticsPath, StringComparison.OrdinalIgnoreCase))
+                       ?? sessions[0];
+
+        ImGui.TextUnformatted("Session");
+        ImGui.SameLine(100f);
+        ImGui.SetNextItemWidth(360f);
+        var preview = FormatUserStatisticsSessionLabel(selected);
+        if (ImGui.BeginCombo("##user_statistics_session", preview))
+        {
+            foreach (var session in sessions)
+            {
+                var isSelected = session.FilePath.Equals(selected.FilePath, StringComparison.OrdinalIgnoreCase);
+                if (ImGui.Selectable(FormatUserStatisticsSessionLabel(session), isSelected))
+                    _selectedUserStatisticsPath = session.FilePath;
+                if (isSelected)
+                    ImGui.SetItemDefaultFocus();
+            }
+            ImGui.EndCombo();
+        }
+
+        ImGui.SameLine();
+        if (UserStatisticsManager.IsActive) ImGui.BeginDisabled();
+        if (BJBGui.Button("Save As..."))
+        {
+            var sourcePath = selected.FilePath;
+            var defaultName = Path.GetFileNameWithoutExtension(sourcePath);
+            _fileDialogManager.SaveFileDialog(
+                "Export User Statistics",
+                "Text Files{.txt}",
+                defaultName,
+                ".txt",
+                (ok, path) =>
+                {
+                    if (ok && !string.IsNullOrWhiteSpace(path))
+                        File.Copy(sourcePath, path, true);
+                });
+        }
+        if (UserStatisticsManager.IsActive) ImGui.EndDisabled();
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip(UserStatisticsManager.IsActive
+                ? "Deactivate Group Detector before exporting user statistics."
+                : "Export the selected user statistics text file.");
+
+        ImGui.Spacing();
+        ImGui.TextDisabled(selected.IsActive
+            ? $"Live session started {selected.StartedAt:yyyy-MM-dd HH:mm:ss}"
+            : $"Session {selected.StartedAt:yyyy-MM-dd HH:mm:ss} - {selected.EndedAt:yyyy-MM-dd HH:mm:ss}");
+        ImGui.TextDisabled(selected.FilePath);
+        ImGui.Separator();
+
+        if (selected.Players.Count == 0)
+        {
+            ImGui.TextDisabled("No completed player trades have been recorded in this session.");
+            return;
+        }
+
+        var height = Math.Max(100f, ImGui.GetContentRegionAvail().Y);
+        if (ImGui.BeginChild("##user_statistics_content", new Vector2(0, height), true))
+        {
+            ImGui.PushFont(UiBuilder.MonoFont);
+            foreach (var player in selected.Players.OrderBy(player => player.Identity, StringComparer.OrdinalIgnoreCase))
+            {
+                var result = player.Result;
+                ImGui.TextUnformatted(player.Identity);
+                ImGui.TextUnformatted($"  Traded in: {player.TradedIn,18:N0}");
+                ImGui.TextUnformatted($"  Paid out:  {player.PaidOut,18:N0}");
+                ImGui.TextColored(
+                    result >= 0
+                        ? new Vector4(0.25f, 1f, 0.35f, 1f)
+                        : new Vector4(1f, 0.3f, 0.3f, 1f),
+                    $"  Result:    {(result >= 0 ? "+" : "-")} {Math.Abs(result),16:N0}");
+                ImGui.Spacing();
+            }
+            ImGui.PopFont();
+        }
+        ImGui.EndChild();
+    }
+
+    private static string FormatUserStatisticsSessionLabel(UserStatisticsSession session)
+    {
+        var status = session.IsActive ? "LIVE" : "Completed";
+        return $"{session.StartedAt:yyyy-MM-dd HH:mm:ss} ({status})";
     }
 
     private void DrawRoundLogTab()

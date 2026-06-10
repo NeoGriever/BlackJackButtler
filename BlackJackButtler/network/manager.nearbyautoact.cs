@@ -54,7 +54,7 @@ public static class NearbyAutoActManager
     private static void ProcessQueue(Configuration cfg)
     {
         if (Queue.Count == 0) return;
-        if (CommandExecutor.IsRunning || CommandExecutor.IsFollowUpPending) return;
+        if (GameActionQueueManager.IsBusy || CommandExecutor.IsRunning || CommandExecutor.IsFollowUpPending) return;
 
         var item = Queue.Dequeue();
         var key = $"{item.Name}@{item.World}";
@@ -75,7 +75,8 @@ public static class NearbyAutoActManager
             async () =>
             {
                 GameEngine.TargetPlayer(item.Name, item.World);
-                await CommandExecutor.ExecuteGroup(cfg.NearbyAutoActCommandName, item.Name, cfg);
+                var targetName = string.IsNullOrWhiteSpace(item.World) ? item.Name : $"{item.Name}@{item.World}";
+                await CommandExecutor.ExecuteGroup(cfg.NearbyAutoActCommandName, targetName, cfg);
                 if (!string.IsNullOrWhiteSpace(previousName))
                     GameEngine.TargetPlayer(previousName, previousWorld);
             },

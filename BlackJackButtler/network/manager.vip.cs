@@ -73,12 +73,11 @@ public static class VipManager
         if (worldId == 0) return string.Empty;
 
         var local = Plugin.ObjectTable.LocalPlayer;
-        if (local != null && local.CurrentWorld.RowId == worldId)
-            return local.CurrentWorld.Value.Name.ToString();
+        if (local != null && local.HomeWorld.RowId == worldId)
+            return local.HomeWorld.Value.Name.ToString();
 
-        for (int i = 0; i < Plugin.PartyList.Length; i++)
+        foreach (var member in GroupContextManager.GetCurrentMembers(Plugin.Instance.Configuration))
         {
-            var member = Plugin.PartyList[i];
             if (member != null && member.World.RowId == worldId)
                 return member.World.Value.Name.ToString();
         }

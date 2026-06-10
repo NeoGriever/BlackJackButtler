@@ -104,28 +104,7 @@ public partial class BlackJackButtlerWindow
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.30f, 0.30f, 0.30f, 1f));
         if (BJBGui.Button(isOn ? "Open##v2_recon" : "Closed##v2_recon", new Vector2(64f, 0)))
         {
-            IsRecognitionActive = !IsRecognitionActive;
-            if (IsRecognitionActive)
-            {
-                StatsLogManager.OnGroupDetectorStarted();
-                SyncParty();
-                ViewDirectionManager.CaptureCurrentRotation(_config);
-                _groupDetectorActivatedAt = StatsManager.IsRunning ? null : DateTime.Now;
-            }
-            else
-            {
-                StatsLogManager.OnGroupDetectorStopped();
-                if (!StatsManager.IsRunning)
-                    SessionManager.ClearSession();
-                RemovePlayersWithCompanionErase(p => !p.IsActivePlayer && p.Bank == 0);
-                AddDebugLog(StatsManager.IsRunning
-                    ? "[SessionManager] Session retained for active stats (Group Detector deactivated)"
-                    : "[SessionManager] Session cleared (Group Detector deactivated)", false);
-                if (StatsManager.IsRunning)
-                    SaveSessionFromUI();
-                _groupDetectorActivatedAt = null;
-            }
-            Plugin.Instance.UpdateEventHooks();
+            SetGroupDetectorActive(!IsRecognitionActive);
         }
         ImGui.PopStyleColor();
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(isOn ? "Group Detector: ON — click to deactivate" : "Group Detector: OFF — click to activate");
@@ -148,6 +127,7 @@ public partial class BlackJackButtlerWindow
             }
             ImGui.PopStyleColor(2);
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Clean players and DrawLogic debug data left over while Group Detector is off.");
+            DrawCompactSeparatorV2();
         }
 
         // Automation-Buttons (nur wenn Automation aktiviert)
@@ -192,6 +172,7 @@ public partial class BlackJackButtlerWindow
         }
 
         // BNK
+        DrawCompactSeparatorV2();
         ImGui.SameLine();
         bool canTell = GameEngine.CanAcceptInterRoundDetectors();
         if (!canTell) ImGui.BeginDisabled();
@@ -223,6 +204,7 @@ public partial class BlackJackButtlerWindow
         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) ImGui.SetTooltip("Stop currently running commands");
 
         // Table Popout — Snapshot VOR dem Button, damit Push/Pop immer übereinstimmen
+        DrawCompactSeparatorV2();
         ImGui.SameLine();
         bool tblOn = _config.TablePopout;
         if (tblOn) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
@@ -252,6 +234,19 @@ public partial class BlackJackButtlerWindow
             ? "Nearby Players is open in popup — click to close"
             : "Open Nearby Players as popup window");
 
+        ImGui.SameLine();
+        if (BJBGui.Button("CFG##v2_nearby_cfg", new Vector2(_v2BtnW, 0)))
+            _showNearbySettingsWindow = true;
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Detection Radius and Nearby Players configuration");
+
+        ImGui.SameLine();
+        DrawCompactToggleV2(
+            "STI##v2_nearby_sticky",
+            ref _config.NearbySticky,
+            "Sticky sorting: keep the current Nearby Players order while enabled",
+            _v2BtnW);
+
         // PANIC (nur bei Ctrl+Shift)
         if (io.KeyCtrl && io.KeyShift)
         {
@@ -275,6 +270,20 @@ public partial class BlackJackButtlerWindow
         }
         if (wasOn) ImGui.PopStyleColor();
         if (ImGui.IsItemHovered()) ImGui.SetTooltip(tooltip);
+    }
+
+    private static void DrawCompactSeparatorV2()
+    {
+        ImGui.SameLine(0f, 7f);
+        var start = ImGui.GetCursorScreenPos();
+        var height = ImGui.GetFrameHeight();
+        var color = ImGui.GetColorU32(new Vector4(0.45f, 0.45f, 0.45f, 0.8f));
+        ImGui.GetWindowDrawList().AddLine(
+            new Vector2(start.X, start.Y + 2f),
+            new Vector2(start.X, start.Y + height - 2f),
+            color,
+            1f);
+        ImGui.Dummy(new Vector2(1f, height));
     }
 
     private void DrawCleanDataButtonV2()
@@ -361,7 +370,7 @@ public partial class BlackJackButtlerWindow
     internal void DrawPlayersPanelV2(string idSuffix = "")
     {
         _partyDissolved = _players.Count > 0 && !_players.Any(x => x.IsInParty);
-        int columnCount = IsV2SuperCompact() ? 10 : 11;
+        const int columnCount = 10;
         if (ImGui.BeginTable($"bjb_main_table_v2{idSuffix}", columnCount, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
         {
             SetupTableColumns();

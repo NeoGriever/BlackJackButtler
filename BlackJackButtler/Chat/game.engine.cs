@@ -11,6 +11,7 @@ public static partial class GameEngine
 {
     public static void SetRuntimeContext(List<PlayerState> players, PlayerState dealer)
     {
+        PlayerIdentityManager.Refresh(players, dealer);
         lock (_ctxLock)
         {
             _ctxPlayers = players;
@@ -45,8 +46,7 @@ public static partial class GameEngine
         }
         else if (!string.IsNullOrWhiteSpace(recipientName))
         {
-            target = players.FirstOrDefault(p =>
-                p.Name.Equals(recipientName, StringComparison.OrdinalIgnoreCase));
+            target = PlayerIdentityManager.Find(players, null, recipientName);
         }
 
         target ??= players.FirstOrDefault(p => p.IsCurrentTurn) ?? dealer;
@@ -313,7 +313,7 @@ public static partial class GameEngine
                 .Replace("${busted}", GetV("busted"));
             VariableManager.SetVariable("results", renderedResults);
 
-            await CommandExecutor.ExecuteGroup("ResultSmall", dealer.Name, cfg);
+            await CommandExecutor.ExecuteGroup("ResultSmall", dealer.DisplayName, cfg);
         }
         else
         {

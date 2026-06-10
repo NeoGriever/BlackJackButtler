@@ -72,6 +72,9 @@ public static class JoinQueueManager
 
     public static void Tick(Configuration cfg)
     {
+        if (GroupContextManager.IsAllianceMode(cfg))
+            return;
+
         var partySize = Plugin.PartyList.Length;
         if (partySize < _lastKnownPartySize && _queue.Count > 0)
             _leaveTimestamp = DateTime.Now;
