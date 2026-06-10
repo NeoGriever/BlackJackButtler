@@ -136,6 +136,7 @@ public static class TradeManager
             : RoundLogManager.BuildTradeLineInbound(p.DisplayName, before, after);
         RoundLogManager.AddTradeLine(p.DisplayName, line);
         StatsLogManager.AppendTrade(p, delta);
+        UserStatisticsManager.RecordTrade(p, delta);
     }
 
     public static string StripWorldSuffix(string name)

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -11,51 +10,48 @@ namespace BlackJackButtler;
 
 public static class SetBetQueueManager
 {
-    private sealed record QueueItem(string PlayerName, string DisplayName, string RawBetAmount, Configuration Config, string Source);
+    private static int _pendingCount;
 
-    private static readonly ConcurrentQueue<QueueItem> Queue = new();
-    private static int _isProcessing;
-
-    public static bool IsProcessing => _isProcessing != 0;
-    public static int Count => Queue.Count;
+    public static bool IsProcessing => Volatile.Read(ref _pendingCount) > 0;
+    public static int Count => Math.Max(0, Volatile.Read(ref _pendingCount));
 
     public static void Enqueue(PlayerState player, string rawBetAmount, Configuration config, string source)
     {
-        Queue.Enqueue(new QueueItem(player.Name, player.DisplayName, rawBetAmount, config, source));
-        EnsureProcessing();
+        var playerName = player.Name;
+        var displayName = player.DisplayName;
+        Interlocked.Increment(ref _pendingCount);
+        GameActionQueueManager.Enqueue(
+            $"SetBet:{displayName}",
+            () => Execute(playerName, displayName, rawBetAmount, config, source),
+            null,
+            null,
+            () => Interlocked.Decrement(ref _pendingCount));
     }
 
-    private static void EnsureProcessing()
+    private static async Task Execute(
+        string playerName,
+        string displayName,
+        string rawBetAmount,
+        Configuration config,
+        string source)
     {
-        if (Interlocked.CompareExchange(ref _isProcessing, 1, 0) == 0)
-            _ = Task.Run(ProcessQueue);
-    }
+        var window = Plugin.Instance.GetMainWindow();
+        var player = window.GetPlayers().FirstOrDefault(p =>
+            p.Name.Equals(playerName, StringComparison.OrdinalIgnoreCase)
+            || p.DisplayName.Equals(displayName, StringComparison.OrdinalIgnoreCase));
 
-    private static async Task ProcessQueue()
-    {
-        try
+        if (player == null)
         {
-            while (Queue.TryDequeue(out var item))
-            {
-                await CommandExecutor.WaitForCurrentGroupToFinishAsync();
+            window.AddDebugLog($"[SetBetQueue] Skipped missing player '{displayName}' from {source}");
+            return;
+        }
 
-                var window = Plugin.Instance.GetMainWindow();
-                var player = window.GetPlayers().FirstOrDefault(p =>
-                    p.Name.Equals(item.PlayerName, StringComparison.OrdinalIgnoreCase) ||
-                    p.DisplayName.Equals(item.DisplayName, StringComparison.OrdinalIgnoreCase));
-
-                if (player == null)
-                {
-                    window.AddDebugLog($"[SetBetQueue] Skipped missing player '{item.DisplayName}' from {item.Source}");
-                    continue;
-                }
-
-                var normalized = await TryNormalizeBetAmountAsync(item.RawBetAmount, player, item.Config);
-                if (!normalized.Success)
-                {
-                    window.AddDebugLog($"[SetBetQueue] Skipped invalid bet '{item.RawBetAmount}' for {player.DisplayName}");
-                    continue;
-                }
+        var normalized = await TryNormalizeBetAmountAsync(rawBetAmount, player, config);
+        if (!normalized.Success)
+        {
+            window.AddDebugLog($"[SetBetQueue] Skipped invalid bet '{rawBetAmount}' for {player.DisplayName}");
+            return;
+        }
 
                 var normalizedBet = normalized.Amount;
                 var normalizeReason = normalized.Reason;
@@ -73,52 +69,43 @@ public static class SetBetQueueManager
                     player.CurrentBet = normalizedBet;
                     player.HighlightBet = false;
                     ActivityLogManager.LogBetSet(player.DisplayName, player.CurrentBet);
-                    CompanionSyncManager.SendPlayerBankBetUpdate(item.Config, player);
+                    CompanionSyncManager.SendPlayerBankBetUpdate(config, player);
                     SessionManager.SaveSession(window.GetPlayers(), window.GetDealer(), GameEngine.CurrentPhase, window.IsRecognitionActive);
                     window.AddDebugLog($"[SetBetQueue] Set bet for {player.DisplayName}: {oldBet:N0} -> {player.CurrentBet:N0}");
                 }
 
-                if (!changed)
-                    continue;
+        if (!changed)
+            return;
 
-                var postCommand = ResolvePostCommand(item.Config);
-                if (postCommand == null)
-                    continue;
+        var postCommandName = ResolvePostCommandName(config);
+        if (postCommandName == null)
+            return;
 
-                await Task.Delay(TimeSpan.FromSeconds(0.2));
+        await Task.Delay(TimeSpan.FromSeconds(0.2));
 
-                await CommandExecutor.WaitForCurrentGroupToFinishAsync();
-                GameEngine.TargetPlayer(player.Name);
-                VariableManager.SetPlayerVariables(player);
-                await CommandExecutor.ExecuteGroup(postCommand.Name, player.DisplayName, item.Config);
-            }
+        GameEngine.TargetPlayer(player);
+        VariableManager.SetPlayerVariables(player);
+        await CommandExecutor.ExecuteGroup(postCommandName, player.DisplayName, config);
 
-            var dealerName = Plugin.Instance.GetMainWindow().GetDealer().Name;
-            if (!string.IsNullOrWhiteSpace(dealerName))
-                GameEngine.TargetPlayer(dealerName);
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Error($"[SetBetQueue] Failed: {ex}");
-        }
-        finally
-        {
-            Interlocked.Exchange(ref _isProcessing, 0);
-            if (!Queue.IsEmpty)
-                EnsureProcessing();
-        }
+        var dealerName = window.GetDealer().Name;
+        if (!string.IsNullOrWhiteSpace(dealerName))
+            GameEngine.TargetPlayer(dealerName);
     }
 
-    private static CommandGroup? ResolvePostCommand(Configuration config)
+    private static string? ResolvePostCommandName(Configuration config)
     {
         if (string.IsNullOrWhiteSpace(config.AutoBetPostCommandName))
             return null;
+
+        if (config.AutoBetPostCommandName.Equals("Payout", StringComparison.OrdinalIgnoreCase))
+            return "Payout";
 
         return config.CommandGroups
             .Concat(config.CustomCommandGroups)
             .FirstOrDefault(g => g.Name.Equals(config.AutoBetPostCommandName, StringComparison.OrdinalIgnoreCase)
                 && g.IsActive
-                && !IsSetBetLoopbackName(g.Name));
+                && !IsSetBetLoopbackName(g.Name))
+            ?.Name;
     }
 
     public static bool IsSetBetLoopbackName(string name)

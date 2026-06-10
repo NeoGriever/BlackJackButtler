@@ -130,10 +130,14 @@ public partial class BlackJackButtlerWindow
 
                 if (playerToProcess != null)
                 {
-                    Task.Run(async () => {
-                        await Task.Delay(50);
-                        GameEngine.ContinueDDAfterPayment(playerToProcess, currentConfig, currentPlayers);
-                    });
+                    GameActionQueueManager.Enqueue(
+                        $"ContinueDD:{playerToProcess.Name}",
+                        async () =>
+                        {
+                            await Task.Delay(50);
+                            await GameEngine.ContinueDDAfterPayment(playerToProcess, currentConfig, currentPlayers);
+                        },
+                        $"PlayerAction:{playerToProcess.Name}");
                 }
             }
 

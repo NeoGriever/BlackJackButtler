@@ -60,6 +60,9 @@ public partial class BlackJackButtlerWindow
 
             DrawSettingsTab_Sound(level);
 
+            DrawSettingsTab_Alliance();
+            DrawSettingsTab_PresetSetup();
+
             if (level >= (int)UserLevel.Advanced)
                 DrawSettingsTab_System(level);
 
@@ -212,6 +215,7 @@ public partial class BlackJackButtlerWindow
                 var commandNames = _config.CommandGroups
                     .Select(g => g.Name)
                     .Concat(_config.CustomCommandGroups.Select(g => g.Name))
+                    .Append("Payout")
                     .Where(n => !string.IsNullOrWhiteSpace(n))
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
@@ -905,7 +909,14 @@ public partial class BlackJackButtlerWindow
             ImGui.Spacing();
 
             if (ImGui.Checkbox("Disable update popup", ref _config.DisableUpdatePopup)) _save();
+            if (BJBGui.Button("Open Changelog"))
+                Plugin.Instance.OpenChangelog();
             if (ImGui.Checkbox("Hide Thanks page", ref _config.HideThanksPage)) _save();
+            var allowZeroBet = GameEngine.AllowZeroBetForSession;
+            if (ImGui.Checkbox("Allow 0 bet", ref allowZeroBet))
+                GameEngine.AllowZeroBetForSession = allowZeroBet;
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Session-only setting. Resets to disabled when the plugin reloads.");
 
             ImGui.Spacing();
             ImGui.TextUnformatted("Card-Companion App");
@@ -1147,6 +1158,7 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "NearbyFixedCenterCaptured",              v => _config.NearbyFixedCenterCaptured = v);
         TryApply<bool>  (j, "NearbyAutoActEnabled",                   v => _config.NearbyAutoActEnabled = v);
         TryApply<string>(j, "NearbyAutoActCommandName",               v => _config.NearbyAutoActCommandName = v);
+        TryApply<string>(j, "AllianceNearbyCommandName",              v => _config.AllianceNearbyCommandName = v);
         TryApply<float> (j, "NearbyAutoActTimeoutMinutes",            v => _config.NearbyAutoActTimeoutMinutes = Math.Clamp(v, 1f, 1440f));
         TryApply<float> (j, "CustomButtonPaddingH",                   v => _config.CustomButtonPaddingH = v);
         TryApply<float> (j, "CustomButtonPaddingV",                   v => _config.CustomButtonPaddingV = v);

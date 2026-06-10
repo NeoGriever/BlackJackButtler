@@ -85,7 +85,7 @@ public static class DiceResultHandler
                         GameEngine.SendCompanionTableUpdate(cfg, players.Where(x => x.IsActivePlayer));
                         CommandExecutor.NotifyDiceResult();
                         CommandExecutor.SignalFollowUpPending();
-                        Task.Run(async () =>
+                        GameActionQueueManager.RunContinuation("InitialDealNextTurn", async () =>
                         {
                             try
                             {
@@ -168,7 +168,7 @@ public static class DiceResultHandler
             CommandExecutor.CancelCurrentGroup();
             CommandExecutor.SignalFollowUpPending();
 
-            Task.Run(async () =>
+            GameActionQueueManager.RunContinuation($"DiceResult:{newGroup}", async () =>
             {
                 try
                 {
@@ -230,7 +230,7 @@ public static class DiceResultHandler
                 string promptGroup = GameEngine.GetStatePromptGroup(target, cfg);
                 CommandExecutor.SignalFollowUpPending();
 
-                Task.Run(async () =>
+                GameActionQueueManager.RunContinuation($"DicePrompt:{target.Name}", async () =>
                 {
                     try
                     {

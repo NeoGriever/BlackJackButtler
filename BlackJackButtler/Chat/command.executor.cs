@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ namespace BlackJackButtler;
 public static class CommandExecutor
 {
     private static readonly RRX.Regex StackTokenRegex = new(@"#\{([^}]+)\}", RRX.RegexOptions.Compiled);
-    private static readonly RRX.Regex DicePartyRegex = new(@"^/dice\s+party\s+(\d+)\s*$", RRX.RegexOptions.Compiled | RRX.RegexOptions.IgnoreCase);
+    private static readonly RRX.Regex DicePartyRegex = new(@"^/dice\s+(?:party|p|alliance|al)\s+(\d+)\s*$", RRX.RegexOptions.Compiled | RRX.RegexOptions.IgnoreCase);
     private const float MinCommandDelay = 0.05f;
     private const int MaxInternalDepth = 5;
     private static int _internalDepth = 0;
@@ -135,9 +136,12 @@ public static class CommandExecutor
             else
             {
                 string realName = pState?.Name ?? targetName;
-                string worldName = pState != null ? VipManager.ResolveWorldName(pState.WorldId) : string.Empty;
-                firstReplacement = !string.IsNullOrWhiteSpace(worldName)
-                    ? $"{realName}@{worldName}" : realName;
+                var qualifiedName = pState != null
+                    ? PlayerIdentityManager.GetQualifiedName(pState)
+                    : realName;
+                firstReplacement = qualifiedName.Contains('@', StringComparison.Ordinal)
+                    ? qualifiedName
+                    : realName;
             }
             var after = text[(idx + 3)..].Replace("<t>", aliasOrT);
             text = string.Concat(text.AsSpan(0, idx), firstReplacement, after);
@@ -235,13 +239,25 @@ public static class CommandExecutor
     public static async Task ExecuteGroup(string groupName, string targetPlayerName, Configuration cfg)
     {
         var window = Plugin.Instance.GetMainWindow();
-        window.AddDebugLog($"[Executor] Start Chain: {groupName} -> {targetPlayerName}");
+        var chainStopwatch = Stopwatch.StartNew();
+        LogFlow(window, $"Requested chain '{groupName}' -> '{targetPlayerName}'");
         var players = window.GetPlayers();
         var dealer = window.GetDealer();
 
-        var pState = targetPlayerName.Equals(dealer.Name, StringComparison.OrdinalIgnoreCase)
-            ? dealer
-            : players.FirstOrDefault(p => p.DisplayName.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase));
+        var pState = PlayerIdentityManager.Find(players, dealer, targetPlayerName);
+
+        if (groupName.Equals("Payout", StringComparison.OrdinalIgnoreCase))
+        {
+            if (pState == null)
+            {
+                LogFlow(window, $"Payout skipped: target '{targetPlayerName}' not found");
+                return;
+            }
+
+            PayoutManagement.StartPayout(pState);
+            LogFlow(window, $"Payout requested for '{pState.DisplayName}'");
+            return;
+        }
 
         // Set HandIndex variable for split hand identification
         if (pState != null && pState.Hands.Count > 1)
@@ -252,13 +268,22 @@ public static class CommandExecutor
         var group = cfg.CommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase))
                  ?? cfg.CustomCommandGroups.FirstOrDefault(g => g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
 
-        if (group == null) return;
+        if (group == null)
+        {
+            LogFlow(window, $"Chain '{groupName}' not found");
+            return;
+        }
 
         if (cfg.CustomCommandGroups.Contains(group) && !group.IsActive)
         {
-            window.AddDebugLog($"[Executor] Group '{groupName}' is inactive, skipping");
+            LogFlow(window, $"Chain '{groupName}' inactive, skipping");
             return;
         }
+
+        LogFlow(window, $"Capturing group route for '{groupName}'");
+        var allianceMode = await GroupContextManager.CaptureAllianceModeAsync(cfg, groupName);
+        LogFlow(window, $"Captured group route for '{groupName}': {(allianceMode ? "Alliance" : "Party")} | " +
+            $"Elapsed={chainStopwatch.ElapsedMilliseconds}ms");
 
         _currentGroupName = groupName;
         _currentTargetPlayer = targetPlayerName;
@@ -266,29 +291,30 @@ public static class CommandExecutor
             c.Enabled && !string.IsNullOrWhiteSpace(c.Text) &&
             c.Text.TrimStart().StartsWith("/dice", StringComparison.OrdinalIgnoreCase));
         var commandSnapshot = group.Commands.ToList();
-        window.AddDebugLog($"[Executor] Chain Snapshot: {groupName}, Commands={commandSnapshot.Count}, HasDice={_currentGroupHasDice}");
-        for (var i = 0; i < commandSnapshot.Count; i++)
-        {
-            var snapshotCmd = commandSnapshot[i];
-            var text = snapshotCmd.IsCommandRef ? $"ref:{snapshotCmd.CommandRefName}" : snapshotCmd.Text;
-            window.AddDebugLog($"[Executor] Snapshot Step {i + 1}: Enabled={snapshotCmd.Enabled}, GroupId={snapshotCmd.GroupId}, Text={text}");
-        }
         _delayCts = new CancellationTokenSource();
 
         var isStatePromptGroup = StateGroupNames.Contains(groupName);
 
         _isRunning = true;
         _cancel = false;
+        LogFlow(window, $"Started chain '{groupName}' | Steps={commandSnapshot.Count} | HasDice={_currentGroupHasDice}");
         int step = 0;
         var processedGroups = new HashSet<int>();
 
         // Wait for target focus to settle before executing commands
         if (!Plugin.IsDebugMode || !Plugin.IsSpeedMode)
+        {
+            LogFlow(window, $"Initial target-settle delay begin for '{groupName}' (300ms)");
             try { await Task.Delay(300, _delayCts.Token); } catch (OperationCanceledException) { }
+            LogFlow(window, $"Initial target-settle delay end for '{groupName}'");
+        }
 
         foreach (var cmd in commandSnapshot)
         {
             step++;
+            var stepStopwatch = Stopwatch.StartNew();
+            LogFlow(window, $"Step {step}/{commandSnapshot.Count} entered | Enabled={cmd.Enabled} | " +
+                $"GroupId={cmd.GroupId} | Ref={cmd.IsCommandRef} | Raw='{cmd.Text}'");
 
             if (_cancel)
             {
@@ -304,7 +330,7 @@ public static class CommandExecutor
                     (cmd.IsCommandRef && !string.IsNullOrWhiteSpace(cmd.CommandRefName));
                 if (!cmd.Enabled || !hasContent)
                 {
-                    window.AddDebugLog($"[Executor] Skip Step {step} (Disabled or Empty)");
+                    LogFlow(window, $"Step {step} skipped: disabled or empty");
                     continue;
                 }
                 effectiveCmd = cmd;
@@ -313,7 +339,7 @@ public static class CommandExecutor
             {
                 if (processedGroups.Contains(cmd.GroupId))
                 {
-                    window.AddDebugLog($"[Executor] Skip Step {step} (Group {cmd.GroupId} already handled)");
+                    LogFlow(window, $"Step {step} skipped: group {cmd.GroupId} already handled");
                     continue;
                 }
                 processedGroups.Add(cmd.GroupId);
@@ -328,10 +354,11 @@ public static class CommandExecutor
                 var selected = lineGroup.PickNext(groupCmds);
                 if (selected == null)
                 {
-                    window.AddDebugLog($"[Executor] Skip Group {cmd.GroupId} (No enabled commands)");
+                    LogFlow(window, $"Step {step} skipped: group {cmd.GroupId} has no enabled command");
                     continue;
                 }
                 effectiveCmd = selected;
+                LogFlow(window, $"Step {step} selected grouped command '{effectiveCmd.Text}'");
             }
 
             try
@@ -339,74 +366,109 @@ public static class CommandExecutor
                 if (effectiveCmd.IsCommandRef && !string.IsNullOrWhiteSpace(effectiveCmd.CommandRefName))
                 {
                     if (_cancel) break;
-                    window.AddDebugLog($"[Executor] Step {step}: Executing command ref '{effectiveCmd.CommandRefName}'");
-                    await ExecuteInternalGroup(effectiveCmd.CommandRefName, targetPlayerName, cfg);
+                    LogFlow(window, $"Step {step} executing reference '{effectiveCmd.CommandRefName}'");
+                    await ExecuteInternalGroup(effectiveCmd.CommandRefName, targetPlayerName, cfg, allianceMode);
+                    LogFlow(window, $"Step {step} reference returned | Elapsed={stepStopwatch.ElapsedMilliseconds}ms");
 
                     float refDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
                         : Math.Max(MinCommandDelay, effectiveCmd.Delay * (effectiveCmd.FixedDelay ? 1f : cfg.CommandSpeedMultiplier));
                     if (refDelay > 0)
                     {
-                        window.AddDebugLog($"[Executor] Post-ref delay {refDelay}s...");
+                        LogFlow(window, $"Step {step} post-reference delay begin ({refDelay:0.###}s)");
                         try { await Task.Delay(TimeSpan.FromSeconds(refDelay), _delayCts!.Token); } catch (OperationCanceledException) { }
+                        LogFlow(window, $"Step {step} post-reference delay end");
                     }
                     continue;
                 }
 
                 if (cfg.EnableAntiDouble && effectiveCmd.NonDoubled && effectiveCmd.Text == _lastSentRawText)
                 {
-                    window.AddDebugLog($"[Executor] Step {step} skipped (Anti-Double: same as last sent)");
+                    LogFlow(window, $"Step {step} skipped: anti-double");
                     continue;
                 }
 
-                window.AddDebugLog($"[Executor] Processing Step {step}: {effectiveCmd.Text}");
+                var commandText = effectiveCmd.Text;
+                LogFullDebug(window, $"Step {step} [Input] '{commandText}'");
+                if (TryResolveSkipCommand(
+                        commandText,
+                        pState,
+                        targetPlayerName,
+                        cfg,
+                        out commandText,
+                        out var skipCondition))
+                {
+                    LogFullDebug(window, $"Step {step} [/skip] condition='{skipCondition}' | result=SKIP");
+                    LogFlow(window, $"Step {step} skipped: /skip value empty");
+                    continue;
+                }
+                LogFullDebug(window, $"Step {step} [/skip] condition='{skipCondition}' | command='{commandText}'");
 
-                string processedText = ReplaceMessageStacks(effectiveCmd.Text, cfg);
+                string processedText = ReplaceMessageStacks(commandText, cfg);
+                LogFullDebug(window, $"Step {step} [Message stacks] '{processedText}'");
                 processedText = ProcessContextTokens(processedText, pState, targetPlayerName, cfg);
+                LogFullDebug(window, $"Step {step} [Context tokens] '{processedText}'");
                 processedText = ReplacePlayerScoreFirst(processedText);
+                LogFullDebug(window, $"Step {step} [Player score] '{processedText}'");
                 processedText = VariableManager.ProcessMessage(processedText);
+                LogFullDebug(window, $"Step {step} [Variables] '{processedText}'");
+                LogFlow(window, $"Step {step} resolved='{processedText}'");
 
-                window.AddDebugLog($"[Executor] Final Text Step {step}: {processedText}");
-
-                var (shouldExecute, skipDelay, resolvedCommand) = EvaluateIfCondition(processedText);
+                var (shouldExecute, skipDelay, resolvedCommand) = EvaluateConditionalCommand(processedText);
+                LogFullDebug(
+                    window,
+                    $"Step {step} [/if] execute={shouldExecute} | skipDelay={skipDelay} | command='{resolvedCommand}'");
                 if (!shouldExecute)
                 {
-                    window.AddDebugLog($"[Executor] Step {step} skipped (/if condition false)");
+                    LogFlow(window, $"Step {step} skipped: condition empty or false | SkipDelay={skipDelay}");
                     if (!skipDelay)
                     {
                         float skipEffDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
                             : Math.Max(MinCommandDelay, effectiveCmd.Delay * (effectiveCmd.FixedDelay ? 1f : cfg.CommandSpeedMultiplier));
                         if (skipEffDelay > 0)
                         {
-                            window.AddDebugLog($"[Executor] Waiting delay {skipEffDelay}s despite skip...");
+                            LogFlow(window, $"Step {step} skipped-command delay begin ({skipEffDelay:0.###}s)");
                             try { await Task.Delay(TimeSpan.FromSeconds(skipEffDelay), _delayCts!.Token); } catch (OperationCanceledException) { }
+                            LogFlow(window, $"Step {step} skipped-command delay end");
                         }
                     }
                     continue;
                 }
                 processedText = resolvedCommand;
                 processedText = processedText.Replace("<.>", "<t>");
+                LogFullDebug(window, $"Step {step} [Target token] '{processedText}'");
+                processedText = ChatCommandRouter.NormalizeGroupCommand(processedText, allianceMode);
+                LogFullDebug(
+                    window,
+                    $"Step {step} [Final output] mode={(allianceMode ? "Alliance" : "Party")} | '{processedText}'");
+                LogFlow(window, $"Step {step} routed='{processedText}'");
 
                 bool isDiceCommand = processedText.Trim().StartsWith("/dice", StringComparison.OrdinalIgnoreCase);
 
                 if (isDiceCommand)
                 {
-                    window.AddDebugLog($"[Executor] Dice command detected, setting wait flag");
                     _wait = true;
                 }
 
                 if (isDiceCommand && TryHandleDebugDice(processedText))
                 {
+                    LogFlow(window, $"Step {step} handled by debug dice");
                     _lastSentRawText = effectiveCmd.Text;
                 }
                 else
                 {
-                    ChatCommandRouter.Send(processedText, cfg, $"{groupName}:{step}");
+                    LogFlow(window, $"Step {step} dispatch requested");
+                    ChatCommandRouter.Send(
+                        processedText,
+                        cfg,
+                        $"{groupName}:{step}",
+                        effectiveCmd.Text,
+                        allianceMode);
                     _lastSentRawText = effectiveCmd.Text;
                 }
 
                 if (isDiceCommand)
                 {
-                    window.AddDebugLog($"[Executor] Waiting for dice result...");
+                    LogFlow(window, $"Step {step} dice wait begin");
 
                     int waitCount = 0;
                     while (_wait && !_cancel)
@@ -416,12 +478,12 @@ public static class CommandExecutor
 
                         if (waitCount > 600)
                         {
-                            window.AddDebugLog($"[Executor] Dice wait timeout - continuing anyway");
+                            LogFlow(window, $"Step {step} dice wait timeout");
                             _wait = false;
                         }
                     }
 
-                    window.AddDebugLog($"[Executor] Dice result received or canceled");
+                    LogFlow(window, $"Step {step} dice wait end | Cancel={_cancel}");
 
                     if (_cancel)
                     {
@@ -435,13 +497,14 @@ public static class CommandExecutor
 
                 if (effectiveDelay > 0)
                 {
-                    window.AddDebugLog($"[Executor] Delaying {effectiveDelay}s...");
+                    LogFlow(window, $"Step {step} delay begin ({effectiveDelay:0.###}s)");
                     try { await Task.Delay(TimeSpan.FromSeconds(effectiveDelay), _delayCts!.Token); } catch (OperationCanceledException) { }
+                    LogFlow(window, $"Step {step} delay end | StepElapsed={stepStopwatch.ElapsedMilliseconds}ms");
                 }
             }
             catch (Exception ex)
             {
-                window.AddDebugLog($"[Executor-Step-Error] Step {step} failed: {ex.Message}");
+                LogFlow(window, $"Step {step} failed | {ex.GetType().Name}: {ex.Message}");
             }
         }
 
@@ -461,7 +524,19 @@ public static class CommandExecutor
             LastStateFiredAt = DateTime.Now;
         }
         OnGroupCompleted?.Invoke();
-        window.AddDebugLog($"[Executor] Chain End: {groupName}");
+        LogFlow(window, $"Finished chain '{groupName}' | Elapsed={chainStopwatch.ElapsedMilliseconds}ms");
+    }
+
+    private static void LogFlow(BlackJackButtler.Windows.BlackJackButtlerWindow window, string message)
+    {
+        window.AddDebugLog(
+            $"[Executor T{Environment.CurrentManagedThreadId}/Task{Task.CurrentId?.ToString() ?? "-"}] {message}");
+    }
+
+    private static void LogFullDebug(BlackJackButtler.Windows.BlackJackButtlerWindow window, string message)
+    {
+        window.AddFullDebugLog(
+            $"[Executor-Full T{Environment.CurrentManagedThreadId}/Task{Task.CurrentId?.ToString() ?? "-"}] {message}");
     }
 
     private static string ResolveCommandText(string text, string targetPlayerName, Configuration cfg, PlayerState? pState)
@@ -478,9 +553,10 @@ public static class CommandExecutor
         return text;
     }
 
-    private static (bool execute, bool skipDelay, string command) EvaluateIfCondition(string text)
+    private static (bool execute, bool skipDelay, string command) EvaluateConditionalCommand(string text)
     {
-        if (!text.TrimStart().StartsWith("/if ", StringComparison.OrdinalIgnoreCase))
+        var trimmed = text.TrimStart();
+        if (!trimmed.StartsWith("/if ", StringComparison.OrdinalIgnoreCase))
             return (true, false, text);
 
         var parts = text.Substring(text.IndexOf("/if ", StringComparison.OrdinalIgnoreCase) + 4)
@@ -521,6 +597,37 @@ public static class CommandExecutor
         return (strMatch, hasSkip && !strMatch, commandPart);
     }
 
+    private static bool TryResolveSkipCommand(
+        string text,
+        PlayerState? pState,
+        string targetPlayerName,
+        Configuration cfg,
+        out string command,
+        out string resolvedCondition)
+    {
+        command = text;
+        resolvedCondition = "(not a /skip command)";
+        var trimmed = text.TrimStart();
+        if (!trimmed.StartsWith("/skip ", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var body = trimmed[6..];
+        var separatorIndex = body.IndexOf('|');
+        resolvedCondition = "(invalid /skip syntax)";
+        if (separatorIndex < 0)
+            return false;
+
+        var condition = body[..separatorIndex].Trim();
+        command = body[(separatorIndex + 1)..].Trim();
+
+        condition = ProcessContextTokens(condition, pState, targetPlayerName, cfg);
+        condition = ReplacePlayerScoreFirst(condition);
+        condition = VariableManager.ProcessMessage(condition);
+        resolvedCondition = condition;
+
+        return string.IsNullOrWhiteSpace(condition);
+    }
+
     private static bool TryHandleDebugDice(string processedText)
     {
         if (!Plugin.IsDebugMode)
@@ -548,7 +655,11 @@ public static class CommandExecutor
         return true;
     }
 
-    public static async Task ExecuteInternalGroup(string groupName, string targetPlayerName, Configuration cfg)
+    public static async Task ExecuteInternalGroup(
+        string groupName,
+        string targetPlayerName,
+        Configuration cfg,
+        bool allianceMode)
     {
         if (_cancel) return;
         var window = Plugin.Instance.GetMainWindow();
@@ -562,9 +673,7 @@ public static class CommandExecutor
         var players = window.GetPlayers();
         var dealer = window.GetDealer();
 
-        var pState = targetPlayerName.Equals(dealer.Name, StringComparison.OrdinalIgnoreCase)
-            ? dealer
-            : players.FirstOrDefault(p => p.DisplayName.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase) || p.Name.Equals(targetPlayerName, StringComparison.OrdinalIgnoreCase));
+        var pState = PlayerIdentityManager.Find(players, dealer, targetPlayerName);
 
         // Set HandIndex variable for split hand identification
         if (pState != null && pState.Hands.Count > 1)
@@ -642,7 +751,7 @@ public static class CommandExecutor
                 {
                     if (_cancel) break;
                     window.AddDebugLog($"[Executor-Internal] Step {step}: Executing nested command ref '{effectiveCmd.CommandRefName}'");
-                    await ExecuteInternalGroup(effectiveCmd.CommandRefName, targetPlayerName, cfg);
+                    await ExecuteInternalGroup(effectiveCmd.CommandRefName, targetPlayerName, cfg, allianceMode);
 
                     float refDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
                         : Math.Max(MinCommandDelay, effectiveCmd.Delay * (effectiveCmd.FixedDelay ? 1f : cfg.CommandSpeedMultiplier));
@@ -660,19 +769,43 @@ public static class CommandExecutor
                     continue;
                 }
 
-                window.AddDebugLog($"[Executor-Internal] Processing Step {step}: {effectiveCmd.Text}");
+                var commandText = effectiveCmd.Text;
+                LogFullDebug(window, $"Internal {groupName}:{step} [Input] '{commandText}'");
+                if (TryResolveSkipCommand(
+                        commandText,
+                        pState,
+                        targetPlayerName,
+                        cfg,
+                        out commandText,
+                        out var skipCondition))
+                {
+                    LogFullDebug(
+                        window,
+                        $"Internal {groupName}:{step} [/skip] condition='{skipCondition}' | result=SKIP");
+                    window.AddDebugLog($"[Executor-Internal] Step {step} skipped (/skip value empty)");
+                    continue;
+                }
+                LogFullDebug(
+                    window,
+                    $"Internal {groupName}:{step} [/skip] condition='{skipCondition}' | command='{commandText}'");
 
-                string processedText = ReplaceMessageStacks(effectiveCmd.Text, cfg);
+                string processedText = ReplaceMessageStacks(commandText, cfg);
+                LogFullDebug(window, $"Internal {groupName}:{step} [Message stacks] '{processedText}'");
                 processedText = ProcessContextTokens(processedText, pState, targetPlayerName, cfg);
+                LogFullDebug(window, $"Internal {groupName}:{step} [Context tokens] '{processedText}'");
                 processedText = ReplacePlayerScoreFirst(processedText);
+                LogFullDebug(window, $"Internal {groupName}:{step} [Player score] '{processedText}'");
                 processedText = VariableManager.ProcessMessage(processedText);
+                LogFullDebug(window, $"Internal {groupName}:{step} [Variables] '{processedText}'");
 
-                window.AddDebugLog($"[Executor-Internal] Final Text Step {step}: {processedText}");
-
-                var (shouldExecuteInt, skipDelayInt, resolvedCommandInt) = EvaluateIfCondition(processedText);
+                var (shouldExecuteInt, skipDelayInt, resolvedCommandInt) = EvaluateConditionalCommand(processedText);
+                LogFullDebug(
+                    window,
+                    $"Internal {groupName}:{step} [/if] execute={shouldExecuteInt} | " +
+                    $"skipDelay={skipDelayInt} | command='{resolvedCommandInt}'");
                 if (!shouldExecuteInt)
                 {
-                    window.AddDebugLog($"[Executor-Internal] Step {step} skipped (/if condition false)");
+                    window.AddDebugLog($"[Executor-Internal] Step {step} skipped (condition empty or false)");
                     if (!skipDelayInt)
                     {
                         float skipEffDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
@@ -687,8 +820,19 @@ public static class CommandExecutor
                 }
                 processedText = resolvedCommandInt;
                 processedText = processedText.Replace("<.>", "<t>");
+                LogFullDebug(window, $"Internal {groupName}:{step} [Target token] '{processedText}'");
+                processedText = ChatCommandRouter.NormalizeGroupCommand(processedText, allianceMode);
+                LogFullDebug(
+                    window,
+                    $"Internal {groupName}:{step} [Final output] " +
+                    $"mode={(allianceMode ? "Alliance" : "Party")} | '{processedText}'");
 
-                ChatCommandRouter.Send(processedText, cfg, $"{groupName}:internal:{step}");
+                ChatCommandRouter.Send(
+                    processedText,
+                    cfg,
+                    $"{groupName}:internal:{step}",
+                    effectiveCmd.Text,
+                    allianceMode);
                 _lastSentRawText = effectiveCmd.Text;
 
                 float effectiveDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f

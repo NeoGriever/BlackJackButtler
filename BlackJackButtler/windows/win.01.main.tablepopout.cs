@@ -14,7 +14,7 @@ public class TablePopoutWindow : Window
 
     public TablePopoutWindow(Configuration config, Action save, BlackJackButtlerWindow mainWindow)
         : base("BJB Table##bjb_table_popout",
-            ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoCollapse)
+            ImGuiWindowFlags.NoCollapse)
     {
         _config = config;
         _save = save;

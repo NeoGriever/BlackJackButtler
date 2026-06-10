@@ -47,6 +47,9 @@ public sealed class Configuration : IPluginConfiguration
     public bool EnableCompanionSync = false;
     public string CompanionServerAddress = "http://127.0.0.1:8000";
     public int CompanionTimeoutMs = 200;
+    // Legacy compatibility only. Alliance routing is always enabled.
+    public bool EnableAllianceSupport = true;
+    public string AllianceNearbyCommandName = "";
 
     public List<CommandGroup> CommandGroups = new();
     public List<CommandGroup> CustomCommandGroups = new();

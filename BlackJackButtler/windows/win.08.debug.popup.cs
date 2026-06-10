@@ -11,7 +11,7 @@ namespace BlackJackButtler.Windows;
 public class DebugLogWindow : Window
 {
     private readonly BlackJackButtlerWindow _main;
-    private int _lastChatEntryCount = -1;
+    private int _lastVisibleEntryCount = -1;
 
     public DebugLogWindow(BlackJackButtlerWindow main) : base("BJB Chat Debug Popout")
     {
@@ -25,7 +25,7 @@ public class DebugLogWindow : Window
         if (BJBGui.SmallButton("Clear Log"))
         {
             lock(_main.GetLogLock()) _main.GetDebugLog().Clear();
-            _lastChatEntryCount = 0;
+            _lastVisibleEntryCount = 0;
         }
 
         if (Plugin.IsDebugMode)
@@ -37,13 +37,27 @@ public class DebugLogWindow : Window
         }
 
         ImGui.SameLine();
+        var verbose = _main.IsVerboseLogEnabled;
+        if (ImGui.Checkbox("Verbose", ref verbose))
+            _main.IsVerboseLogEnabled = verbose;
+
+        ImGui.SameLine();
+        var fullDebug = _main.IsFullDebugLogEnabled;
+        if (!verbose) ImGui.BeginDisabled();
+        if (ImGui.Checkbox("Full Debug", ref fullDebug))
+            _main.IsFullDebugLogEnabled = fullDebug;
+        if (!verbose) ImGui.EndDisabled();
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip("Log every command input and transformation step. Requires Verbose.");
+
+        ImGui.SameLine();
         if (BJBGui.SmallButton("Copy All"))
         {
             CopyLogToClipboard();
         }
         if (ImGui.IsItemHovered())
         {
-            ImGui.SetTooltip("Copy all chat entries to clipboard in chronological order");
+            ImGui.SetTooltip("Copy all currently visible entries in chronological order");
         }
 
         if (Plugin.IsDebugMode)
@@ -65,23 +79,25 @@ public class DebugLogWindow : Window
             List<BlackJackButtlerWindow.DebugEntry> logCopy;
             lock (_main.GetLogLock()) logCopy = _main.GetDebugLog().ToList();
 
-            var chatEntryCount = 0;
+            var visibleEntryCount = 0;
             for (int i = 0; i < logCopy.Count; i++)
             {
                 var entry = logCopy[i];
-                if (!entry.IsChat) continue;
-                chatEntryCount++;
+                if (!_main.IsDebugEntryVisible(entry)) continue;
+                visibleEntryCount++;
 
-                var color = GetChannelColor(entry.Text);
+                var color = BlackJackButtlerWindow.GetDebugEntryColor(entry.Color)
+                    ?? GetChannelColor(entry.Text);
                 if (color.HasValue) ImGui.PushStyleColor(ImGuiCol.Text, color.Value);
-                if (ImGui.Selectable($"{entry.Text}##pop_{i}")) ImGui.SetClipboardText(entry.Text);
+                var displayText = BlackJackButtlerWindow.FormatDebugEntry(entry);
+                if (ImGui.Selectable($"{displayText}##pop_{i}")) ImGui.SetClipboardText(displayText);
                 if (color.HasValue) ImGui.PopStyleColor();
             }
 
-            if (chatEntryCount != _lastChatEntryCount)
+            if (visibleEntryCount != _lastVisibleEntryCount)
             {
                 ImGui.SetScrollHereY(1.0f);
-                _lastChatEntryCount = chatEntryCount;
+                _lastVisibleEntryCount = visibleEntryCount;
             }
         }
         ImGui.EndChild();
@@ -102,24 +118,28 @@ public class DebugLogWindow : Window
         List<BlackJackButtlerWindow.DebugEntry> logCopy;
         lock (_main.GetLogLock()) logCopy = _main.GetDebugLog().ToList();
 
-        var chatEntries = logCopy.Where(e => e.IsChat).ToList();
+        var visibleEntries = logCopy
+            .Where(_main.IsDebugEntryVisible)
+            .ToList();
 
-        if (chatEntries.Count == 0)
+        if (visibleEntries.Count == 0)
         {
             ImGui.SetClipboardText("(No chat entries to copy)");
             return;
         }
 
-        var sb = new StringBuilder(chatEntries.Count * 100);
-        sb.AppendLine($"=== BlackJack Buttler Chat Log ===");
+        var sb = new StringBuilder(visibleEntries.Count * 100);
+        sb.AppendLine($"=== BlackJack Buttler Debug Log ===");
         sb.AppendLine($"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        sb.AppendLine($"Total Entries: {chatEntries.Count}");
-        sb.AppendLine($"===================================");
+        sb.AppendLine($"Total Entries: {visibleEntries.Count}");
+        sb.AppendLine($"Verbose Mode: {(_main.IsVerboseLogEnabled ? "ON" : "OFF")}");
+        sb.AppendLine($"Full Debug Mode: {(_main.IsVerboseLogEnabled && _main.IsFullDebugLogEnabled ? "ON" : "OFF")}");
+        sb.AppendLine($"=====================================");
         sb.AppendLine();
 
-        foreach (var entry in chatEntries)
+        foreach (var entry in visibleEntries)
         {
-            sb.AppendLine(entry.Text);
+            sb.AppendLine(BlackJackButtlerWindow.FormatDebugEntry(entry));
         }
 
         ImGui.SetClipboardText(sb.ToString());

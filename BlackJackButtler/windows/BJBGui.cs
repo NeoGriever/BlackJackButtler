@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 
@@ -8,6 +9,7 @@ namespace BlackJackButtler.Windows;
 internal static class BJBGui
 {
     public static Vector4 ButtonTextColor = new Vector4(1f, 1f, 1f, 1f);
+    private static readonly Dictionary<string, string> LongInputBuffers = new();
 
     public static bool MatchesFilter(string filter, params string?[] haystacks)
     {
@@ -119,6 +121,38 @@ internal static class BJBGui
         var r = ImGui.InputLong(label, ref v, 0, 0);
         ImGui.PopStyleColor();
         return r;
+    }
+
+    public static bool InputLongFormatted(string label, ref long value, Vector4? textColor = null)
+    {
+        if (!LongInputBuffers.TryGetValue(label, out var text))
+            text = value.ToString("N0", CultureInfo.InvariantCulture);
+
+        ImGui.PushStyleColor(ImGuiCol.Text, textColor ?? ButtonTextColor);
+        var edited = ImGui.InputText(label, ref text, 32);
+        ImGui.PopStyleColor();
+
+        var valueChanged = false;
+        if (edited)
+        {
+            LongInputBuffers[label] = text;
+            var normalized = text.Replace(",", string.Empty, StringComparison.Ordinal).Trim();
+            if (long.TryParse(
+                    normalized,
+                    NumberStyles.AllowLeadingSign,
+                    CultureInfo.InvariantCulture,
+                    out var parsed)
+                && parsed != value)
+            {
+                value = parsed;
+                valueChanged = true;
+            }
+        }
+
+        if (!ImGui.IsItemActive())
+            LongInputBuffers[label] = value.ToString("N0", CultureInfo.InvariantCulture);
+
+        return valueChanged;
     }
 
     public static bool InputFloat(string label, ref float v, float step, float step_fast, string format)

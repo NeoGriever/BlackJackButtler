@@ -16,6 +16,9 @@ public static partial class GameEngine
         }
     }
 
+    public static void SetForcedRecipient(PlayerState player)
+        => SetForcedRecipient(PlayerIdentityManager.GetQualifiedName(player));
+
     public static void ClearForcedRecipient()
     {
         lock (_ctxLock)
@@ -41,6 +44,17 @@ public static partial class GameEngine
     public static void TargetPlayer(string name)
     {
         TargetPlayer(name, null);
+    }
+
+    public static void TargetPlayer(PlayerState player)
+    {
+        var qualifiedName = PlayerIdentityManager.GetQualifiedName(player);
+        var separatorIndex = qualifiedName.LastIndexOf('@');
+        var worldName = separatorIndex >= 0 && separatorIndex < qualifiedName.Length - 1
+            ? qualifiedName[(separatorIndex + 1)..]
+            : null;
+
+        TargetPlayer(player.Name, worldName);
     }
 
     public static void TargetPlayer(string name, string? worldName)

@@ -41,6 +41,7 @@ public enum RegexAction
     ExecuteOwnButton,
     SetBet,
     InviteNearby,
+    Payout,
 }
 
 [Flags]

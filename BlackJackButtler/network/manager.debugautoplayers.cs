@@ -38,7 +38,7 @@ public static class DebugAutoPlayerManager
         if (_inFlight || _dueAt == DateTime.MinValue || DateTime.Now < _dueAt)
             return;
 
-        if (CommandExecutor.IsRunning || CommandExecutor.IsFollowUpPending)
+        if (GameActionQueueManager.IsBusy || CommandExecutor.IsRunning || CommandExecutor.IsFollowUpPending)
             return;
 
         if (GameEngine.CurrentPhase != GamePhase.PlayersTurn)
@@ -62,17 +62,15 @@ public static class DebugAutoPlayerManager
 
         _dueAt = DateTime.MinValue;
         _inFlight = true;
-        Task.Run(async () =>
+        if (!GameActionQueueManager.Enqueue(
+            $"DebugAutoPlayer:{player.Name}",
+            () => ExecuteDecision(player, cfg, players),
+            $"PlayerAction:{player.Name}",
+            () => Plugin.IsDebugMode && Plugin.DebugAutoPlayers && player.IsCurrentTurn,
+            () => _inFlight = false))
         {
-            try
-            {
-                await ExecuteDecision(player, cfg, players);
-            }
-            finally
-            {
-                _inFlight = false;
-            }
-        });
+            _inFlight = false;
+        }
     }
 
     private static async Task ExecuteDecision(PlayerState player, Configuration cfg, System.Collections.Generic.List<PlayerState> players)

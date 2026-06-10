@@ -11,6 +11,7 @@ public class PlayerState
 
     public string Name = string.Empty;
     public string Alias = string.Empty;
+    public string ResolvedName = string.Empty;
     public uint WorldId;
     public bool IsActivePlayer = false;
 
@@ -47,7 +48,9 @@ public class PlayerState
     public bool HighlightTell = false;
     public bool IsInDebt => Bank < 0;
 
-    public string DisplayName => !string.IsNullOrWhiteSpace(Alias) ? Alias : Name;
+    public string DisplayName => !string.IsNullOrWhiteSpace(Alias)
+        ? Alias
+        : !string.IsNullOrWhiteSpace(ResolvedName) ? ResolvedName : Name;
     public string UIID => $"{Name}_{WorldId}";
 
     public string GetCardsString(int handIndex)
@@ -152,6 +155,7 @@ public class PlayerState
             IsDealer = IsDealer,
             Name = Name,
             Alias = Alias,
+            ResolvedName = ResolvedName,
             WorldId = WorldId,
             IsActivePlayer = IsActivePlayer,
 

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -10,73 +9,59 @@ namespace BlackJackButtler;
 
 public static class BankTellQueueManager
 {
-    private sealed record QueueItem(string PlayerName, string DisplayName, Configuration Config, string Source);
+    private static int _pendingCount;
 
-    private static readonly ConcurrentQueue<QueueItem> Queue = new();
-    private static int _isProcessing;
-
-    public static bool IsProcessing => _isProcessing != 0;
-    public static int Count => Queue.Count;
+    public static bool IsProcessing => Volatile.Read(ref _pendingCount) > 0;
+    public static int Count => Math.Max(0, Volatile.Read(ref _pendingCount));
 
     public static void Enqueue(PlayerState player, Configuration config, string source)
     {
-        Queue.Enqueue(new QueueItem(player.Name, player.DisplayName, config, source));
-        EnsureProcessing();
+        var playerName = player.Name;
+        var displayName = player.DisplayName;
+        Interlocked.Increment(ref _pendingCount);
+        if (!GameActionQueueManager.Enqueue(
+                $"BankTell:{displayName}",
+                () => Execute(playerName, displayName, config, source),
+                null,
+                null,
+                () => Interlocked.Decrement(ref _pendingCount)))
+        {
+            Interlocked.Decrement(ref _pendingCount);
+        }
     }
 
     public static void EnqueueMany(IEnumerable<PlayerState> players, Configuration config, string source)
     {
         foreach (var player in players)
-            Queue.Enqueue(new QueueItem(player.Name, player.DisplayName, config, source));
-
-        EnsureProcessing();
+            Enqueue(player, config, source);
     }
 
-    private static void EnsureProcessing()
-    {
-        if (Interlocked.CompareExchange(ref _isProcessing, 1, 0) == 0)
-            _ = Task.Run(ProcessQueue);
-    }
-
-    private static async Task ProcessQueue()
+    private static async Task Execute(string playerName, string displayName, Configuration config, string source)
     {
         try
         {
-            while (Queue.TryDequeue(out var item))
+            var window = Plugin.Instance.GetMainWindow();
+            var player = window.GetPlayers().FirstOrDefault(p =>
+                p.Name.Equals(playerName, StringComparison.OrdinalIgnoreCase)
+                || p.DisplayName.Equals(displayName, StringComparison.OrdinalIgnoreCase));
+
+            if (player == null)
             {
-                await CommandExecutor.WaitForCurrentGroupToFinishAsync();
-
-                var window = Plugin.Instance.GetMainWindow();
-                var player = window.GetPlayers().FirstOrDefault(p =>
-                    p.Name.Equals(item.PlayerName, StringComparison.OrdinalIgnoreCase) ||
-                    p.DisplayName.Equals(item.DisplayName, StringComparison.OrdinalIgnoreCase));
-
-                if (player == null)
-                {
-                    window.AddDebugLog($"[BankTellQueue] Skipped missing player '{item.DisplayName}' from {item.Source}");
-                    continue;
-                }
-
-                window.AddDebugLog($"[BankTellQueue] Executing BankTell for {player.DisplayName} from {item.Source}");
-                player.HighlightTell = false;
-                GameEngine.TargetPlayer(player.Name);
-                VariableManager.SetPlayerVariables(player);
-                await CommandExecutor.ExecuteGroup("BankTell", player.DisplayName, item.Config);
+                window.AddDebugLog($"[BankTellQueue] Skipped missing player '{displayName}' from {source}");
+                return;
             }
 
-            var dealerName = Plugin.Instance.GetMainWindow().GetDealer().Name;
-            if (!string.IsNullOrWhiteSpace(dealerName))
-                GameEngine.TargetPlayer(dealerName);
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Error($"[BankTellQueue] Failed: {ex}");
+            window.AddDebugLog($"[BankTellQueue] Executing BankTell for {player.DisplayName} from {source}");
+            player.HighlightTell = false;
+            GameEngine.TargetPlayer(player);
+            VariableManager.SetPlayerVariables(player);
+            await CommandExecutor.ExecuteGroup("BankTell", player.DisplayName, config);
         }
         finally
         {
-            Interlocked.Exchange(ref _isProcessing, 0);
-            if (!Queue.IsEmpty)
-                EnsureProcessing();
+            var dealerName = Plugin.Instance.GetMainWindow().GetDealer().Name;
+            if (!string.IsNullOrWhiteSpace(dealerName))
+                GameEngine.TargetPlayer(dealerName);
         }
     }
 }

@@ -9,6 +9,37 @@ namespace BlackJackButtler;
 
 public static partial class GameEngine
 {
+    public static bool AllowZeroBetForSession { get; set; }
+
+    public static bool CanStartInitialDeal(IEnumerable<PlayerState> players, out string reason)
+    {
+        var activePlayers = players
+            .Where(p => p.IsActivePlayer && !p.IsOnHold)
+            .ToList();
+
+        if (activePlayers.Count == 0)
+        {
+            reason = "No active players are available.";
+            return false;
+        }
+
+        if (!AllowZeroBetForSession)
+        {
+            var zeroBetPlayers = activePlayers
+                .Where(p => p.CurrentBet == 0)
+                .Select(p => p.DisplayName)
+                .ToList();
+            if (zeroBetPlayers.Count > 0)
+            {
+                reason = $"Bet is 0 for: {string.Join(", ", zeroBetPlayers)}";
+                return false;
+            }
+        }
+
+        reason = string.Empty;
+        return true;
+    }
+
     private static PlayerState? _pendingSplitPlayer = null;
     private static Configuration? _pendingSplitConfig = null;
     private static List<PlayerState>? _pendingSplitPlayers = null;
@@ -16,6 +47,18 @@ public static partial class GameEngine
 
     public static async Task StartInitialDeal(List<PlayerState> players, Configuration cfg)
     {
+        if (!CanStartInitialDeal(players, out var blockedReason))
+        {
+            Plugin.Instance.GetMainWindow().AddDebugLog(
+                $"[RoundStart] Blocked: {blockedReason} | Allow0Bet={AllowZeroBetForSession}");
+            return;
+        }
+
+        PlayerState? rollbackDealer;
+        lock (_ctxLock) rollbackDealer = _ctxDealer;
+        if (rollbackDealer != null)
+            RoundRollbackManager.Capture(players, rollbackDealer, CurrentPhase);
+
         Regex.RegexEngine.ClearNextRoundVotes();
         StatsLogManager.OnRoundStarted();
 
@@ -75,11 +118,11 @@ public static partial class GameEngine
         CurrentPhase = GamePhase.InitialDeal;
         ViewDirectionManager.ApplyViewDirection(cfg);
 
-        TargetPlayer(dealer.Name);
-        SetForcedRecipient(dealer.Name);
+        TargetPlayer(dealer);
+        SetForcedRecipient(dealer);
         try
         {
-            await CommandExecutor.ExecuteGroup("DealStart", dealer.Name, cfg);
+            await CommandExecutor.ExecuteGroup("DealStart", dealer.DisplayName, cfg);
 
             if (dealer.Hands.Count > 0 && dealer.Hands[0].Cards.Count > 0)
             {
@@ -100,7 +143,7 @@ public static partial class GameEngine
         var first = activePlayers[0];
         first.IsCurrentTurn = true;
         first.CurrentHandIndex = 0;
-        TargetPlayer(first.Name);
+        TargetPlayer(first);
 
         CurrentPhase = GamePhase.InitialDeal;
         SendCompanionTableUpdate(cfg, activePlayers);
@@ -120,9 +163,9 @@ public static partial class GameEngine
     {
         Plugin.Instance.GetMainWindow().AddDebugLog($"[ActionDealHand] Start: {p.DisplayName}");
         await ExecutePlayerAction(p, "Initial", cfg, players, async () => {
-            TargetPlayer(p.Name);
-            SetForcedRecipient(p.Name);
-            try { await CommandExecutor.ExecuteGroup("Initial", p.Name, cfg); }
+            TargetPlayer(p);
+            SetForcedRecipient(p);
+            try { await CommandExecutor.ExecuteGroup("Initial", p.DisplayName, cfg); }
             finally { ClearForcedRecipient(); }
             p.HasInitialHandDealt = true;
         });
@@ -210,14 +253,14 @@ public static partial class GameEngine
                 {
                     var p = current;
                     Chat.GameLog.PushSnapshot(players, _ctxDealer!, CurrentPhase, $"SplitDraw:{p.Name}");
-                    Task.Run(async () =>
+                    GameActionQueueManager.RunContinuation($"SplitDraw:{p.Name}", async () =>
                     {
                         CommandExecutor.SetPreActionSnapshot(Chat.GameLog.CurrentIndex);
-                        TargetPlayer(p.Name);
-                        SetForcedRecipient(p.Name);
+                        TargetPlayer(p);
+                        SetForcedRecipient(p);
                         try
                         {
-                            await CommandExecutor.ExecuteGroup("SplitDraw", p.Name, cfg);
+                            await CommandExecutor.ExecuteGroup("SplitDraw", p.DisplayName, cfg);
                             SaveSessionIfNeeded(players);
 
                             if (CurrentPhase == GamePhase.PlayersTurn
@@ -276,7 +319,7 @@ public static partial class GameEngine
                 window.AddDebugLog($"[NextTurn] Player {next.DisplayName} needs initial deal, switching to InitialDeal phase");
                 CurrentPhase = GamePhase.InitialDeal;
                 next.CurrentHandIndex = 0;
-                TargetPlayer(next.Name);
+                TargetPlayer(next);
                 VariableManager.SetPlayerVariables(next);
                 SendCompanionTableUpdate(cfg, activePlayers);
             }
@@ -305,7 +348,7 @@ public static partial class GameEngine
                         CurrentPhase = GamePhase.InitialDeal;
                         firstFromBench.CurrentHandIndex = 0;
                         firstFromBench.BankAtRoundStart = firstFromBench.Bank;
-                        TargetPlayer(firstFromBench.Name);
+                        TargetPlayer(firstFromBench);
                         VariableManager.SetPlayerVariables(firstFromBench);
                         SendCompanionTableUpdate(cfg, newActive);
                     }
@@ -329,7 +372,9 @@ public static partial class GameEngine
             {
                 window.AddDebugLog("[NextTurn] All players busted, skipping Dealer turn");
                 BeginPayoutOutput();
-                Task.Run(async () => await EvaluateFinalResults(players, _ctxDealer!, cfg));
+                GameActionQueueManager.RunContinuation(
+                    "AllPlayersBustedPayout",
+                    () => EvaluateFinalResults(players, _ctxDealer!, cfg));
             }
             else
             {
@@ -339,7 +384,7 @@ public static partial class GameEngine
                 {
                     _ctxDealer.IsCurrentTurn = true;
                     _ctxDealer.CurrentHandIndex = 0;
-                    TargetPlayer(_ctxDealer.Name);
+                    TargetPlayer(_ctxDealer);
 
                     if (_ctxDealer.Hands.Count > 0)
                     {
@@ -362,14 +407,14 @@ public static partial class GameEngine
         foreach (var pl in allActive) pl.IsCurrentTurn = false;
         target.IsCurrentTurn = true;
         target.CurrentHandIndex = 0;
-        TargetPlayer(target.Name);
+        TargetPlayer(target);
         VariableManager.SetPlayerVariables(target);
         SendCompanionTableUpdate(cfg, allActive);
         if (target.Hands.Count > 0 && target.Hands[target.CurrentHandIndex].Cards.Count >= 2)
         {
             string promptGroup = GetStatePromptGroup(target, cfg);
             window.AddDebugLog($"[SwitchTurn] Triggering prompt group: {promptGroup}");
-            Task.Run(async () =>
+            GameActionQueueManager.RunContinuation($"TurnPrompt:{target.Name}", async () =>
             {
                 await CommandExecutor.ExecuteGroup(promptGroup, target.DisplayName, cfg);
                 SendCompanionTableUpdate(cfg, allActive);
@@ -382,9 +427,9 @@ public static partial class GameEngine
         await ExecutePlayerAction(p, "Hit", cfg, players, async () => {
             if (p.CurrentHandIndex >= 0 && p.CurrentHandIndex < p.Hands.Count)
                 p.Hands[p.CurrentHandIndex].ActionLog.Add("Hit");
-            TargetPlayer(p.Name);
-            SetForcedRecipient(p.Name);
-            try { await CommandExecutor.ExecuteGroup("Hit", p.Name, cfg); }
+            TargetPlayer(p);
+            SetForcedRecipient(p);
+            try { await CommandExecutor.ExecuteGroup("Hit", p.DisplayName, cfg); }
             finally { ClearForcedRecipient(); }
             if (p.CurrentHandIndex >= 0 && p.CurrentHandIndex < p.Hands.Count && p.Hands[p.CurrentHandIndex].IsBust)
             {
@@ -405,9 +450,9 @@ public static partial class GameEngine
             p.Hands[p.CurrentHandIndex].ActionLog.Add("Stand");
         }
 
-        TargetPlayer(p.Name);
-        SetForcedRecipient(p.Name);
-        try { await CommandExecutor.ExecuteGroup("Stand", p.Name, cfg); }
+        TargetPlayer(p);
+        SetForcedRecipient(p);
+        try { await CommandExecutor.ExecuteGroup("Stand", p.DisplayName, cfg); }
         finally { ClearForcedRecipient(); }
 
         NextTurn(players, cfg);
@@ -428,7 +473,7 @@ public static partial class GameEngine
         await ExecuteActualDD(p, cfg, players);
     }
 
-    public static async void ContinueDDAfterPayment(PlayerState p, Configuration cfg, List<PlayerState> players)
+    public static async Task ContinueDDAfterPayment(PlayerState p, Configuration cfg, List<PlayerState> players)
     {
         if (p == null)
         {
@@ -462,9 +507,9 @@ public static partial class GameEngine
             hand.IsDoubleDown = true;
             hand.ActionLog.Add("DD");
             hand.Bet *= 2;
-            TargetPlayer(p.Name);
-            SetForcedRecipient(p.Name);
-            try { await CommandExecutor.ExecuteGroup("DD", p.Name, cfg); }
+            TargetPlayer(p);
+            SetForcedRecipient(p);
+            try { await CommandExecutor.ExecuteGroup("DD", p.DisplayName, cfg); }
             finally { ClearForcedRecipient(); }
             hand.IsStand = true;
         });
@@ -495,7 +540,7 @@ public static partial class GameEngine
         await ExecuteSplit(p, cfg, players);
     }
 
-    public static async void ContinueSplitAfterPayment(PlayerState p, Configuration cfg, List<PlayerState> players)
+    public static async Task ContinueSplitAfterPayment(PlayerState p, Configuration cfg, List<PlayerState> players)
     {
         if (p == null)
         {
@@ -540,9 +585,9 @@ public static partial class GameEngine
         newHand.Cards.Add(cardToMove);
         p.Hands.Add(newHand);
 
-        TargetPlayer(p.Name);
-        SetForcedRecipient(p.Name);
-        try { await CommandExecutor.ExecuteGroup("Split", p.Name, cfg); }
+        TargetPlayer(p);
+        SetForcedRecipient(p);
+        try { await CommandExecutor.ExecuteGroup("Split", p.DisplayName, cfg); }
         finally { ClearForcedRecipient(); }
 
         SaveSessionIfNeeded(players);
@@ -564,9 +609,9 @@ public static partial class GameEngine
         if (dealer.Hands.Count > 0)
             dealer.Hands[0].ActionLog.Add("Hit");
 
-        TargetPlayer(dealer.Name);
-        SetForcedRecipient(dealer.Name);
-        try { await CommandExecutor.ExecuteGroup("DealHit", dealer.Name, cfg); }
+        TargetPlayer(dealer);
+        SetForcedRecipient(dealer);
+        try { await CommandExecutor.ExecuteGroup("DealHit", dealer.DisplayName, cfg); }
         finally { ClearForcedRecipient(); }
 
         if (dealer.Hands.Count > 0 && dealer.Hands[0].IsBust)
@@ -595,9 +640,9 @@ public static partial class GameEngine
             dealer.Hands[0].IsStand = true;
         }
 
-        TargetPlayer(dealer.Name);
-        SetForcedRecipient(dealer.Name);
-        try { await CommandExecutor.ExecuteGroup("DealStand", dealer.Name, cfg); }
+        TargetPlayer(dealer);
+        SetForcedRecipient(dealer);
+        try { await CommandExecutor.ExecuteGroup("DealStand", dealer.DisplayName, cfg); }
         finally { ClearForcedRecipient(); }
         SaveSessionIfNeeded(players);
         SendCompanionTableUpdate(cfg, players.Where(x => x.IsActivePlayer));

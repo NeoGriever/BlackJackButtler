@@ -52,7 +52,7 @@ public class ChatBoxWindow : Window
         if (ImGui.BeginChild("bjb_chat_scroll", new Vector2(-1, -inputBarHeight), true))
         {
             var snapshot = _chatLog.Snapshot();
-            var visible = snapshot.Where(m => ChatLogBuffer.IsPartyChatType(m.ChatType) || m.IsDice).ToList();
+            var visible = snapshot.Where(m => ChatLogBuffer.IsSupportedGroupChatType(m.ChatType, _config) || m.IsDice).ToList();
 
             foreach (var m in visible)
             {
@@ -115,7 +115,7 @@ public class ChatBoxWindow : Window
     private void CopyVisibleToClipboard()
     {
         var snapshot = _chatLog.Snapshot();
-        var visible = snapshot.Where(m => ChatLogBuffer.IsPartyChatType(m.ChatType) || m.IsDice).ToList();
+        var visible = snapshot.Where(m => ChatLogBuffer.IsSupportedGroupChatType(m.ChatType, _config) || m.IsDice).ToList();
         if (visible.Count == 0)
         {
             ImGui.SetClipboardText("(BJB Messenger: no messages)");

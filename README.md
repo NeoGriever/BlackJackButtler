@@ -1,4 +1,4 @@
-`v1.8.4.1`
+`v1.8.4.2`
 
 # BlackJack Buttler
 
@@ -147,6 +147,8 @@ The header includes a **Bank /tell** button that posts bank/bet info to party ch
 
 The **Group Detector** button syncs your FFXIV party list into the plugin. The party leader becomes the dealer; all other members become players. The detector polls every second while active.
 
+Alliance support is always active. When an alliance is detected, the local plugin user becomes the dealer and up to 23 other alliance members are synchronized as players. Party/alliance chat prefixes and `/dice` group channels are normalized only at runtime; saved command text is not modified.
+
 When deactivated, the session is cleared and non-active players with zero bank are removed.
 
 In Main View V2, the detector area also supports:
@@ -184,7 +186,7 @@ An 11-column table for all players:
 | **J** | Join/Leave toggle. `>` to add inactive player, `X` to deactivate. |
 | **R** | Ready-skip toggle. Counts the player as ready for the next round when inter-round detectors can run. |
 | **P** | Hold/Bench button. Toggles hold (skip next round), bench (pause mid-round), or return. |
-| **Name** | Player display name (alias if set, otherwise character name). Yellow when it is their turn. |
+| **Name** | Alias if set. Otherwise the shortest unambiguous name is used: first name, full name when first names collide, or `Full Name@World` when full names also collide. Yellow when it is their turn. |
 | **Bank** | Gil balance. Editable when the Bank Input checkbox is enabled. Includes a **"T" button** that executes the `BankTell` command group for this individual player, posting their bank/bet info to party chat. Ctrl-actions can move a leaving player's bank into tips. In Version 2 Compact, Bank-to-Tip and Max Bet buttons are only shown while Shift is held. |
 | **Bet** | Current bet amount. Red `!` indicator appears when outside the configured min/max range. The effective max can come from global max bet or VIP tier. |
 | **Cards** | Visual card display with suit colors (red for Hearts/Diamonds, white for Spades/Clubs). |
@@ -227,7 +229,7 @@ Main View V2 also draws stable numbers near nearby players' feet so the list can
 | Control | Effect |
 |---|---|
 | **STOP** | Stops the currently running command chain. |
-| **PANIC** | Two-step confirmation that aborts the active round, clears transient turn state, and returns to Waiting. |
+| **PANIC** | Two-step confirmation that suspends and drains the action queue, cancels the running command and restores the session snapshot captured immediately before the round started. Player bank, bet, hands and round state are restored; logs and statistics remain unchanged. |
 | **Bank input** | Allows direct editing of player banks. |
 | Sticky-note icon | Opens or closes the Notepad window. |
 | Restore Previous Session | Appears on launch when a saved session exists; restores players, dealer, game phase, and round-history snapshots. |
@@ -509,6 +511,7 @@ The player table's **V** button cycles player VIP tiers. A tier can be resolved 
 Additional system controls:
 
 - **Disable Update Popup** suppresses the version/update popup.
+- **Automatic Alliance Support** enables dynamic 24-player alliance detection and runtime alliance chat/dice routing. The related selector chooses the Command or Custom Button executed by the Nearby `J` button while in alliance mode.
 - **Wait-Range expanded** increases command step delay range beyond the default limit.
 - **Hashed Stats** controls whether stats copies include an integrity hash.
 - **Export/Import Config File as JSON** writes or reads the full plugin config through a file dialog.
@@ -595,6 +598,8 @@ A command group is a named sequence of steps. Each step has:
 - **Grp**: Group assignment (0-9) for Command Line Groups (see [13.6 Command Line Groups](#136-command-line-groups)).
 
 Steps execute sequentially. If a step contains `/dice`, the executor pauses until a dice result is detected (30-second timeout).
+Group commands are routed at runtime: `/p`, `/party`, `/a`, `/alliance`, and group-targeted `/dice` commands are normalized to the currently detected party or alliance without changing the configured step.
+Gameplay actions and their follow-ups share one execution queue. PANIC suspends this queue, invalidates pending work and waits for the running action to stop before restoring the round-start snapshot.
 
 ### 13.2 Message References
 
@@ -612,7 +617,7 @@ These tokens are replaced with live game data during command execution:
 
 | Token | Value |
 |---|---|
-| `<t>` | Target player's alias (if set) or name. |
+| `<t>` | Target player's alias, or the shortest unambiguous first/full/world-qualified name. |
 | `<points>` | Current hand's point total (e.g., `15` or `11/21` for soft hands). |
 | `<cards>` | Card string (e.g., `Spades A, Hearts 5 and Clubs K`). |
 | `<dealerHand>` | Dealer card string. |

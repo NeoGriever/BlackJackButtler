@@ -11,6 +11,7 @@ public partial class BlackJackButtlerWindow
         var commandNames = _config.CommandGroups
             .Concat(_config.CustomCommandGroups)
             .Select(g => g.Name)
+            .Append("Payout")
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Where(n => !SetBetQueueManager.IsSetBetLoopbackName(n))
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -43,6 +44,7 @@ public partial class BlackJackButtlerWindow
         var commandNames = _config.CommandGroups
             .Concat(_config.CustomCommandGroups)
             .Select(g => g.Name)
+            .Append("Payout")
             .Where(n => !string.IsNullOrWhiteSpace(n))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)

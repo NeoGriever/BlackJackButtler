@@ -19,7 +19,8 @@ public partial class BlackJackButtlerWindow
 
     private static readonly string[] SettingsV2Tabs =
     {
-        "General", "Automation", "Rules", "Betting", "Time & Delay", "Message settings", "Nearby Players", "Visual", "System"
+        "General", "Automation", "Rules", "Betting", "Time & Delay", "Message settings",
+        "Nearby Players", "Visual", "Alliance", "Preset Setup", "System"
     };
 
     private void DrawSettingsPageV2(int level)
@@ -34,7 +35,9 @@ public partial class BlackJackButtlerWindow
             DrawSettingsV2Tab(5, "Message settings", DrawSettingsV2Messages);
             DrawSettingsV2Tab(6, "Nearby Players", DrawSettingsV2Nearby);
             DrawSettingsV2Tab(7, "Visual", DrawSettingsV2Visual);
-            DrawSettingsV2Tab(8, "System", () => DrawSettingsV2System(level));
+            DrawSettingsV2Tab(8, "Alliance", DrawSettingsAllianceBody);
+            DrawSettingsV2Tab(9, "Preset Setup", DrawSettingsPresetSetupBody);
+            DrawSettingsV2Tab(10, "System", () => DrawSettingsV2System(level));
             ImGui.EndTabBar();
         }
 
@@ -497,7 +500,14 @@ public partial class BlackJackButtlerWindow
     private void DrawSettingsV2System(int level)
     {
         CheckSave("Disable Update Popup", ref _config.DisableUpdatePopup);
+        if (BJBGui.Button("Open Changelog"))
+            Plugin.Instance.OpenChangelog();
         CheckSave("Hide Thanks page", ref _config.HideThanksPage);
+        var allowZeroBet = GameEngine.AllowZeroBetForSession;
+        if (ImGui.Checkbox("Allow 0 bet", ref allowZeroBet))
+            GameEngine.AllowZeroBetForSession = allowZeroBet;
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Session-only setting. Resets to disabled when the plugin reloads.");
 
         Header("Card-Companion App");
         Indent(() =>
@@ -902,6 +912,7 @@ public partial class BlackJackButtlerWindow
         ImGui.SameLine(260f);
         var commands = _config.CommandGroups.Select(g => "Commands/" + g.Name)
             .Concat(_config.CustomCommandGroups.Select(g => "Custom Buttons/" + g.Name))
+            .Append("Actions/Payout")
             .ToArray();
         var labels = new[] { "None" }.Concat(commands).ToArray();
         int selected = 0;

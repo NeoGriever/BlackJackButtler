@@ -206,7 +206,7 @@ public static class StatsLogManager
             return false;
 
         var trimmed = commandText.TrimStart();
-        string[] prefixes = { "/p ", "/party " };
+        string[] prefixes = { "/p ", "/party ", "/a ", "/alliance " };
         foreach (var prefix in prefixes)
         {
             if (trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
