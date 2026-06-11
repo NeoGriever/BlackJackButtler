@@ -2,33 +2,44 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dalamud.Game.ClientState.Party;
 using FFXIVClientStructs.FFXIV.Client.Game.Group;
+using FFXIVClientStructs.FFXIV.Client.UI.Info;
 using FFXIVClientStructs.FFXIV.Component.GUI;
+using Lumina.Excel.Sheets;
 using static ECommons.GenericHelpers;
 
 namespace BlackJackButtler;
+
+public sealed record GroupMemberSnapshot(
+    string Source,
+    int GroupIndex,
+    int MemberIndex,
+    nint Address,
+    string Name,
+    uint WorldId,
+    string WorldName,
+    ulong ContentId,
+    bool IsPartyLeader);
 
 public static class GroupContextManager
 {
     private const int PartySlots = 8;
     private const int AllianceSlots = 20;
-
-    private sealed record MemberSnapshot(
-        string Source,
-        int Slot,
-        nint Address,
-        IPartyMember Member,
-        string Name,
-        uint WorldId,
-        ulong ContentId);
+    private const int CrossRealmGroupSlots = 6;
+    private const int CrossRealmMemberSlots = 8;
 
     private static readonly object Gate = new();
-    private static IReadOnlyList<MemberSnapshot> _members = Array.Empty<MemberSnapshot>();
+    private static IReadOnlyList<GroupMemberSnapshot> _members = Array.Empty<GroupMemberSnapshot>();
     private static bool _rawIsAlliance;
     private static bool _nativeIsAlliance;
+    private static bool _crossRealmActive;
+    private static bool _crossRealmAlliance;
+    private static bool _authoritative;
     private static byte _nativeMemberCount;
     private static byte _nativeAllianceFlags;
+    private static byte _crossRealmGroupCount;
+    private static byte _crossRealmLocalGroupIndex;
+    private static nint _crossRealmProxyAddress;
     private static nint _allianceList1AddonAddress;
     private static nint _allianceList2AddonAddress;
     private static bool _allianceList1Visible;
@@ -46,6 +57,18 @@ public static class GroupContextManager
     {
         lock (Gate)
             return _detectedAlliance;
+    }
+
+    public static bool IsSnapshotAuthoritative()
+    {
+        lock (Gate)
+            return _authoritative;
+    }
+
+    public static int CurrentMemberCount()
+    {
+        lock (Gate)
+            return _members.Count;
     }
 
     public static void ObserveSystemMessage(string message)
@@ -83,7 +106,6 @@ public static class GroupContextManager
 
     public static void Refresh(Configuration config, bool strictValidation = false)
     {
-        var snapshots = new List<MemberSnapshot>(PartySlots + AllianceSlots);
         var rawIsAlliance = Plugin.PartyList.IsAlliance;
         var partyLength = Plugin.PartyList.Length;
         var groupManagerAddress = Plugin.PartyList.GroupManagerAddress;
@@ -99,75 +121,77 @@ public static class GroupContextManager
             out var allianceList2AddonAddress,
             out var allianceList2Visible);
 
-        for (var i = 0; i < PartySlots; i++)
-            TryAddMember(snapshots, "Party", i, alliance: false);
+        var crossRealmMembers = ReadCrossRealmMembers(
+            out var crossRealmActive,
+            out var crossRealmAlliance,
+            out var crossRealmGroupCount,
+            out var crossRealmLocalGroupIndex,
+            out var crossRealmProxyAddress);
+        var nativeMembers = crossRealmActive
+            ? new List<GroupMemberSnapshot>()
+            : ReadNativeMembers(nativeIsAlliance, nativeMemberCount, partyLength, strictValidation);
 
-        for (var i = 0; i < AllianceSlots; i++)
-            TryAddMember(snapshots, "Alliance", i, alliance: true);
-
-        snapshots = snapshots
-            .GroupBy(x => x.ContentId != 0
-                ? $"cid:{x.ContentId}"
-                : $"name:{x.Name}@{x.WorldId}")
-            .Select(x => x.First())
-            .ToList();
-
-        var confirmedPartySlotCount = Math.Min(
-            PartySlots,
-            Math.Max((int)nativeMemberCount, partyLength));
-        if (strictValidation || !nativeIsAlliance)
-        {
-            snapshots = snapshots
-                .Where(x => x.Source != "Party" || x.Slot < confirmedPartySlotCount)
-                .ToList();
-        }
-
-        var allianceMemberCount = snapshots.Count(x => x.Source == "Alliance");
         bool groupDisbandedHint;
+        IReadOnlyList<GroupMemberSnapshot> previousMembers;
         lock (Gate)
         {
-            if (nativeMemberCount > 0 || partyLength > 0 || rawIsAlliance || nativeIsAlliance || allianceMemberCount > 0)
+            if (crossRealmMembers.Count > 0 || nativeMembers.Count > 0)
                 _groupDisbandedHint = false;
             groupDisbandedHint = _groupDisbandedHint;
+            previousMembers = _members;
         }
+
+        IReadOnlyList<GroupMemberSnapshot> snapshots;
+        bool authoritative;
+        string decisionReason;
 
         if (groupDisbandedHint)
         {
-            snapshots.Clear();
-            allianceMemberCount = 0;
+            snapshots = Array.Empty<GroupMemberSnapshot>();
+            authoritative = true;
+            decisionReason = "Group disbanded system message";
+        }
+        else if (crossRealmActive && crossRealmMembers.Count > 0)
+        {
+            snapshots = Deduplicate(crossRealmMembers);
+            authoritative = true;
+            decisionReason = crossRealmAlliance
+                ? $"InfoProxyCrossRealm alliance ({crossRealmGroupCount} groups)"
+                : $"InfoProxyCrossRealm party (local group {crossRealmLocalGroupIndex})";
+        }
+        else if (crossRealmActive)
+        {
+            snapshots = previousMembers;
+            authoritative = false;
+            decisionReason = "InfoProxyCrossRealm active but temporarily empty; retained previous snapshot";
+        }
+        else
+        {
+            snapshots = Deduplicate(nativeMembers);
+            authoritative = true;
+            decisionReason = nativeIsAlliance || rawIsAlliance
+                ? "Native GroupManager alliance"
+                : snapshots.Count > 0
+                    ? $"Dalamud party ({snapshots.Count} members)"
+                    : "No active group";
         }
 
-        var allianceAddonExists = allianceList1AddonAddress != 0 || allianceList2AddonAddress != 0;
-        var confirmedNormalParty = !nativeIsAlliance
-            && !rawIsAlliance
-            && allianceMemberCount == 0
-            && nativeMemberCount > 0
-            && partyLength > 0;
-
-        var detectedAlliance = !groupDisbandedHint && !confirmedNormalParty
-            && (allianceAddonExists || nativeIsAlliance || rawIsAlliance || allianceMemberCount > 0);
-        var decisionReason = groupDisbandedHint
-                ? "Group disbanded system message"
-                : confirmedNormalParty
-                ? $"Confirmed normal party (NativeMemberCount={nativeMemberCount}, PartyList.Length={partyLength})"
-                : nativeIsAlliance
-                    ? "Native GroupManager IsAlliance"
-                    : rawIsAlliance
-                        ? "Dalamud PartyList.IsAlliance"
-                        : allianceMemberCount > 0
-                            ? $"Populated alliance slots ({allianceMemberCount})"
-                            : allianceAddonExists
-                                ? "Alliance UI addon fallback"
-                                : "No alliance signal";
-
+        var detectedAlliance = !groupDisbandedHint &&
+            (crossRealmActive ? crossRealmAlliance : nativeIsAlliance || rawIsAlliance);
         string diagnostic;
         lock (Gate)
         {
             _members = snapshots;
             _rawIsAlliance = rawIsAlliance;
             _nativeIsAlliance = nativeIsAlliance;
+            _crossRealmActive = crossRealmActive;
+            _crossRealmAlliance = crossRealmAlliance;
+            _authoritative = authoritative;
             _nativeMemberCount = nativeMemberCount;
             _nativeAllianceFlags = nativeAllianceFlags;
+            _crossRealmGroupCount = crossRealmGroupCount;
+            _crossRealmLocalGroupIndex = crossRealmLocalGroupIndex;
+            _crossRealmProxyAddress = crossRealmProxyAddress;
             _allianceList1AddonAddress = allianceList1AddonAddress;
             _allianceList2AddonAddress = allianceList2AddonAddress;
             _allianceList1Visible = allianceList1Visible;
@@ -184,8 +208,14 @@ public static class GroupContextManager
         var signature = string.Join('|',
             rawIsAlliance,
             nativeIsAlliance,
+            crossRealmActive,
+            crossRealmAlliance,
+            authoritative,
             nativeMemberCount,
             nativeAllianceFlags,
+            crossRealmGroupCount,
+            crossRealmLocalGroupIndex,
+            crossRealmProxyAddress,
             allianceList1AddonAddress,
             allianceList1Visible,
             allianceList2AddonAddress,
@@ -197,7 +227,8 @@ public static class GroupContextManager
             groupListAddress,
             allianceListAddress,
             strictValidation,
-            string.Join(',', snapshots.Select(x => $"{x.Source}:{x.Slot}:{x.ContentId}:{x.Name}:{x.WorldId}")));
+            string.Join(',', snapshots.Select(x =>
+                $"{x.Source}:{x.GroupIndex}:{x.MemberIndex}:{x.ContentId}:{x.Name}:{x.WorldId}:{x.IsPartyLeader}")));
 
         if (!string.Equals(signature, _lastDiagnosticSignature, StringComparison.Ordinal))
         {
@@ -210,16 +241,10 @@ public static class GroupContextManager
         => candidates.Any(candidate =>
             value.Contains(candidate, StringComparison.OrdinalIgnoreCase));
 
-    public static IReadOnlyList<IPartyMember> GetCurrentMembers(Configuration config)
+    public static IReadOnlyList<GroupMemberSnapshot> GetCurrentMembers(Configuration config)
     {
         lock (Gate)
-        {
-            var includeAlliance = _detectedAlliance;
-            return _members
-                .Where(x => x.Source == "Party" || includeAlliance)
-                .Select(x => x.Member)
-                .ToList();
-        }
+            return _members.ToList();
     }
 
     public static string GetRoutingDiagnostic(Configuration config)
@@ -232,10 +257,9 @@ public static class GroupContextManager
     {
         lock (Gate)
         {
-            var partyMembers = _members.Count(x => x.Source == "Party");
-            var allianceMembers = _members.Count(x => x.Source == "Alliance");
             return $"Mode={(_detectedAlliance ? "Alliance" : "Party")} | " +
-                   $"Reason='{_decisionReason}' | PartySlots={partyMembers} | AllianceSlots={allianceMembers}";
+                   $"Source={(_crossRealmActive ? "CrossRealm" : "Native")} | " +
+                   $"Authoritative={_authoritative} | Reason='{_decisionReason}' | Members={_members.Count}";
         }
     }
 
@@ -262,9 +286,33 @@ public static class GroupContextManager
         return tcs.Task;
     }
 
-    private static void TryAddMember(
-        ICollection<MemberSnapshot> snapshots,
+    private static List<GroupMemberSnapshot> ReadNativeMembers(
+        bool nativeIsAlliance,
+        byte nativeMemberCount,
+        int partyLength,
+        bool strictValidation)
+    {
+        var snapshots = new List<GroupMemberSnapshot>(PartySlots + AllianceSlots);
+        var partySlotCount = Math.Min(PartySlots, Math.Max((int)nativeMemberCount, partyLength));
+        for (var i = 0; i < partySlotCount; i++)
+            TryAddNativeMember(snapshots, "Party", 0, i, alliance: false);
+
+        if (nativeIsAlliance)
+        {
+            for (var i = 0; i < AllianceSlots; i++)
+                TryAddNativeMember(snapshots, "Alliance", (i / PartySlots) + 1, i, alliance: true);
+        }
+
+        if (strictValidation && !nativeIsAlliance)
+            return snapshots.Where(x => x.MemberIndex < partySlotCount).ToList();
+
+        return snapshots;
+    }
+
+    private static void TryAddNativeMember(
+        ICollection<GroupMemberSnapshot> snapshots,
         string source,
+        int groupIndex,
         int slot,
         bool alliance)
     {
@@ -283,19 +331,104 @@ public static class GroupContextManager
             if (member == null || string.IsNullOrWhiteSpace(name))
                 return;
 
-            snapshots.Add(new MemberSnapshot(
+            snapshots.Add(new GroupMemberSnapshot(
                 source,
+                groupIndex,
                 slot,
                 address,
-                member,
                 name,
                 member.World.RowId,
-                member.ContentId));
+                member.World.ValueNullable?.Name.ToString() ?? ResolveWorldName(member.World.RowId),
+                member.ContentId,
+                !alliance && (uint)slot == Plugin.PartyList.PartyLeaderIndex));
         }
         catch (Exception ex)
         {
             Plugin.Log.Debug($"[GroupContext] Failed to read {source} slot {slot}: {ex.Message}");
         }
+    }
+
+    private static unsafe List<GroupMemberSnapshot> ReadCrossRealmMembers(
+        out bool active,
+        out bool alliance,
+        out byte groupCount,
+        out byte localGroupIndex,
+        out nint proxyAddress)
+    {
+        var snapshots = new List<GroupMemberSnapshot>(24);
+        active = false;
+        alliance = false;
+        groupCount = 0;
+        localGroupIndex = 0;
+        proxyAddress = 0;
+
+        try
+        {
+            var proxy = InfoProxyCrossRealm.Instance();
+            proxyAddress = (nint)proxy;
+            if (proxy == null)
+                return snapshots;
+
+            var proxyReportsActive = proxy->IsInCrossRealmParty;
+            active = proxyReportsActive;
+            alliance = active && proxy->IsInAllianceRaid;
+            groupCount = (byte)Math.Min((int)proxy->GroupCount, CrossRealmGroupSlots);
+            localGroupIndex = proxy->LocalPlayerGroupIndex;
+            if (!proxyReportsActive && groupCount == 0)
+                return snapshots;
+
+            for (var groupIndex = 0; groupIndex < groupCount; groupIndex++)
+            {
+                var group = proxy->CrossRealmGroups[groupIndex];
+                var memberCount = Math.Min((int)group.GroupMemberCount, CrossRealmMemberSlots);
+                for (var memberIndex = 0; memberIndex < memberCount; memberIndex++)
+                {
+                    var member = group.GroupMembers[memberIndex];
+                    var name = member.NameString;
+                    if (string.IsNullOrWhiteSpace(name) || member.HomeWorld < 0)
+                        continue;
+
+                    snapshots.Add(new GroupMemberSnapshot(
+                        "CrossRealm",
+                        groupIndex,
+                        memberIndex,
+                        0,
+                        name,
+                        (uint)member.HomeWorld,
+                        ResolveWorldName((uint)member.HomeWorld),
+                        member.ContentId,
+                        member.IsPartyLeader));
+                }
+            }
+
+            active = active || snapshots.Count > 1;
+            alliance = active && proxy->IsInAllianceRaid;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Warning(ex, "[GroupContext] Failed to read InfoProxyCrossRealm");
+        }
+
+        return snapshots;
+    }
+
+    private static List<GroupMemberSnapshot> Deduplicate(IEnumerable<GroupMemberSnapshot> members)
+    {
+        return members
+            .Where(x => !string.IsNullOrWhiteSpace(x.Name))
+            .GroupBy(x => x.ContentId != 0
+                ? $"cid:{x.ContentId}"
+                : $"name:{x.Name}@{x.WorldId}", StringComparer.OrdinalIgnoreCase)
+            .Select(x => x.First())
+            .ToList();
+    }
+
+    private static string ResolveWorldName(uint worldId)
+    {
+        if (worldId == 0)
+            return string.Empty;
+
+        return GetRow<World>(worldId)?.Name.ToString() ?? string.Empty;
     }
 
     private static unsafe void ReadNativeGroupState(
@@ -351,15 +484,23 @@ public static class GroupContextManager
 
     private static string BuildDiagnosticLocked()
     {
-        var partyMembers = _members.Where(x => x.Source == "Party").ToList();
-        var allianceMembers = _members.Where(x => x.Source == "Alliance").ToList();
         var slots = _members.Count == 0
             ? "(none)"
             : string.Join("; ", _members.Select(x =>
-                $"{x.Source}[{x.Slot}]@0x{x.Address:X}={x.Name}@{x.WorldId}/CID:{x.ContentId}"));
+                $"{x.Source}[{x.GroupIndex}:{x.MemberIndex}]@0x{x.Address:X}=" +
+                $"{x.Name}@{x.WorldId}/CID:{x.ContentId}/Leader:{x.IsPartyLeader}"));
 
         return $"[GroupContext] Mode={(_detectedAlliance ? "Alliance" : "Party")} | " +
-               $"Reason='{_decisionReason}' | PartySlots={partyMembers.Count} | " +
-               $"AllianceSlots={allianceMembers.Count} | Members: {slots}";
+               $"Source={(_crossRealmActive ? "CrossRealm" : "Native")} | " +
+               $"Authoritative={_authoritative} | Reason='{_decisionReason}' | Members={_members.Count} | " +
+               $"CrossRealm=Active:{_crossRealmActive},Alliance:{_crossRealmAlliance}," +
+               $"Groups:{_crossRealmGroupCount},LocalGroup:{_crossRealmLocalGroupIndex}," +
+               $"Proxy:0x{_crossRealmProxyAddress:X} | " +
+               $"Native=PartyLength:{_partyLength},MemberCount:{_nativeMemberCount}," +
+               $"Alliance:{_nativeIsAlliance},RawAlliance:{_rawIsAlliance}," +
+               $"Flags:0x{_nativeAllianceFlags:X2},Manager:0x{_groupManagerAddress:X}," +
+               $"Party:0x{_groupListAddress:X},AllianceList:0x{_allianceListAddress:X} | " +
+               $"AllianceAddons=List1:0x{_allianceList1AddonAddress:X}/Visible:{_allianceList1Visible}," +
+               $"List2:0x{_allianceList2AddonAddress:X}/Visible:{_allianceList2Visible} | Members: {slots}";
     }
 }

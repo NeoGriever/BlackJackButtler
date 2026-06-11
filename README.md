@@ -1,4 +1,4 @@
-`v1.8.4.2`
+`v1.8.4.3`
 
 # BlackJack Buttler
 
@@ -145,7 +145,7 @@ The header includes a **Bank /tell** button that posts bank/bet info to party ch
 
 ### 2.1 Group Detector
 
-The **Group Detector** button syncs your FFXIV party list into the plugin. The party leader becomes the dealer; all other members become players. The detector polls every second while active.
+The **Group Detector** button syncs your FFXIV group into the plugin. Normal parties use Dalamud's party list; PartyFinder cross-world parties and alliances use FFXIV's `InfoProxyCrossRealm` data so members from every home world are included. The party leader becomes the dealer; all other members become players. The detector polls every second while active.
 
 Alliance support is always active. When an alliance is detected, the local plugin user becomes the dealer and up to 23 other alliance members are synchronized as players. Party/alliance chat prefixes and `/dice` group channels are normalized only at runtime; saved command text is not modified.
 

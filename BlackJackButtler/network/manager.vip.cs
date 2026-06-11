@@ -78,11 +78,12 @@ public static class VipManager
 
         foreach (var member in GroupContextManager.GetCurrentMembers(Plugin.Instance.Configuration))
         {
-            if (member != null && member.World.RowId == worldId)
-                return member.World.Value.Name.ToString();
+            if (member.WorldId == worldId && !string.IsNullOrWhiteSpace(member.WorldName))
+                return member.WorldName;
         }
 
-        return string.Empty;
+        return ECommons.GenericHelpers.GetRow<Lumina.Excel.Sheets.World>(worldId)?.Name.ToString()
+            ?? string.Empty;
     }
 
     private static void MigrateFromVenues(string configDir)

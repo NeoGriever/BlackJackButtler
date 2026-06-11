@@ -64,7 +64,7 @@ public partial class BlackJackButtlerWindow
         }
 
         if (IsRecognitionActive && _config.CurrentLevel == UserLevel.Dev
-            && (!IsLocalPlayerPartyLeader() || Plugin.PartyList.Length == 0))
+            && (!IsLocalPlayerPartyLeader() || GroupContextManager.CurrentMemberCount() == 0))
         {
             if (BJBGui.SmallButton("Activate debug mode"))
             {
