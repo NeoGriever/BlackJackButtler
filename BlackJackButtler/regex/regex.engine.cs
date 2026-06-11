@@ -71,11 +71,22 @@ public static class RegexEngine
     public static void ProcessIncoming(ParsedChatMessage msg, Configuration cfg, List<PlayerState> players, PlayerState dealer)
     {
         var cleanMessage = SanitizeForRegex(msg.Message);
+        var diceHandled = false;
 
         foreach (var entry in cfg.UserRegexes)
         {
             if (!entry.Enabled || entry.Patterns == null || entry.Patterns.Count == 0) continue;
             if (!IsSourceAllowed(entry, msg, cfg)) continue;
+
+            if (!diceHandled
+                && entry.Action == RegexAction.DiceRollValue
+                && msg.IsDice
+                && msg.DiceValue.HasValue)
+            {
+                ExecuteDiceAction(msg.DiceValue.Value, cfg, players, dealer);
+                diceHandled = true;
+                continue;
+            }
 
             foreach (var pattern in entry.Patterns)
             {
@@ -154,22 +165,10 @@ public static class RegexEngine
         switch (entry.Action)
         {
             case RegexAction.DiceRollValue:
-                var window = Plugin.Instance.GetMainWindow();
-                if (!window.IsRecognitionActive && !Plugin.IsDebugMode)
-                    break;
-                if (!CommandExecutor.IsRunning)
-                    break;
                 if (match.Success && match.Groups.Count >= 2)
                 {
                     if (int.TryParse(match.Groups[1].Value, out var rolled))
-                    {
-                        var card = MapValue(rolled);
-                        if (card.HasValue)
-                        {
-                            LastDetectedCardValue = card.Value;
-                            DiceResultHandler.HandleDiceResult(card.Value, cfg, players, dealer);
-                        }
-                    }
+                        ExecuteDiceAction(rolled, cfg, players, dealer);
                 }
                 break;
 
@@ -522,6 +521,27 @@ public static class RegexEngine
                 break;
             }
         }
+    }
+
+    private static void ExecuteDiceAction(
+        int rolled,
+        Configuration cfg,
+        List<PlayerState> players,
+        PlayerState dealer)
+    {
+        var window = Plugin.Instance.GetMainWindow();
+        if (!window.IsRecognitionActive && !Plugin.IsDebugMode)
+            return;
+        if (!CommandExecutor.IsRunning)
+            return;
+
+        var card = MapValue(rolled);
+        if (!card.HasValue)
+            return;
+
+        LastDetectedCardValue = card.Value;
+        window.AddDebugLog($"[DiceDetection] Accepted roll {rolled} as card {card.Value}");
+        DiceResultHandler.HandleDiceResult(card.Value, cfg, players, dealer);
     }
 
     private static string ResolveNearbyWorld(string name)

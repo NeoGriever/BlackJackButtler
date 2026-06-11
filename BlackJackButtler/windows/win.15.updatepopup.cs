@@ -16,11 +16,68 @@ public class UpdatePopupWindow : Window
         "v1.8.4.3\n" +
         "\n" +
         "CRITICAL FIX — PartyFinder Cross-World Groups:\n" +
-        "- Cross-world party and alliance members are now read from FFXIV's InfoProxyCrossRealm data\n" +
-        "- Members are identified by character name, home world, and content ID across all alliance groups\n" +
+        "- Cross-world party and alliance members are now read from FFXIV's InfoProxyCrossRealm data instead of the local-only party list\n" +
+        "- Members are identified by full character name, home world, and content ID across all alliance groups\n" +
         "- Temporary cross-world data gaps retain the last valid snapshot instead of removing every player\n" +
-        "- Strict Group Detector validation now waits for an authoritative snapshot\n" +
-        "- Group routing diagnostics now show the active source, proxy state, groups, and resolved members\n";
+        "- Strict Group Detector validation waits for an authoritative snapshot\n" +
+        "- Group routing diagnostics show the active source, proxy state, groups, and resolved members\n" +
+        "\n" +
+        "CRITICAL FIX — Alliance Dice Detection:\n" +
+        "- Party and alliance dice senders are identified through FFXIV's native chat content ID, independent of abbreviated display names\n" +
+        "- Full dealer names and home worlds are restored from raw chat identity and the cross-world group snapshot\n" +
+        "- Dice rolls are recognized from Party, CrossParty, Alliance, and RandomNumber chat log kinds\n" +
+        "- Parsed dice values are passed directly to blackjack logic without localized regex re-parsing\n" +
+        "- Name-based emergency fallback supports every FFXIV chat-name display mode and only accepts an expected local dice roll\n" +
+        "- Other party or alliance members' rolls remain excluded\n" +
+        "- Dice diagnostics show chat type, sender, content ID, identity source, ownership, and value\n" +
+        "\n" +
+        "NEW — Alliance & Large Table Support:\n" +
+        "- Full alliance support: one dealer can manage up to 23 players\n" +
+        "- Party and alliance members are detected and synchronized automatically\n" +
+        "- Party chat commands and group /dice commands automatically use alliance chat while an alliance is active\n" +
+        "- Group mode is detected once before each command chain, keeping large-table command execution responsive\n" +
+        "- Added an Alliance settings tab for configuring the Nearby J action\n" +
+        "- Added Create Alliance Invite Button for a reusable Alliance Invite custom command\n" +
+        "\n" +
+        "NEW:\n" +
+        "- Added Version 2 Compact view for denser player and dealer controls\n" +
+        "- Added /skip to omit command rows when a resolved variable is empty\n" +
+        "- Added Payout to command references, Own Button actions, regex actions, and reaction command selections\n" +
+        "- Added a session-only Allow 0 bet setting\n" +
+        "- Added Standard Message and Fast Message preset creation buttons\n" +
+        "- Added stacked preset previews with ordered temporary application and simulated Debug dice rolls\n" +
+        "- Added the ${dealerHand} command variable\n" +
+        "- Added 1k, 5k, and Custom tip buttons to Stats\n" +
+        "- Added live User Statistics with session review and export\n" +
+        "- Group Detector startup can create a new User Statistics file or continue the current one without duplicate players\n" +
+        "- Added an Open Changelog button to System settings\n" +
+        "- Added Full Debug command tracing and complete Verbose logs with millisecond timestamps\n" +
+        "\n" +
+        "CHANGED:\n" +
+        "- Player names always show the full character name; double-click a name to edit its alias\n" +
+        "- Aliases are yellow and regular names are light blue\n" +
+        "- Removed the Alias column and Bank/Bet +/- controls\n" +
+        "- Bank and Bet fields use thousands separators; invalid bets are orange\n" +
+        "- Bank input locking is controlled from the Bank table header\n" +
+        "- Version 2 header controls are grouped more clearly and include CFG and STI Nearby controls\n" +
+        "- Own Buttons now live in Commands; Variables moved under DEBUG; Round History moved under Stats\n" +
+        "- Custom regex entries are separated from standard entries and can be reordered\n" +
+        "- Preset previews simulate complete rounds, including dealer/player draws, states, rules, and results\n" +
+        "- Debug logs are chronological with new entries at the bottom\n" +
+        "- Main View selection is consistently labeled Classic / Version 2\n" +
+        "\n" +
+        "FIXED:\n" +
+        "- Fixed stale party/alliance members remaining after players leave or a group is dissolved\n" +
+        "- Fixed Group Detector validation removing valid members during transient cross-world updates\n" +
+        "- Fixed rounds and queued actions failing because game operations ran outside the main thread\n" +
+        "- Fixed Bank Tell execution after Bet Change and other queued actions\n" +
+        "- Fixed round starts with active zero-bet players unless Allow 0 bet is enabled\n" +
+        "- Fixed empty result variables producing unwanted chat rows when used with /skip\n" +
+        "- Fixed party/alliance /dice routing in command chains and referenced commands\n" +
+        "- Fixed shifted Classic table columns and player header alignment\n" +
+        "- Fixed Natural and Dirty Blackjack setting labels\n" +
+        "- Fixed Debug player generation replacing existing players or exceeding the group limit\n" +
+        "- Expanded diagnostics for blocked, rejected, stale, skipped, failed, routed, and identity-resolved actions\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",

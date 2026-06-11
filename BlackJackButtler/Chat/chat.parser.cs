@@ -34,48 +34,76 @@ public static class ChatMessageParser
       [''] = 20,
   };
 
-  private static readonly Rx DiceTextDe = new(
-    @"^Würfeln!\s*\(\d+\s*-\s*\d+\)\s*\d+\s*$",
-    RxOpt.Compiled
-  );
-
-  private static readonly Rx DiceTextEn = new(
-    @"\brolls?\s+a\s+\d+\b",
+  private static readonly Rx DiceRangeText = new(
+    @"^(?:Würfeln!|Random!)\s*\(\s*(\d+)\s*[-–—]\s*(\d+)\s*\)\s*(\d+)\s*[.!]?\s*$",
     RxOpt.Compiled | RxOpt.IgnoreCase
   );
 
-  private static readonly Rx DiceTextRandom = new(
-    @"^Random!\s*\(\d+\s*-\s*\d+\)\s*\d+\s*$",
-    RxOpt.Compiled
+  private static readonly Rx DiceRollText = new(
+    @"^(?:Random!\s*)?(?:(.+?)\s+)?rolls?\s+(?:a\s+)?(\d+)\s*[.!]?\s*$",
+    RxOpt.Compiled | RxOpt.IgnoreCase
   );
 
-  public static ParsedChatMessage Parse(DateTime timestamp, SeString sender, SeString message, string localPlayerName, int chatType)
+  public static ParsedChatMessage Parse(
+    DateTime timestamp,
+    SeString sender,
+    SeString message,
+    string localPlayerName,
+    uint localWorldId,
+    ulong localContentId,
+    ulong sourceContentId,
+    uint sourceWorldId,
+    string canonicalSourceName,
+    uint logNameType,
+    int chatType)
   {
     var messageText = message.TextValue ?? string.Empty;
 
     var playerPayload = sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
-    var name = playerPayload?.PlayerName ?? ExtractNameFromTextPayloads(sender);
-    var worldId = playerPayload?.World.RowId is uint wid ? unchecked((int)wid) : -1;
+    var displayedName = playerPayload?.PlayerName ?? ExtractNameFromTextPayloads(sender);
+    var name = !string.IsNullOrWhiteSpace(canonicalSourceName) ? canonicalSourceName : displayedName;
+    var worldId = sourceWorldId != 0
+      ? unchecked((int)sourceWorldId)
+      : playerPayload?.World.RowId is uint wid ? unchecked((int)wid) : -1;
 
-    var tag = ExtractGroupTag(sender, name);
+    var tag = ExtractGroupTag(sender, displayedName);
 
-    var isSelf = !string.IsNullOrWhiteSpace(localPlayerName)
-    && string.Equals(name, localPlayerName, StringComparison.Ordinal);
-
-    var isDice = IsDiceRoll(message, messageText);
+    var isDice = TryParseDiceRoll(message, messageText, chatType, out var diceValue);
+    var isSelf = IsLocalPlayerMessage(
+      displayedName,
+      messageText,
+      localPlayerName,
+      localWorldId,
+      localContentId,
+      sourceContentId,
+      sourceWorldId,
+      logNameType,
+      chatType,
+      isDice,
+      diceValue);
     var isEvent = isSelf && isDice;
     var color = ColorFromIdentity(name, worldId);
+    var identitySource = sourceContentId != 0
+      ? "ContentId"
+      : playerPayload != null
+        ? "PlayerPayload"
+        : isSelf
+          ? "ConfiguredDisplayName"
+          : "DisplayText";
 
     return new ParsedChatMessage(
       timestamp,
       tag,
       name,
       worldId,
+      sourceContentId,
+      identitySource,
       messageText,
       isEvent,
       color,
       chatType,
-      isDice
+      isDice,
+      isDice ? diceValue : null
     );
   }
 
@@ -175,23 +203,108 @@ public static class ChatMessageParser
     return (uint)(a << 24 | b << 16 | g << 8 | r);
   }
 
-  private static bool IsDiceRoll(SeString message, string messageText)
+  private static bool IsLocalPlayerMessage(
+    string senderName,
+    string messageText,
+    string localPlayerName,
+    uint localWorldId,
+    ulong localContentId,
+    ulong sourceContentId,
+    uint sourceWorldId,
+    uint logNameType,
+    int chatType,
+    bool isDice,
+    int diceValue)
   {
-    var textLooksLikeDice = DiceTextDe.IsMatch(messageText)
-    || DiceTextEn.IsMatch(messageText)
-    || DiceTextRandom.IsMatch(messageText);
-    if (!textLooksLikeDice)
-    return false;
+    if (sourceContentId != 0 && localContentId != 0)
+      return sourceContentId == localContentId;
 
-    var enc = message.Encode();
-    var markerCount = 0;
+    if (!string.IsNullOrWhiteSpace(localPlayerName)
+        && string.Equals(senderName, localPlayerName, StringComparison.OrdinalIgnoreCase))
+      return sourceWorldId == 0 || localWorldId == 0 || sourceWorldId == localWorldId;
 
-    for (var i = 0; i < enc.Length - 1; i++)
+    if (!isDice)
+      return false;
+
+    if (string.IsNullOrWhiteSpace(localPlayerName))
+      return false;
+
+    var expectedDisplayName = FormatLogDisplayName(localPlayerName, logNameType);
+    if (!string.IsNullOrWhiteSpace(expectedDisplayName)
+        && string.Equals(senderName.Trim(), expectedDisplayName, StringComparison.OrdinalIgnoreCase))
+      return CommandExecutor.IsWaitingForDiceValue(diceValue);
+
+    if (ChatLogBuffer.IsDiceChatType(chatType) && string.IsNullOrWhiteSpace(senderName))
+      return CommandExecutor.IsWaitingForDiceValue(diceValue);
+
+    var match = DiceRollText.Match(messageText);
+    if (!match.Success)
+      return false;
+
+    var subject = match.Groups[1].Value.Trim();
+    return subject.Equals("You", StringComparison.OrdinalIgnoreCase)
+      || (subject.Equals(localPlayerName, StringComparison.OrdinalIgnoreCase)
+          && CommandExecutor.IsWaitingForDiceValue(diceValue));
+  }
+
+  public static string FormatLogDisplayName(string fullName, uint logNameType)
+  {
+    var parts = fullName
+      .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    if (parts.Length < 2)
+      return fullName.Trim();
+
+    var forename = parts[0];
+    var surname = string.Join(' ', parts.Skip(1));
+    return logNameType switch
     {
-      if (enc[i] == 0x02 && enc[i + 1] == 0x12)
-      markerCount++;
+      1 => $"{forename} {surname[0]}.",
+      2 => $"{forename[0]}. {surname}",
+      3 => $"{forename[0]}. {surname[0]}.",
+      _ => fullName.Trim(),
+    };
+  }
+
+  public static bool TryParseDiceRoll(
+    SeString message,
+    string messageText,
+    int chatType,
+    out int diceValue)
+  {
+    diceValue = 0;
+    var rangeMatch = DiceRangeText.Match(messageText);
+    if (rangeMatch.Success)
+    {
+      if (!int.TryParse(rangeMatch.Groups[1].Value, out var minimum)
+          || !int.TryParse(rangeMatch.Groups[2].Value, out var maximum)
+          || !int.TryParse(rangeMatch.Groups[3].Value, out diceValue)
+          || minimum <= 0
+          || maximum < minimum
+          || diceValue < minimum
+          || diceValue > maximum)
+        return false;
+    }
+    else
+    {
+      var rollMatch = DiceRollText.Match(messageText);
+      if (!rollMatch.Success
+          || !int.TryParse(rollMatch.Groups[2].Value, out diceValue)
+          || diceValue <= 0)
+        return false;
     }
 
-    return markerCount >= 2;
+    if (ChatLogBuffer.IsDiceChatType(chatType)
+        || ChatLogBuffer.IsPartyChatType(chatType)
+        || ChatLogBuffer.IsAllianceChatType(chatType))
+      return true;
+
+    var encoded = message.Encode();
+    for (var i = 0; i < encoded.Length - 1; i++)
+    {
+      if (encoded[i] == 0x02 && encoded[i + 1] == 0x12)
+        return true;
+    }
+
+    return false;
   }
 }

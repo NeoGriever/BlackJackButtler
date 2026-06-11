@@ -29,6 +29,7 @@ public static class CommandExecutor
 
     private static bool _wait = false;
     private static bool _cancel = false;
+    private static int _expectedDiceSides;
 
     private static string _currentGroupName = string.Empty;
     private static string _currentTargetPlayer = string.Empty;
@@ -64,6 +65,13 @@ public static class CommandExecutor
         var window = Plugin.Instance.GetMainWindow();
         window.AddDebugLog("[Executor] NotifyDiceResult called - releasing wait");
         _wait = false;
+        Volatile.Write(ref _expectedDiceSides, 0);
+    }
+
+    public static bool IsWaitingForDiceValue(int value)
+    {
+        var sides = Volatile.Read(ref _expectedDiceSides);
+        return _wait && sides > 0 && value >= 1 && value <= sides;
     }
 
     public static void SetPreActionSnapshot(int snapshotIndex)
@@ -77,6 +85,7 @@ public static class CommandExecutor
         window.AddDebugLog("[Executor] CancelCurrentGroup called - setting cancel flag");
         _cancel = true;
         _wait = false;
+        Volatile.Write(ref _expectedDiceSides, 0);
         _delayCts?.Cancel();
     }
 
@@ -447,6 +456,12 @@ public static class CommandExecutor
                 if (isDiceCommand)
                 {
                     _wait = true;
+                    var diceMatch = DicePartyRegex.Match(processedText.Trim());
+                    Volatile.Write(
+                        ref _expectedDiceSides,
+                        diceMatch.Success && int.TryParse(diceMatch.Groups[1].Value, out var sides)
+                            ? sides
+                            : 0);
                 }
 
                 if (isDiceCommand && TryHandleDebugDice(processedText))
@@ -480,10 +495,12 @@ public static class CommandExecutor
                         {
                             LogFlow(window, $"Step {step} dice wait timeout");
                             _wait = false;
+                            Volatile.Write(ref _expectedDiceSides, 0);
                         }
                     }
 
                     LogFlow(window, $"Step {step} dice wait end | Cancel={_cancel}");
+                    Volatile.Write(ref _expectedDiceSides, 0);
 
                     if (_cancel)
                     {
@@ -510,6 +527,8 @@ public static class CommandExecutor
 
         _isRunning = false;
         _cancel = false;
+        _wait = false;
+        Volatile.Write(ref _expectedDiceSides, 0);
         _internalDepth = 0;
         _currentGroupName = string.Empty;
         _currentTargetPlayer = string.Empty;

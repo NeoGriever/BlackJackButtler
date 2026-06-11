@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Dalamud.Game.Chat;
+using Dalamud.Game.Config;
 using Dalamud.Game.Command;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
@@ -25,6 +26,8 @@ using System.IO;
 using System.Threading;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Hooking;
+using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 
 namespace BlackJackButtler;
 
@@ -43,6 +46,8 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static ISigScanner SigScanner { get; private set; } = null!;
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
     [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
+    [PluginService] internal static IGameConfig GameConfig { get; private set; } = null!;
+    [PluginService] internal static IGameInteropProvider GameInteropProvider { get; private set; } = null!;
     internal static Plugin Instance { get; private set; } = null!;
 
     internal static Action<string>? DebugCommandSink { get; private set; }
@@ -75,6 +80,9 @@ public sealed class Plugin : IDalamudPlugin
     private DateTime _lastIdleTick = DateTime.MinValue;
     private bool _frameworkHooked = false;
     private bool _chatHooked = false;
+    private readonly object _pendingChatGate = new();
+    private readonly Queue<PendingChatMessage> _pendingChatMessages = new();
+    private Hook<RaptureLogModule.Delegates.AddMsgSourceEntry>? _chatSourceHook;
     private int _autoActionGeneration = 0;
     private const double ImGuiTextRecoveryWindowSeconds = 5.0;
     private const int ImGuiTextRecoveryStableFrameTarget = 12;
@@ -290,6 +298,7 @@ public sealed class Plugin : IDalamudPlugin
         AddonLifecycle.RegisterListener(AddonEvent.PostRequestedUpdate, "Trade", TradeManager.OnTradeUpdated);
         AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "Trade", TradeManager.OnTradeClosed);
 
+        InitializeChatSourceHook();
         UpdateEventHooks();
 
         Log.Information("BlackJack Buttler loaded.");
@@ -378,6 +387,8 @@ public sealed class Plugin : IDalamudPlugin
     private void OnFrameworkUpdate(IFramework framework)
     {
         if (mainWindow == null) return;
+
+        DrainPendingChatMessages();
 
         if (!mainWindow.IsRecognitionActive)
         {
@@ -576,8 +587,8 @@ public sealed class Plugin : IDalamudPlugin
 
     public void UpdateEventHooks()
     {
-        bool needFramework = mainWindow.IsOpen || mainWindow.IsRecognitionActive;
         bool needChat = mainWindow.IsRecognitionActive || (chatBoxWindow != null && chatBoxWindow.IsOpen);
+        bool needFramework = mainWindow.IsOpen || mainWindow.IsRecognitionActive || needChat;
 
         if (needFramework && !_frameworkHooked)
         {
@@ -616,6 +627,7 @@ public sealed class Plugin : IDalamudPlugin
 
         if (_chatHooked) ChatGui.ChatMessage -= OnChatMessage;
         if (_frameworkHooked) Framework.Update -= OnFrameworkUpdate;
+        _chatSourceHook?.Dispose();
 
         NearbyAlertManager.Dispose();
         DrawLogicScriptManager.Dispose();
@@ -640,27 +652,141 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnChatMessage(IHandleableChatMessage message)
     {
-        var senderText = message.Sender.TextValue ?? string.Empty;
-        var messageText = message.Message.TextValue ?? string.Empty;
-        var pp = message.Sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
-        var playerName = pp?.PlayerName ?? string.Empty;
-        var worldId = pp?.World.RowId ?? 0u;
+        var pending = new PendingChatMessage(
+            (int)message.LogKind,
+            message.Sender,
+            message.Message);
 
-        InjectChatMessage((int)message.LogKind, worldId, playerName, senderText, messageText, message.Sender, message.Message);
+        lock (_pendingChatGate)
+            _pendingChatMessages.Enqueue(pending);
     }
 
-    public void InjectChatMessage(int type, uint worldId, string playerName, string senderText, string messageText, SeString? rawSender = null, SeString? rawMessage = null)
+    private unsafe void InitializeChatSourceHook()
+    {
+        try
+        {
+            _chatSourceHook = GameInteropProvider.HookFromAddress<RaptureLogModule.Delegates.AddMsgSourceEntry>(
+                RaptureLogModule.MemberFunctionPointers.AddMsgSourceEntry,
+                OnAddChatSourceEntry);
+            _chatSourceHook.Enable();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "[ChatIdentity] Failed to initialize native chat source hook; using name fallbacks.");
+        }
+    }
+
+    private unsafe void OnAddChatSourceEntry(
+        RaptureLogModule* module,
+        ulong contentId,
+        ulong accountId,
+        int messageIndex,
+        ushort worldId,
+        ushort chatType)
+    {
+        _chatSourceHook!.Original(module, contentId, accountId, messageIndex, worldId, chatType);
+
+        lock (_pendingChatGate)
+        {
+            if (_pendingChatMessages.Count == 0)
+                return;
+
+            var pending = _pendingChatMessages.Last();
+            pending.SourceContentId = contentId;
+            pending.SourceWorldId = worldId;
+            pending.NativeChatType = chatType;
+        }
+    }
+
+    private void DrainPendingChatMessages()
+    {
+        List<PendingChatMessage> pending;
+        lock (_pendingChatGate)
+        {
+            if (_pendingChatMessages.Count == 0)
+                return;
+
+            pending = _pendingChatMessages.ToList();
+            _pendingChatMessages.Clear();
+        }
+
+        foreach (var message in pending)
+            ProcessChatMessage(message);
+    }
+
+    private void ProcessChatMessage(PendingChatMessage pending)
+    {
+        var pp = pending.Sender.Payloads.OfType<PlayerPayload>().FirstOrDefault();
+        var playerName = pp?.PlayerName ?? string.Empty;
+        var worldId = pending.SourceWorldId != 0 ? pending.SourceWorldId : pp?.World.RowId ?? 0u;
+
+        if (pending.SourceContentId != 0)
+        {
+            var member = GroupContextManager.GetCurrentMembers(Configuration)
+                .FirstOrDefault(x => x.ContentId == pending.SourceContentId);
+            if (member != null)
+            {
+                playerName = member.Name;
+                worldId = member.WorldId;
+            }
+            else if (pending.SourceContentId == PlayerState.ContentId)
+            {
+                playerName = PlayerState.CharacterName
+                    ?? ObjectTable.LocalPlayer?.Name.TextValue
+                    ?? playerName;
+                worldId = PlayerState.HomeWorld.RowId;
+            }
+        }
+
+        InjectChatMessage(
+            pending.Type,
+            worldId,
+            playerName,
+            pending.Sender.TextValue ?? string.Empty,
+            pending.Message.TextValue ?? string.Empty,
+            pending.Sender,
+            pending.Message,
+            pending.SourceContentId);
+    }
+
+    public uint GetLogNameType()
+        => GameConfig.TryGet(UiConfigOption.LogNameType, out uint value) ? value : 0u;
+
+    public void InjectChatMessage(
+        int type,
+        uint worldId,
+        string playerName,
+        string senderText,
+        string messageText,
+        SeString? rawSender = null,
+        SeString? rawMessage = null,
+        ulong sourceContentId = 0)
     {
         string logName = !string.IsNullOrEmpty(playerName) ? playerName : senderText;
         string logLine = string.IsNullOrEmpty(logName) ? messageText : $"{logName}: {messageText}";
 
         mainWindow.AddDebugLog($"[{DateTime.Now:T}] {logLine}", true);
 
-        var localName = _cachedLocalName;
+        var localName = !string.IsNullOrWhiteSpace(_cachedLocalName)
+            ? _cachedLocalName
+            : PlayerState.CharacterName
+                ?? ObjectTable.LocalPlayer?.Name.TextValue
+                ?? string.Empty;
         var s = rawSender ?? new SeString(new TextPayload(senderText));
         var m = rawMessage ?? new SeString(new TextPayload(messageText));
 
-        var parsed = ChatMessageParser.Parse(DateTime.Now, s, m, localName, type);
+        var parsed = ChatMessageParser.Parse(
+            DateTime.Now,
+            s,
+            m,
+            localName,
+            PlayerState.HomeWorld.RowId,
+            PlayerState.ContentId,
+            sourceContentId,
+            worldId,
+            playerName,
+            GetLogNameType(),
+            type);
 
         if (ChatLogBuffer.IsSystemChatType(type))
             GroupContextManager.ObserveSystemMessage(parsed.Message);
@@ -669,10 +795,33 @@ public sealed class Plugin : IDalamudPlugin
             _lastChatActivity = DateTime.Now;
 
         if (parsed.IsDice)
+        {
+            mainWindow.AddDebugLog(
+                $"[DiceDetection] Type={type}, Sender='{parsed.Name}', " +
+                $"CID={parsed.SourceContentId}, Identity={parsed.IdentitySource}, " +
+                $"OwnRoll={parsed.Event}, Value={parsed.DiceValue?.ToString() ?? "(none)"}");
             StatsLogManager.AppendDiceResult(parsed.Message);
+        }
 
         chatLog.Add(parsed);
         RegexEngine.ProcessIncoming(parsed, Configuration, mainWindow.GetPlayers(), mainWindow.GetDealer());
+    }
+
+    private sealed class PendingChatMessage
+    {
+        public PendingChatMessage(int type, SeString sender, SeString message)
+        {
+            Type = type;
+            Sender = sender;
+            Message = message;
+        }
+
+        public int Type { get; }
+        public SeString Sender { get; }
+        public SeString Message { get; }
+        public ulong SourceContentId { get; set; }
+        public uint SourceWorldId { get; set; }
+        public ushort NativeChatType { get; set; }
     }
 
     private static string DumpPayloads(SeString s)
