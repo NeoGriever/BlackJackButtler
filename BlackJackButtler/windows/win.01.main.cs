@@ -558,7 +558,7 @@ public partial class BlackJackButtlerWindow
         }
 
         if (IsRecognitionActive && _config.CurrentLevel == UserLevel.Dev
-            && (!IsLocalPlayerPartyLeader() || Plugin.PartyList.Length == 0))
+            && (!IsLocalPlayerPartyLeader() || GroupContextManager.CurrentMemberCount() == 0))
         {
             if (BJBGui.SmallButton("Activate debug mode"))
             {
@@ -1618,6 +1618,14 @@ public partial class BlackJackButtlerWindow
     {
         if (Plugin.IsDebugMode) return;
         GroupContextManager.Refresh(_config);
+        if (!GroupContextManager.IsSnapshotAuthoritative())
+        {
+            AddFullDebugLog(
+                $"[GroupContext] Sync skipped while snapshot is non-authoritative: " +
+                GroupContextManager.GetRoutingSummary(_config));
+            return;
+        }
+
         _dealer.IsDealer = true;
         _dealer.IsActivePlayer = true;
         foreach (var p in _players)
@@ -1665,22 +1673,24 @@ public partial class BlackJackButtlerWindow
 
         foreach (var member in members)
         {
-            var name = member.Name.TextValue;
+            var name = member.Name;
             if (string.IsNullOrEmpty(name)) continue;
 
             if (IsLocalPluginUser(
                     name,
-                    member.World.RowId,
+                    member.WorldId,
                     member.ContentId,
                     localName,
                     localWorldId,
                     localContentId))
                 continue;
 
-            uint homeWorldId = member.World.RowId;
+            uint homeWorldId = member.WorldId;
             foreach (var obj in Plugin.ObjectTable)
             {
-                if (obj is IPlayerCharacter pc && pc.Name.TextValue == name)
+                if (obj is IPlayerCharacter pc
+                    && pc.Name.TextValue.Equals(name, StringComparison.OrdinalIgnoreCase)
+                    && (homeWorldId == 0 || pc.HomeWorld.RowId == homeWorldId))
                 {
                     homeWorldId = pc.HomeWorld.RowId;
                     break;
@@ -1838,16 +1848,27 @@ public partial class BlackJackButtlerWindow
         GroupContextManager.Refresh(_config, strictValidation: true);
         var members = GroupContextManager.GetCurrentMembers(_config);
         var memberKeys = members
-            .Select(member => $"{member.Name.TextValue}@{member.World.RowId}")
+            .Select(member => $"{member.Name}@{member.WorldId}")
             .ToList();
         var before = _players
             .Select(player => $"{player.Name}@{player.WorldId}[Bank={player.Bank:N0},Active={player.IsActivePlayer}]")
             .ToList();
 
+        if (!GroupContextManager.IsSnapshotAuthoritative())
+        {
+            AddDebugLog(
+                $"[GroupDetector:{context}] Validation skipped for non-authoritative snapshot | " +
+                $"{GroupContextManager.GetRoutingSummary(_config)} | " +
+                $"Detected=[{string.Join("; ", memberKeys)}] | Before=[{string.Join("; ", before)}]");
+            AddFullDebugLog(
+                $"[GroupDetector:{context}] Full context: {GroupContextManager.GetRoutingDiagnostic(_config)}");
+            return;
+        }
+
         var removed = _players
             .Where(player => !members.Any(member =>
-                member.Name.TextValue.Equals(player.Name, StringComparison.OrdinalIgnoreCase)
-                && (member.World.RowId == 0 || player.WorldId == 0 || member.World.RowId == player.WorldId)))
+                member.Name.Equals(player.Name, StringComparison.OrdinalIgnoreCase)
+                && (member.WorldId == 0 || player.WorldId == 0 || member.WorldId == player.WorldId)))
             .ToList();
 
         foreach (var player in removed)

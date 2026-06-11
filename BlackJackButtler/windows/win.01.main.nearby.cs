@@ -122,7 +122,7 @@ public partial class BlackJackButtlerWindow
             childHeight = visibleRows * rowHeight + 8f;
         }
 
-        bool partyFull = Plugin.PartyList.Length >= 8;
+        bool partyFull = GroupContextManager.CurrentMemberCount() >= 8;
 
         if (ImGui.BeginChild("bjb_nearby_scroll", new Vector2(availWidth, childHeight), true))
         {

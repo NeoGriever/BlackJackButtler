@@ -75,7 +75,7 @@ public static class JoinQueueManager
         if (GroupContextManager.IsAllianceMode(cfg))
             return;
 
-        var partySize = Plugin.PartyList.Length;
+        var partySize = GroupContextManager.CurrentMemberCount();
         if (partySize < _lastKnownPartySize && _queue.Count > 0)
             _leaveTimestamp = DateTime.Now;
         _lastKnownPartySize = partySize;
@@ -116,7 +116,7 @@ public static class JoinQueueManager
         {
             case InviteState.Idle:
                 if (_queue.Count == 0) return;
-                if (Plugin.PartyList.Length >= 8) return;
+                if (GroupContextManager.CurrentMemberCount() >= 8) return;
                 if (GameEngine.CurrentPhase is not (GamePhase.Waiting or GamePhase.Payout)) return;
                 if (CommandExecutor.IsRunning || CommandExecutor.IsFollowUpPending) return;
                 if ((DateTime.Now - _leaveTimestamp).TotalSeconds < 5.0) return;
