@@ -52,6 +52,11 @@ public sealed class ChatLogBuffer
     return t == (int)XivChatType.Alliance;
   }
 
+  public static bool IsDiceChatType(int t)
+  {
+    return t == (int)XivChatType.RandomNumber;
+  }
+
   public static bool IsSupportedGroupChatType(int t, Configuration config)
   {
     return IsPartyChatType(t)
@@ -83,9 +88,12 @@ public sealed record ParsedChatMessage(
   int GroupIndexNumber,
   string Name,
   int WorldId,
+  ulong SourceContentId,
+  string IdentitySource,
   string Message,
   bool Event,
   uint ColorU32,
   int ChatType,
-  bool IsDice
+  bool IsDice,
+  int? DiceValue
 );

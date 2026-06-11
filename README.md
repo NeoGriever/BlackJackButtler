@@ -598,7 +598,7 @@ A command group is a named sequence of steps. Each step has:
 - **Grp**: Group assignment (0-9) for Command Line Groups (see [13.6 Command Line Groups](#136-command-line-groups)).
 
 Steps execute sequentially. If a step contains `/dice`, the executor pauses until a dice result is detected (30-second timeout).
-Group commands are routed at runtime: `/p`, `/party`, `/a`, `/alliance`, and group-targeted `/dice` commands are normalized to the currently detected party or alliance without changing the configured step.
+Group commands are routed at runtime: `/p`, `/party`, `/a`, `/alliance`, and group-targeted `/dice` commands are normalized to the currently detected party or alliance without changing the configured step. Dice results are recognized from Party, CrossParty, Alliance, and RandomNumber chat log kinds. Native chat content IDs identify the dealer independently of FFXIV's abbreviated name-display setting.
 Gameplay actions and their follow-ups share one execution queue. PANIC suspends this queue, invalidates pending work and waits for the running action to stop before restoring the round-start snapshot.
 
 ### 13.2 Message References
