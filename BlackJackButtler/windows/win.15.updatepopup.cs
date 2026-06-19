@@ -14,22 +14,22 @@ public class UpdatePopupWindow : Window
     private static readonly string CurrentChangelog =
         "v1.8.4.4\n" +
         "\n" +
-        "NEW — Short-Result Message Configuration:\n" +
+        "NEW - Short-Result Message Configuration:\n" +
         "- Build the ${results} message from a top-to-bottom list of rules\n" +
         "- Each rule picks a data source (Winners, Pushed, Lost, Busted, or none) and its own template with a <data> placeholder\n" +
-        "- Conditional visibility: show a rule only if content before or after is empty, or only when its own data is empty\n" +
-        "- Compress repeated names per rule and wrap everything with an optional outer result template\n" +
-        "- Live example output, per-step Undo, and JSON import/export for the whole rule list\n" +
-        "- Added a Player rolling for themselves setting (players roll their required cards with /dice 13, /dice alliance 13, or /random)\n" +
-        "- Added a Gil visual setting (General) with three display styles for all Gil input fields: plain digits, grouped, and fixed-width grouped (default)\n" +
-        "- Added a Top Tabs menu style (General) that lays the pages out as tabs across the top, alongside Sidebar and Burger Menu\n" +
+        "- Conditional visibility: show a rule only when the content before or after is empty, or only when its own data is empty\n" +
+        "- Per-rule de-duplication of repeated names, with an optional outer template wrapping the whole result\n" +
+        "- Live example preview, per-step Undo, and JSON import/export of the entire rule list\n" +
         "\n" +
-        "CHANGED:\n" +
-        "- Gil input fields (including Stats: tips, wage, Gil/hour, house bank, start bank) share the configurable Gil visual layout\n" +
+        "NEW - Display & Navigation:\n" +
+        "- Gil visual setting (General): three display styles for all Gil input fields (incl. Stats) - plain digits, grouped, and fixed-width grouped (default)\n" +
+        "- Top Tabs menu style (General, experimental): pages can now be selected as tabs across the top, alongside Sidebar (default) and Burger Menu\n" +
+        "\n" +
+        "NEW - Gameplay:\n" +
+        "- \"Player rolling for themselves\" setting: players roll their required cards with /dice 13, /dice alliance 13, or /random (dealer rolls unchanged)\n" +
         "\n" +
         "FIXED:\n" +
-        "- Fixed player alias names not being displayed/matched correctly\n" +
-        "- Fixed the Short-Result rule editor collapsing every time a rule's data source or template was edited\n";
+        "- Player aliases work again: editing an alias by clicking the player name (after the old \"A\" button was removed) was broken; aliases are now displayed and matched correctly\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",
