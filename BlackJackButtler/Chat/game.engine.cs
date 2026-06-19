@@ -293,16 +293,10 @@ public static partial class GameEngine
             VariableManager.SetVariable("loosers", FormatResultCategory(lossList.Distinct().ToList(), "Lost", "Lost"));
             VariableManager.SetVariable("busted", FormatResultCategory(bustList.Distinct().ToList(), "Busted", "Busted"));
 
-            var parts = new List<string>();
             var variableSnapshot = VariableManager.SnapshotForUi();
             string GetV(string n) => variableSnapshot.FirstOrDefault(v => v.Name == n)?.Value ?? "";
 
-            if (winList.Any())  parts.Add(GetV("winners"));
-            if (pushList.Any()) parts.Add(GetV("pushed"));
-            if (lossList.Any()) parts.Add(GetV("loosers"));
-            if (bustList.Any()) parts.Add(GetV("busted"));
-
-            var defaultResults = string.Join(" | ", parts);
+            var defaultResults = ShortResultFormatter.Render(cfg, winList, pushList, lossList, bustList);
             var resultTemplate = string.IsNullOrWhiteSpace(cfg.ResultTemplate) ? "${results}" : cfg.ResultTemplate;
             var renderedResults = resultTemplate
                 .Replace("${results}", defaultResults)

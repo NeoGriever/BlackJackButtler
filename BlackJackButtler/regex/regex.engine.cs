@@ -70,6 +70,10 @@ public static class RegexEngine
 
     public static void ProcessIncoming(ParsedChatMessage msg, Configuration cfg, List<PlayerState> players, PlayerState dealer)
     {
+        if (cfg.PlayerRollingForThemselves && msg.IsDice && msg.DiceValue.HasValue
+            && CommandExecutor.TryAcceptPlayerDice(msg, players, dealer))
+            return;
+
         var cleanMessage = SanitizeForRegex(msg.Message);
         var diceHandled = false;
 

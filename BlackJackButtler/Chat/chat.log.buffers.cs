@@ -95,5 +95,6 @@ public sealed record ParsedChatMessage(
   uint ColorU32,
   int ChatType,
   bool IsDice,
-  int? DiceValue
+  int? DiceValue,
+  int? DiceSides
 );

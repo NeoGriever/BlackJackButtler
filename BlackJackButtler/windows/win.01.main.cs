@@ -176,13 +176,6 @@ public partial class BlackJackButtlerWindow
 
         DrawNearbyPlayersSection();
 
-        if (_triggerAliasPopup)
-        {
-            ImGui.OpenPopup("bjb_alias_popup");
-            _isAliasModalOpen = true;
-            _triggerAliasPopup = false;
-        }
-
         DrawAliasModal();
 
         if (_panicConfirmStage == 1)
@@ -263,43 +256,69 @@ public partial class BlackJackButtlerWindow
 
     private void DrawAliasModal()
     {
-        if (ImGui.BeginPopupModal("Set Player Alias##bjb_alias_popup", ref _isAliasModalOpen, ImGuiWindowFlags.AlwaysAutoResize))
+        if (_triggerAliasPopup)
+        {
+            _isAliasModalOpen = true;
+            _triggerAliasPopup = false;
+            ImGui.SetNextWindowFocus();
+        }
+
+        if (!_isAliasModalOpen)
+            return;
+
+        var keepOpen = _isAliasModalOpen;
+        if (ImGui.Begin(AliasPopupTitle, ref keepOpen,
+            ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings))
         {
             if (_editingAliasPlayer == null)
             {
                 _isAliasModalOpen = false;
-                ImGui.CloseCurrentPopup();
-                ImGui.EndPopup();
+                ImGui.End();
                 return;
             }
 
-            ImGui.Text($"Set Alias for: {_editingAliasPlayer.Name}");
+            var editingPlayer = _editingAliasPlayer;
+            ImGui.Text($"Set Alias for: {editingPlayer.Name}");
             ImGui.Spacing();
 
             ImGui.SetNextItemWidth(250f);
             ImGui.InputText("##alias_input", ref _aliasInputBuffer, 32);
 
             ImGui.Spacing();
-            if (BJBGui.Button("Save", new Vector2(120, 0)))
+            if (BJBGui.Button("Save", new Vector2(100, 0)))
             {
                 var input = _aliasInputBuffer.Trim();
-                if (string.IsNullOrWhiteSpace(input) || input.Equals(_editingAliasPlayer.Name, StringComparison.OrdinalIgnoreCase))
-                    _editingAliasPlayer.Alias = string.Empty;
+                if (string.IsNullOrWhiteSpace(input) || input.Equals(editingPlayer.Name, StringComparison.OrdinalIgnoreCase))
+                    editingPlayer.Alias = string.Empty;
                 else
-                    _editingAliasPlayer.Alias = input;
+                    editingPlayer.Alias = input;
 
+                _save();
                 _editingAliasPlayer = null;
                 _isAliasModalOpen = false;
-                ImGui.CloseCurrentPopup();
             }
             ImGui.SameLine();
-            if (BJBGui.Button("Cancel", new Vector2(120, 0)))
+            if (BJBGui.Button("Reset", new Vector2(100, 0)))
+            {
+                editingPlayer.Alias = string.Empty;
+                _aliasInputBuffer = editingPlayer.Name;
+                _save();
+                _editingAliasPlayer = null;
+                _isAliasModalOpen = false;
+            }
+            ImGui.SameLine();
+            if (BJBGui.Button("Cancel", new Vector2(100, 0)))
             {
                 _editingAliasPlayer = null;
                 _isAliasModalOpen = false;
-                ImGui.CloseCurrentPopup();
             }
-            ImGui.EndPopup();
+        }
+        ImGui.End();
+
+        if (!keepOpen)
+        {
+            _editingAliasPlayer = null;
+            _isAliasModalOpen = false;
         }
     }
 
@@ -309,6 +328,7 @@ public partial class BlackJackButtlerWindow
         _editingAliasPlayer = p;
         _aliasInputBuffer = !string.IsNullOrWhiteSpace(p.Alias) ? p.Alias : p.Name;
         _triggerAliasPopup = true;
+        AddDebugLog($"[Alias] Name button clicked for {p.Name}; opening alias editor", false);
     }
 
     private void SetupTableColumns()
@@ -974,8 +994,18 @@ public partial class BlackJackButtlerWindow
         var nameColor = hasAlias
             ? new Vector4(1f, 0.85f, 0.2f, 1f)
             : new Vector4(0.45f, 0.8f, 1f, 1f);
-        ImGui.TextColored(nameColor, listName);
-        if (p.IsActivePlayer && ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+
+        var transparent = new Vector4(0f, 0f, 0f, 0f);
+        ImGui.PushStyleColor(ImGuiCol.Text, nameColor);
+        ImGui.PushStyleColor(ImGuiCol.Button, transparent);
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, transparent);
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, transparent);
+        ImGui.PushStyleVar(ImGuiStyleVar.ButtonTextAlign, new Vector2(0f, 0.5f));
+        ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0f);
+        var aliasClicked = ImGui.Button($"{listName}##alias_name_{p.UIID}", new Vector2(-1f, 0f));
+        ImGui.PopStyleVar(2);
+        ImGui.PopStyleColor(4);
+        if (aliasClicked)
             OpenAliasPopupForPlayer(p);
         // Ready-skip wurde in die R-Spalte verschoben
 

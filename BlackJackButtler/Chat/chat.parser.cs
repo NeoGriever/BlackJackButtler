@@ -68,7 +68,7 @@ public static class ChatMessageParser
 
     var tag = ExtractGroupTag(sender, displayedName);
 
-    var isDice = TryParseDiceRoll(message, messageText, chatType, out var diceValue);
+    var isDice = TryParseDiceRoll(message, messageText, chatType, out var diceValue, out var diceSides);
     var isSelf = IsLocalPlayerMessage(
       displayedName,
       messageText,
@@ -103,7 +103,8 @@ public static class ChatMessageParser
       color,
       chatType,
       isDice,
-      isDice ? diceValue : null
+      isDice ? diceValue : null,
+      isDice ? diceSides : null
     );
   }
 
@@ -269,9 +270,11 @@ public static class ChatMessageParser
     SeString message,
     string messageText,
     int chatType,
-    out int diceValue)
+    out int diceValue,
+    out int? diceSides)
   {
     diceValue = 0;
+    diceSides = null;
     var rangeMatch = DiceRangeText.Match(messageText);
     if (rangeMatch.Success)
     {
@@ -283,6 +286,8 @@ public static class ChatMessageParser
           || diceValue < minimum
           || diceValue > maximum)
         return false;
+      if (minimum == 1)
+        diceSides = maximum;
     }
     else
     {
