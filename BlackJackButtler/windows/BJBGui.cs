@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 
 namespace BlackJackButtler.Windows;
 
 internal static class BJBGui
 {
     public static Vector4 ButtonTextColor = new Vector4(1f, 1f, 1f, 1f);
+    public static GilVisualMode GilVisual = GilVisualMode.FixedGroup;
     private static readonly Dictionary<string, string> LongInputBuffers = new();
 
     public static bool MatchesFilter(string filter, params string?[] haystacks)
@@ -125,18 +127,26 @@ internal static class BJBGui
 
     public static bool InputLongFormatted(string label, ref long value, Vector4? textColor = null)
     {
+        var mode = GilVisual;
         if (!LongInputBuffers.TryGetValue(label, out var text))
-            text = value.ToString("N0", CultureInfo.InvariantCulture);
+            text = FormatGil(value, mode);
 
+        ImGui.PushFont(UiBuilder.MonoFont);
+        var itemWidth = ImGui.CalcItemWidth();
+        if (!LongInputBuffers.ContainsKey(label))
+            text = AlignGil(text, itemWidth, mode);
         ImGui.PushStyleColor(ImGuiCol.Text, textColor ?? ButtonTextColor);
-        var edited = ImGui.InputText(label, ref text, 32);
+        var edited = ImGui.InputText(label, ref text, 64);
         ImGui.PopStyleColor();
 
         var valueChanged = false;
         if (edited)
         {
             LongInputBuffers[label] = text;
-            var normalized = text.Replace(",", string.Empty, StringComparison.Ordinal).Trim();
+            var normalized = text
+                .Replace(",", string.Empty, StringComparison.Ordinal)
+                .Replace(" ", string.Empty, StringComparison.Ordinal)
+                .Trim();
             if (long.TryParse(
                     normalized,
                     NumberStyles.AllowLeadingSign,
@@ -150,9 +160,62 @@ internal static class BJBGui
         }
 
         if (!ImGui.IsItemActive())
-            LongInputBuffers[label] = value.ToString("N0", CultureInfo.InvariantCulture);
+            LongInputBuffers[label] = AlignGil(FormatGil(value, mode), itemWidth, mode);
+
+        ImGui.PopFont();
 
         return valueChanged;
+    }
+
+    private static string FormatGil(long value, GilVisualMode mode) => mode switch
+    {
+        GilVisualMode.Plain => value.ToString(CultureInfo.InvariantCulture),
+        GilVisualMode.Grouped => value.ToString("N0", CultureInfo.InvariantCulture),
+        _ => FormatFixedGil(value),
+    };
+
+    private static string AlignGil(string text, float itemWidth, GilVisualMode mode)
+        => mode == GilVisualMode.Plain ? text : PadToRightEdge(text, itemWidth);
+
+    private static string FormatFixedGil(long value)
+    {
+        var negative = value < 0;
+        var absolute = value == long.MinValue ? (ulong)long.MaxValue + 1UL : (ulong)Math.Abs(value);
+        if (absolute > 999_999_999_999UL)
+            return value.ToString("N0", CultureInfo.InvariantCulture);
+
+        var numericGroups = new ulong[4];
+        for (var i = 3; i >= 0; i--)
+        {
+            numericGroups[i] = absolute % 1000UL;
+            absolute /= 1000UL;
+        }
+
+        var firstValueGroup = Array.FindIndex(numericGroups, group => group != 0UL);
+        if (firstValueGroup < 0)
+            firstValueGroup = 3;
+
+        var groups = new string[4];
+        for (var i = 0; i < groups.Length; i++)
+            groups[i] = i < firstValueGroup
+                ? "   "
+                : i == firstValueGroup
+                    ? numericGroups[i].ToString(CultureInfo.InvariantCulture).PadLeft(3)
+                    : numericGroups[i].ToString("D3", CultureInfo.InvariantCulture);
+
+        var formatted = string.Join(',', groups);
+        return negative ? $"-{formatted}" : formatted;
+    }
+
+    private static string PadToRightEdge(string text, float itemWidth)
+    {
+        var available = Math.Max(0f, itemWidth - ImGui.GetStyle().FramePadding.X * 2f);
+        var missing = available - ImGui.CalcTextSize(text).X;
+        if (missing <= 0f)
+            return text;
+
+        var spaceWidth = Math.Max(1f, ImGui.CalcTextSize(" ").X);
+        return new string(' ', (int)(missing / spaceWidth)) + text;
     }
 
     public static bool InputFloat(string label, ref float v, float step, float step_fast, string format)

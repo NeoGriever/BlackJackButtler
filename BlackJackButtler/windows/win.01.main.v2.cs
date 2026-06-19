@@ -391,13 +391,6 @@ public partial class BlackJackButtlerWindow
 
     internal void DrawMainSharedPopupsV2()
     {
-        if (_triggerAliasPopup)
-        {
-            ImGui.OpenPopup("bjb_alias_popup");
-            _isAliasModalOpen = true;
-            _triggerAliasPopup = false;
-        }
-
         DrawAliasModal();
         DrawCleanDataPopupV2();
         DrawPanicPopupsV2();

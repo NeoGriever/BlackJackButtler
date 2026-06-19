@@ -178,14 +178,27 @@ public partial class BlackJackButtlerWindow
             ImGui.TextUnformatted("Menu Style");
             ImGui.SameLine(300f);
             ImGui.SetNextItemWidth(200f);
-            int menuModeIdx = _config.UseBurgerMenu ? 0 : 1;
-            if (BJBGui.Combo("##menu_style", ref menuModeIdx, "Burger Menu\0Sidebar\0"))
+            int menuModeIdx = (int)_config.MenuStyle;
+            if (BJBGui.Combo("##menu_style", ref menuModeIdx, "Sidebar\0Burger Menu\0Top Tabs (experimental)\0"))
             {
-                _config.UseBurgerMenu = menuModeIdx == 0;
+                _config.MenuStyle = (MenuStyleMode)menuModeIdx;
                 _save();
             }
             if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Replace the left sidebar with a compact burger-menu button at the top.\nUseful when window space is tight.");
+                ImGui.SetTooltip("Sidebar: left navigation column.\nBurger Menu: compact top button with a popup.\nTop Tabs: page tabs across the top.");
+
+            ImGui.Spacing();
+            ImGui.TextUnformatted("Gil visual");
+            ImGui.SameLine(300f);
+            ImGui.SetNextItemWidth(200f);
+            int gilVisualIdx = (int)_config.GilVisual;
+            if (BJBGui.Combo("##gil_visual", ref gilVisualIdx, "12345678\0     12,345,678\0   , 12,345,678\0"))
+            {
+                _config.GilVisual = (GilVisualMode)gilVisualIdx;
+                _save();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("How Gil amounts are displayed in all Gil input fields.");
 
             ImGui.Spacing();
             if (ImGui.Checkbox("Show Nearby Players", ref _config.ShowNearbyPlayers)) _save();
@@ -252,6 +265,10 @@ public partial class BlackJackButtlerWindow
             ImGui.Spacing();
             if (ImGui.Checkbox("First Deal, then Play", ref _config.FirstDealThenPlay)) _save();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: First deal every player their hands.\nInactive: Deal hand and direct play per player.");
+
+            ImGui.Spacing();
+            if (ImGui.Checkbox("Player rolling for themselves", ref _config.PlayerRollingForThemselves)) _save();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Players roll their own required cards with a 13-sided dice. Dealer rolls are unchanged.");
 
             ImGui.Spacing();
             if (ImGui.Checkbox("Identical Split Only", ref _config.IdenticalSplitOnly)) _save();
@@ -1093,6 +1110,7 @@ public partial class BlackJackButtlerWindow
     private void ApplyScalars(JObject j)
     {
         TryApply<bool>  (j, "FirstDealThenPlay",                      v => _config.FirstDealThenPlay = v);
+        TryApply<bool>  (j, "PlayerRollingForThemselves",             v => _config.PlayerRollingForThemselves = v);
         TryApply<bool>  (j, "IdenticalSplitOnly",                     v => _config.IdenticalSplitOnly = v);
         TryApply<bool>  (j, "EnableSplit",                            v => _config.EnableSplit = v);
         TryApply<bool>  (j, "EnableDoubleDown",                       v => _config.EnableDoubleDown = v);
@@ -1130,6 +1148,7 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "DealerSoftRule",                         v => _config.DealerSoftRule = v);
         TryApply<bool>  (j, "SmallResult",                            v => _config.SmallResult = v);
         TryApply<string>(j, "ResultTemplate",                         v => _config.ResultTemplate = v);
+        TryApply<List<ShortResultRule>>(j, "ShortResultRules",        v => _config.ShortResultRules = v);
         TryApply<bool>  (j, "AutostartRoundOnlyOnMultiplePlayers",     v => _config.AutostartRoundOnlyOnMultiplePlayers = v);
         TryApply<float> (j, "CommandSpeedMultiplier",                  v => _config.CommandSpeedMultiplier = v);
         TryApply<Vector4>(j, "HighlightColor",                        v => _config.HighlightColor = v);

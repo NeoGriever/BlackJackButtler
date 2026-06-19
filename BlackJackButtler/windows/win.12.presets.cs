@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using BlackJackButtler.Chat;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Newtonsoft.Json;
@@ -15,7 +16,7 @@ public partial class BlackJackButtlerWindow
     // Granulare Settings-Felder nach Kategorie
     private static readonly string[] SettingsGeneralFields = {
         "EnableBankInput", "CommandSpeedMultiplier", "PayoutAutoConfirmTrade",
-        "SmallResult", "ResultTemplate", "AutostartRoundOnlyOnMultiplePlayers",
+        "SmallResult", "ResultTemplate", "ShortResultRules", "AutostartRoundOnlyOnMultiplePlayers",
         "MainViewV2SuperCompact",
     };
     private static readonly string[] SettingsAutomationFields = {
@@ -24,7 +25,7 @@ public partial class BlackJackButtlerWindow
         "AutoInitialDeal", "AutoDealerDraw", "AutoRun", "AutoContinue", "AutoContinueDelay",
     };
     private static readonly string[] SettingsRulesFields = {
-        "FirstDealThenPlay", "IdenticalSplitOnly", "AllowDoubleDownAfterSplit",
+        "FirstDealThenPlay", "PlayerRollingForThemselves", "IdenticalSplitOnly", "AllowDoubleDownAfterSplit",
         "EnableSplit", "EnableDoubleDown", "EnableDirtyBlackjack",
         "MaxHandsPerPlayer", "MultiplierNormalWin", "MultiplierBlackjackWin",
         "MultiplierDirtyBlackjackWin", "RefundFullDoubleDownOnPush", "BlackjackTieRule",
@@ -817,13 +818,7 @@ public partial class BlackJackButtlerWindow
             previewLoosers = ResultCategory(lossList, "Lost", "Lost");
             previewBusted = ResultCategory(bustList, "Busted", "Busted");
 
-            var parts = new List<string>();
-            if (winList.Any()) parts.Add(previewWinners);
-            if (pushList.Any()) parts.Add(previewPushed);
-            if (lossList.Any()) parts.Add(previewLoosers);
-            if (bustList.Any()) parts.Add(previewBusted);
-
-            var defaultResults = string.Join(" | ", parts.Where(p => !string.IsNullOrWhiteSpace(p)));
+            var defaultResults = ShortResultFormatter.Render(src, winList, pushList, lossList, bustList);
             var resultTemplate = string.IsNullOrWhiteSpace(src.ResultTemplate) ? "${results}" : src.ResultTemplate;
             previewResults = resultTemplate
                 .Replace("${results}", defaultResults)
@@ -1325,6 +1320,8 @@ public partial class BlackJackButtlerWindow
             _config.PayoutAutoConfirmTrade              = snap.PayoutAutoConfirmTrade;
             _config.SmallResult                         = snap.SmallResult;
             _config.ResultTemplate                      = snap.ResultTemplate;
+            _config.ShortResultRules                    = snap.ShortResultRules?.Select(r => r.Clone()).ToList()
+                ?? Configuration.CreateDefaultShortResultRules();
             _config.AutostartRoundOnlyOnMultiplePlayers = snap.AutostartRoundOnlyOnMultiplePlayers;
             _config.MainViewV2SuperCompact              = snap.MainViewV2SuperCompact;
         }
@@ -1346,6 +1343,7 @@ public partial class BlackJackButtlerWindow
         if (preset.ApplySettingsRules)
         {
             _config.FirstDealThenPlay            = snap.FirstDealThenPlay;
+            _config.PlayerRollingForThemselves   = snap.PlayerRollingForThemselves;
             _config.IdenticalSplitOnly           = snap.IdenticalSplitOnly;
             _config.EnableSplit                  = snap.EnableSplit;
             _config.EnableDoubleDown             = snap.EnableDoubleDown;

@@ -88,7 +88,7 @@ public partial class BlackJackButtlerWindow
             {
                 ImGui.TextUnformatted("Start Bank:");
                 ImGui.SetNextItemWidth(200f);
-                BJBGui.InputLong("##edit_start_bank_input", ref _editStartBankValue, 1000, 10000);
+                BJBGui.InputLongFormatted("##edit_start_bank_input", ref _editStartBankValue);
                 if (BJBGui.SmallButton("OK##edit_start_bank_ok") || ImGui.IsKeyPressed(ImGuiKey.Enter))
                 {
                     StatsManager.StartBank = _editStartBankValue;
@@ -170,7 +170,7 @@ public partial class BlackJackButtlerWindow
         {
             ImGui.TextUnformatted("Tip amount:");
             ImGui.SetNextItemWidth(180f);
-            BJBGui.InputLong("##custom_tip_value", ref _customTipValue, 1000, 10000);
+            BJBGui.InputLongFormatted("##custom_tip_value", ref _customTipValue);
             if (_customTipValue < 0) _customTipValue = 0;
             if (BJBGui.SmallButton("Add##custom_tip_add") || ImGui.IsKeyPressed(ImGuiKey.Enter))
             {
@@ -206,7 +206,7 @@ public partial class BlackJackButtlerWindow
         if (_config.UseFixedWage)
         {
             long fixedWage = _config.FixedWage;
-            if (BJBGui.InputLong("Fixed Wage##input", ref fixedWage, 50000, 100000))
+            if (BJBGui.InputLongFormatted("Fixed Wage##input", ref fixedWage))
             {
                 _config.FixedWage = fixedWage;
                 _save();
@@ -215,7 +215,7 @@ public partial class BlackJackButtlerWindow
         else
         {
             long gilPerHour = _config.GilPerHour;
-            if (BJBGui.InputLong("Gil/Hour", ref gilPerHour, 50000, 100000))
+            if (BJBGui.InputLongFormatted("Gil/Hour", ref gilPerHour))
             {
                 _config.GilPerHour = gilPerHour;
                 _save();
@@ -264,7 +264,7 @@ public partial class BlackJackButtlerWindow
             ImGui.SameLine(200f);
             ImGui.SetNextItemWidth(200f);
             long houseVal = _config.StatsHouseBank;
-            if (BJBGui.InputLong("##house_bank", ref houseVal, 1000, 100000))
+            if (BJBGui.InputLongFormatted("##house_bank", ref houseVal))
             {
                 _config.StatsHouseBank = Math.Max(0, houseVal);
                 _save();

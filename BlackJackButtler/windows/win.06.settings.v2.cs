@@ -2,7 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using BlackJackButtler.Chat;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace BlackJackButtler.Windows;
@@ -16,6 +19,8 @@ public partial class BlackJackButtlerWindow
     private int? _settingsV2ReturnTab;
     private Page? _settingsV2PendingPage;
     private bool _settingsV2DiscardPopupOpen;
+    private readonly List<List<ShortResultRule>> _shortResultUndoHistory = new();
+    private string _shortResultImportStatus = string.Empty;
 
     private static readonly string[] SettingsV2Tabs =
     {
@@ -98,12 +103,25 @@ public partial class BlackJackButtlerWindow
 
         ImGui.Spacing();
         ImGui.TextUnformatted("Menu Style");
-        int menuMode = _config.UseBurgerMenu ? 0 : 1;
-        DrawEnumButtons("burger_v2", ref menuMode, new[] { "Burger Menu", "Sidebar" }, idx =>
+        int menuMode = (int)_config.MenuStyle;
+        DrawEnumButtons("menu_style_v2", ref menuMode, new[] { "Sidebar", "Burger Menu", "Top Tabs (experimental)" }, idx =>
         {
-            _config.UseBurgerMenu = idx == 0;
+            _config.MenuStyle = (MenuStyleMode)idx;
             _save();
         });
+
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Gil visual");
+        int gilVisual = (int)_config.GilVisual;
+        ImGui.PushFont(UiBuilder.MonoFont);
+        DrawEnumButtons("gil_visual_v2", ref gilVisual, new[] { "12345678", "     12,345,678", "   , 12,345,678" }, idx =>
+        {
+            _config.GilVisual = (GilVisualMode)idx;
+            _save();
+        });
+        ImGui.PopFont();
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("How Gil amounts are displayed in all Gil input fields.");
     }
 
     private void DrawSettingsV2Automation()
@@ -179,6 +197,15 @@ public partial class BlackJackButtlerWindow
         Indent(() =>
         {
         CheckSave("First Deal, then play", ref _config.FirstDealThenPlay);
+        CheckSave("Player rolling for themselves", ref _config.PlayerRollingForThemselves);
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Players roll their own required cards with /dice 13, /dice alliance 13, or the native /random command.\nDealer rolls are unchanged.");
+        CheckSave("Hide card suits", ref _config.HideCardSuits);
+        });
+
+        Header("Dealer Rules");
+        Indent(() =>
+        {
         ImGui.TextUnformatted("Dealer Stands on:");
         ImGui.SameLine(260f);
         CheckSave("Soft##v2_dealer_soft", ref _config.DealerSoftRule);
@@ -195,7 +222,6 @@ public partial class BlackJackButtlerWindow
             _config.DealerDrawsUntil = 17;
             _save();
         }
-        CheckSave("Hide card suits", ref _config.HideCardSuits);
         });
 
         Header("Game settings");
@@ -264,10 +290,236 @@ public partial class BlackJackButtlerWindow
         Indent(() =>
         {
         CheckSave("Small Result Messages", ref _config.SmallResult);
-        ImGui.SetNextItemWidth(-1);
-        if (ImGui.InputText("Result Template##v2_result_template", ref _config.ResultTemplate, 512))
-            _save();
+        DrawShortResultRulesEditor();
         });
+    }
+
+    private void DrawShortResultRulesEditor()
+    {
+        if (!ImGui.CollapsingHeader("Short-Result configuration##short_result_configuration"))
+            return;
+
+        ImGui.Indent(18f);
+        DrawShortResultRulesEditorBody();
+        ImGui.Unindent(18f);
+    }
+
+    private void DrawShortResultRulesEditorBody()
+    {
+        _config.ShortResultRules ??= Configuration.CreateDefaultShortResultRules();
+        var rules = _config.ShortResultRules;
+        ImGui.TextWrapped("Builds ${results} from top to bottom. <data> is replaced by the selected result data.");
+
+        if (!ImGui.BeginTable("bjb_short_result_editor_layout", 2,
+            ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV))
+            return;
+
+        ImGui.TableSetupColumn("Rules", ImGuiTableColumnFlags.WidthStretch, 1.7f);
+        ImGui.TableSetupColumn("Example output", ImGuiTableColumnFlags.WidthStretch, 1f);
+        ImGui.TableNextRow();
+        ImGui.TableNextColumn();
+
+        var canUndoShortResult = _shortResultUndoHistory.Count > 0;
+        if (!canUndoShortResult) ImGui.BeginDisabled();
+        if (BJBGui.SmallButton($"Undo ({_shortResultUndoHistory.Count})##short_result_undo"))
+        {
+            var last = _shortResultUndoHistory[^1];
+            _shortResultUndoHistory.RemoveAt(_shortResultUndoHistory.Count - 1);
+            _config.ShortResultRules = CloneShortResultRules(last);
+            _save();
+        }
+        if (!canUndoShortResult) ImGui.EndDisabled();
+
+        for (var i = 0; i < rules.Count; i++)
+        {
+            var rule = rules[i];
+            ImGui.PushID($"short_result_rule_{i}");
+            ImGui.Separator();
+            var changedOrder = false;
+            var beforeEdit = CloneShortResultRules(rules);
+            var ruleEdited = false;
+            var summary = $"{i + 1}. {rule.Data}: {rule.Template}";
+
+            if (BJBGui.SmallButton("X##delete"))
+            {
+                PushShortResultUndo(beforeEdit);
+                rules.RemoveAt(i);
+                changedOrder = true;
+            }
+            ImGui.SameLine();
+            if (i == 0) ImGui.BeginDisabled();
+            if (BJBGui.SmallButton("↑##move_up"))
+            {
+                PushShortResultUndo(beforeEdit);
+                (rules[i - 1], rules[i]) = (rules[i], rules[i - 1]);
+                changedOrder = true;
+            }
+            if (i == 0) ImGui.EndDisabled();
+            ImGui.SameLine();
+            if (i == rules.Count - 1) ImGui.BeginDisabled();
+            if (BJBGui.SmallButton("↓##move_down"))
+            {
+                PushShortResultUndo(beforeEdit);
+                (rules[i + 1], rules[i]) = (rules[i], rules[i + 1]);
+                changedOrder = true;
+            }
+            if (i == rules.Count - 1) ImGui.EndDisabled();
+            ImGui.SameLine();
+            if (BJBGui.SmallButton("⧉##duplicate"))
+            {
+                PushShortResultUndo(beforeEdit);
+                rules.Insert(i + 1, rule.Clone());
+                changedOrder = true;
+            }
+            ImGui.SameLine();
+
+            if (!changedOrder && ImGui.CollapsingHeader($"{summary}###short_result_rule_header"))
+            {
+
+            var source = (int)rule.Data;
+            ImGui.SetNextItemWidth(180f);
+            if (BJBGui.Combo("Data", ref source, "None (no data)\0Winners\0Pushed\0Loosed\0Busted\0"))
+            {
+                rule.Data = (ShortResultDataSource)source;
+                ruleEdited = true;
+            }
+
+            if (ImGui.Checkbox("Visible if empty", ref rule.VisibleIfEmpty)) ruleEdited = true;
+            if (ImGui.Checkbox("Visible if content before is empty", ref rule.VisibleIfContentBeforeIsEmpty)) ruleEdited = true;
+            if (ImGui.Checkbox("Visible if content after is empty", ref rule.VisibleIfContentAfterIsEmpty)) ruleEdited = true;
+            if (ImGui.Checkbox("Compress", ref rule.Compress)) ruleEdited = true;
+
+            ImGui.SetNextItemWidth(-1);
+            if (ImGui.InputText("Template", ref rule.Template, 512)) ruleEdited = true;
+            }
+
+            ImGui.PopID();
+            if (changedOrder)
+            {
+                _save();
+                break;
+            }
+            if (ruleEdited)
+            {
+                PushShortResultUndo(beforeEdit);
+                _save();
+            }
+        }
+
+        ImGui.Separator();
+        if (BJBGui.SmallButton("Add result rule"))
+        {
+            PushShortResultUndo(CloneShortResultRules(rules));
+            rules.Add(new ShortResultRule());
+            _save();
+        }
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("Reset result rules"))
+        {
+            PushShortResultUndo(CloneShortResultRules(rules));
+            _config.ShortResultRules = Configuration.CreateDefaultShortResultRules();
+            _save();
+        }
+
+        ImGui.SetNextItemWidth(-1);
+        if (ImGui.InputText("Outer result template", ref _config.ResultTemplate, 512))
+            _save();
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Optional wrapper around the rule output. Use ${results}; default is ${results}.");
+
+        ImGui.Separator();
+        ImGui.TextUnformatted("Rule-list import / export");
+        if (BJBGui.SmallButton("Export rules"))
+        {
+            var json = JsonConvert.SerializeObject(_config.ShortResultRules, Formatting.Indented);
+            _fileDialogManager.SaveFileDialog(
+                "Export Short-Result Rules",
+                "JSON Files{.json}",
+                "bjb_short_result_rules",
+                ".json",
+                (ok, path) =>
+                {
+                    if (!ok || string.IsNullOrWhiteSpace(path))
+                        return;
+                    try
+                    {
+                        System.IO.File.WriteAllText(path, json);
+                        _shortResultImportStatus = $"Exported rules to {path}";
+                    }
+                    catch (Exception ex)
+                    {
+                        _shortResultImportStatus = $"Export failed: {ex.Message}";
+                    }
+                });
+        }
+        ImGui.SameLine();
+        if (BJBGui.SmallButton("Import rules"))
+        {
+            _fileDialogManager.OpenFileDialog(
+                "Import Short-Result Rules",
+                "JSON Files{.json}",
+                (ok, path) =>
+                {
+                    if (!ok || string.IsNullOrWhiteSpace(path))
+                        return;
+                    try
+                    {
+                        var json = System.IO.File.ReadAllText(path);
+                        var imported = JsonConvert.DeserializeObject<List<ShortResultRule>>(json)
+                            ?? throw new JsonException("The JSON file does not contain a rule list.");
+                        if (imported.Any(rule => rule == null))
+                            throw new JsonException("The rule list contains null entries.");
+
+                        PushShortResultUndo(CloneShortResultRules(_config.ShortResultRules));
+                        _config.ShortResultRules = CloneShortResultRules(imported);
+                        _config.ShortResultRulesInitialized = true;
+                        _shortResultImportStatus = $"Imported {imported.Count} rules from {path}";
+                        _save();
+                    }
+                    catch (Exception ex)
+                    {
+                        _shortResultImportStatus = $"Import failed: {ex.Message}";
+                    }
+                });
+        }
+        if (!string.IsNullOrWhiteSpace(_shortResultImportStatus))
+            ImGui.TextWrapped(_shortResultImportStatus);
+
+        ImGui.TableNextColumn();
+        ImGui.TextUnformatted("Example output");
+        var winners = new[] { "Alice Winner", "Bob Winner" };
+        var pushed = new[] { "Cara Push", "Dorian Push" };
+        var loosed = new[] { "Eve Lost", "Finn Lost" };
+        var busted = new[] { "Gina Bust", "Hugo Bust" };
+        var ruleOutput = ShortResultFormatter.Render(_config, winners, pushed, loosed, busted);
+        var outerTemplate = string.IsNullOrWhiteSpace(_config.ResultTemplate)
+            ? "${results}"
+            : _config.ResultTemplate;
+        var preview = outerTemplate
+            .Replace("${results}", ruleOutput)
+            .Replace("<results>", ruleOutput)
+            .Replace("${winners}", $"Winners: {string.Join(", ", winners)}")
+            .Replace("${pushed}", $"Pushed: {string.Join(", ", pushed)}")
+            .Replace("${loosers}", $"Lost: {string.Join(", ", loosed)}")
+            .Replace("${busted}", $"Busted: {string.Join(", ", busted)}");
+        ImGui.InputTextMultiline(
+            "##short_result_example_output",
+            ref preview,
+            4096,
+            new Vector2(-1f, 180f),
+            ImGuiInputTextFlags.ReadOnly);
+
+        ImGui.EndTable();
+    }
+
+    private static List<ShortResultRule> CloneShortResultRules(IEnumerable<ShortResultRule> rules)
+        => rules.Select(rule => rule.Clone()).ToList();
+
+    private void PushShortResultUndo(List<ShortResultRule> snapshot)
+    {
+        _shortResultUndoHistory.Add(snapshot);
+        if (_shortResultUndoHistory.Count > 100)
+            _shortResultUndoHistory.RemoveAt(0);
     }
 
     private void DrawSettingsV2Betting()

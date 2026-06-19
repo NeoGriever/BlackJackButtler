@@ -12,6 +12,30 @@ public enum NearbyAlertSoundMode { Iterative, Random, FirstOnly }
 public enum NearbyShapeMode { Circle, Rectangle }
 public enum ButtonBarLayout { Horizontal, Vertical }
 public enum BetLimitEntryKind { MinBet, Vip }
+public enum ShortResultDataSource { None, Winners, Pushed, Loosed, Busted }
+public enum GilVisualMode { Plain, Grouped, FixedGroup }
+public enum MenuStyleMode { Sidebar, BurgerMenu, TopTabs }
+
+[Serializable]
+public sealed class ShortResultRule
+{
+    public ShortResultDataSource Data = ShortResultDataSource.None;
+    public bool VisibleIfEmpty;
+    public bool VisibleIfContentBeforeIsEmpty;
+    public bool VisibleIfContentAfterIsEmpty;
+    public bool Compress;
+    public string Template = string.Empty;
+
+    public ShortResultRule Clone() => new()
+    {
+        Data = Data,
+        VisibleIfEmpty = VisibleIfEmpty,
+        VisibleIfContentBeforeIsEmpty = VisibleIfContentBeforeIsEmpty,
+        VisibleIfContentAfterIsEmpty = VisibleIfContentAfterIsEmpty,
+        Compress = Compress,
+        Template = Template,
+    };
+}
 
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
@@ -22,6 +46,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool AllowEditingStandardRegex = false;
 
     public bool FirstDealThenPlay = true;
+    public bool PlayerRollingForThemselves = false;
     public bool IdenticalSplitOnly = true;
     public bool EnableSplit = true;
     public bool EnableDoubleDown = true;
@@ -84,12 +109,15 @@ public sealed class Configuration : IPluginConfiguration
     public bool DealerSoftRule = true;
     public bool SmallResult = false;
     public string ResultTemplate = "${results}";
+    public List<ShortResultRule> ShortResultRules = new();
+    public bool ShortResultRulesInitialized = false;
     public bool AutostartRoundOnlyOnMultiplePlayers = true;
     public bool EnableAntiDouble = false;
     public Vector4 HighlightColor = new Vector4(1.0f, 1.0f, 0.0f, 1.0f);
     public Vector4 HighlightTextColor = new Vector4(0f, 0f, 0f, 1f);
     public Vector4 ButtonColor     = new Vector4(0.26f, 0.26f, 0.26f, 1.0f); // dark grey
     public Vector4 ButtonTextColor = new Vector4(1.0f,  1.0f,  1.0f,  1.0f); // white
+    public GilVisualMode GilVisual = GilVisualMode.FixedGroup;
 
     public float PayoutPercent = 30f;
     public long GilPerHour = 250000;
@@ -109,6 +137,8 @@ public sealed class Configuration : IPluginConfiguration
     public bool DisableUpdatePopup = false;
 
     public bool UseBurgerMenu = false;
+    public MenuStyleMode MenuStyle = MenuStyleMode.Sidebar;
+    public bool MenuStyleMigrated = false;
     public int MainViewVersion = 1;
     public bool MainViewV2SuperCompact = false;
 
@@ -205,6 +235,64 @@ public sealed class Configuration : IPluginConfiguration
 
     public static string[] StandardBatchNames => DefaultsManager.GetDefaultMessages().Select(m => m.Name).ToArray();
     public static string[] StandardRegexNames => DefaultsManager.GetDefaultRegex().Select(r => r.Name).ToArray();
+
+    public static List<ShortResultRule> CreateDefaultShortResultRules() => new()
+    {
+        new() { Data = ShortResultDataSource.Winners, Compress = true, Template = "Winners: <data>" },
+        new() { Data = ShortResultDataSource.None, Template = " | " },
+        new() { Data = ShortResultDataSource.Pushed, Compress = true, Template = "Pushed: <data>" },
+        new() { Data = ShortResultDataSource.None, Template = " | " },
+        new() { Data = ShortResultDataSource.Loosed, Compress = true, Template = "Lost: <data>" },
+        new() { Data = ShortResultDataSource.None, Template = " | " },
+        new() { Data = ShortResultDataSource.Busted, Compress = true, Template = "Busted: <data>" },
+    };
+
+    public bool EnsureShortResultRules()
+    {
+        if (ShortResultRulesInitialized)
+            return false;
+
+        ShortResultRules ??= new List<ShortResultRule>();
+        var defaults = CreateDefaultShortResultRules();
+
+        if (ShortResultRules.Count == 0)
+        {
+            ShortResultRules = defaults;
+        }
+        else
+        {
+            // Older builds initialized the field with defaults before Newtonsoft
+            // populated it. Every load therefore prepended another default block.
+            while (ShortResultRules.Count > defaults.Count
+                && HasRulePrefix(ShortResultRules, defaults))
+            {
+                ShortResultRules.RemoveRange(0, defaults.Count);
+            }
+        }
+
+        ShortResultRulesInitialized = true;
+        return true;
+    }
+
+    private static bool HasRulePrefix(IReadOnlyList<ShortResultRule> rules, IReadOnlyList<ShortResultRule> prefix)
+    {
+        if (rules.Count < prefix.Count)
+            return false;
+
+        for (var i = 0; i < prefix.Count; i++)
+        {
+            var left = rules[i];
+            var right = prefix[i];
+            if (left.Data != right.Data
+                || left.VisibleIfEmpty != right.VisibleIfEmpty
+                || left.VisibleIfContentBeforeIsEmpty != right.VisibleIfContentBeforeIsEmpty
+                || left.VisibleIfContentAfterIsEmpty != right.VisibleIfContentAfterIsEmpty
+                || left.Compress != right.Compress
+                || !string.Equals(left.Template, right.Template, StringComparison.Ordinal))
+                return false;
+        }
+        return true;
+    }
 
     public void ForceResetStandardBatches() {
         var defaults = DefaultsMigration.GetSnapshotMessages()

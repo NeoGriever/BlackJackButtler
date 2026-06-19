@@ -189,6 +189,9 @@ public sealed class Plugin : IDalamudPlugin
 
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
+        if (Configuration.EnsureShortResultRules())
+            Configuration.Save();
+
         if (!Configuration.EnableAllianceSupport)
         {
             Configuration.EnableAllianceSupport = true;
@@ -208,6 +211,14 @@ public sealed class Plugin : IDalamudPlugin
         {
             Configuration.NotifyGroupsMigrated = true;
             DefaultsMigration.MigrateNotifyGroups(Configuration);
+            Configuration.Save();
+        }
+
+        if (!Configuration.MenuStyleMigrated)
+        {
+            Configuration.MenuStyleMigrated = true;
+            if (Configuration.UseBurgerMenu)
+                Configuration.MenuStyle = MenuStyleMode.BurgerMenu;
             Configuration.Save();
         }
 

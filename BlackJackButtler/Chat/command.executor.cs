@@ -30,6 +30,9 @@ public static class CommandExecutor
     private static bool _wait = false;
     private static bool _cancel = false;
     private static int _expectedDiceSides;
+    private static bool _expectsPlayerDice;
+    private static string _expectedDicePlayerName = string.Empty;
+    private static uint _expectedDicePlayerWorldId;
 
     private static string _currentGroupName = string.Empty;
     private static string _currentTargetPlayer = string.Empty;
@@ -66,12 +69,82 @@ public static class CommandExecutor
         window.AddDebugLog("[Executor] NotifyDiceResult called - releasing wait");
         _wait = false;
         Volatile.Write(ref _expectedDiceSides, 0);
+        ClearExpectedPlayerDice();
     }
 
     public static bool IsWaitingForDiceValue(int value)
     {
         var sides = Volatile.Read(ref _expectedDiceSides);
         return _wait && sides > 0 && value >= 1 && value <= sides;
+    }
+
+    public static bool TryAcceptPlayerDice(
+        ParsedChatMessage message,
+        List<PlayerState> players,
+        PlayerState dealer)
+    {
+        if (!_wait || !_expectsPlayerDice || Volatile.Read(ref _expectedDiceSides) != 13
+            || !message.DiceValue.HasValue)
+            return false;
+
+        // Group /dice 13 reports its range. Native /random is delivered through the
+        // RandomNumber chat kind without range metadata, so it is accepted only while
+        // a 13-roll from this exact player is pending and only for values 1..13.
+        if (message.DiceSides.HasValue && message.DiceSides.Value != 13)
+            return false;
+        if (!message.DiceSides.HasValue && !ChatLogBuffer.IsDiceChatType(message.ChatType))
+            return false;
+        if (message.DiceValue.Value is < 1 or > 13)
+            return false;
+
+        var expected = players.FirstOrDefault(p =>
+            p.Name.Equals(_expectedDicePlayerName, StringComparison.OrdinalIgnoreCase)
+            && (_expectedDicePlayerWorldId == 0 || p.WorldId == _expectedDicePlayerWorldId));
+        if (expected == null || !SenderMatchesExpectedPlayer(message, expected))
+        {
+            Plugin.Instance.GetMainWindow().AddDebugLog(
+                $"[PlayerDice] Ignored roll from '{message.Name}': waiting for '{_expectedDicePlayerName}'");
+            return false;
+        }
+
+        var card = GameEngine.MapDice13ToCardValue(message.DiceValue.Value);
+        Plugin.Instance.GetMainWindow().AddDebugLog(
+            $"[PlayerDice] Accepted {message.DiceValue.Value}/13 from {expected.DisplayName} as card {card}");
+        DiceResultHandler.HandleDiceResult(card, Plugin.Instance.Configuration, players, dealer);
+        return true;
+    }
+
+    private static bool SenderMatchesExpectedPlayer(ParsedChatMessage message, PlayerState expected)
+    {
+        if (message.WorldId > 0 && expected.WorldId != 0 && (uint)message.WorldId != expected.WorldId)
+            return false;
+
+        var sender = message.Name.Trim();
+        if (sender.Equals(expected.Name, StringComparison.OrdinalIgnoreCase)
+            || sender.Equals(expected.ResolvedName, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var parts = expected.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length < 2)
+            return false;
+        var surname = string.Join(' ', parts.Skip(1));
+        return sender.Equals($"{parts[0]} {surname[0]}.", StringComparison.OrdinalIgnoreCase)
+            || sender.Equals($"{parts[0][0]}. {surname}", StringComparison.OrdinalIgnoreCase)
+            || sender.Equals($"{parts[0][0]}. {surname[0]}.", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void ExpectPlayerDice(PlayerState player)
+    {
+        _expectedDicePlayerName = player.Name;
+        _expectedDicePlayerWorldId = player.WorldId;
+        _expectsPlayerDice = true;
+    }
+
+    private static void ClearExpectedPlayerDice()
+    {
+        _expectsPlayerDice = false;
+        _expectedDicePlayerName = string.Empty;
+        _expectedDicePlayerWorldId = 0;
     }
 
     public static void SetPreActionSnapshot(int snapshotIndex)
@@ -86,6 +159,7 @@ public static class CommandExecutor
         _cancel = true;
         _wait = false;
         Volatile.Write(ref _expectedDiceSides, 0);
+        ClearExpectedPlayerDice();
         _delayCts?.Cancel();
     }
 
@@ -453,18 +527,34 @@ public static class CommandExecutor
 
                 bool isDiceCommand = processedText.Trim().StartsWith("/dice", StringComparison.OrdinalIgnoreCase);
 
+                bool waitForPlayerRoll = false;
                 if (isDiceCommand)
                 {
                     _wait = true;
                     var diceMatch = DicePartyRegex.Match(processedText.Trim());
+                    var parsedSides = diceMatch.Success && int.TryParse(diceMatch.Groups[1].Value, out var sides)
+                        ? sides
+                        : 0;
                     Volatile.Write(
                         ref _expectedDiceSides,
-                        diceMatch.Success && int.TryParse(diceMatch.Groups[1].Value, out var sides)
-                            ? sides
-                            : 0);
+                        parsedSides);
+                    waitForPlayerRoll = cfg.PlayerRollingForThemselves
+                        && pState != null
+                        && !pState.IsDealer
+                        && parsedSides == 13;
+                    if (waitForPlayerRoll)
+                    {
+                        ExpectPlayerDice(pState!);
+                        LogFlow(window, $"Step {step} waiting for {pState!.DisplayName} to roll /dice 13");
+                    }
                 }
 
-                if (isDiceCommand && TryHandleDebugDice(processedText))
+                if (isDiceCommand && waitForPlayerRoll)
+                {
+                    LogFlow(window, $"Step {step} dealer dice dispatch suppressed for player self-roll");
+                    _lastSentRawText = effectiveCmd.Text;
+                }
+                else if (isDiceCommand && TryHandleDebugDice(processedText))
                 {
                     LogFlow(window, $"Step {step} handled by debug dice");
                     _lastSentRawText = effectiveCmd.Text;
@@ -496,11 +586,13 @@ public static class CommandExecutor
                             LogFlow(window, $"Step {step} dice wait timeout");
                             _wait = false;
                             Volatile.Write(ref _expectedDiceSides, 0);
+                            ClearExpectedPlayerDice();
                         }
                     }
 
                     LogFlow(window, $"Step {step} dice wait end | Cancel={_cancel}");
                     Volatile.Write(ref _expectedDiceSides, 0);
+                    ClearExpectedPlayerDice();
 
                     if (_cancel)
                     {
@@ -529,6 +621,7 @@ public static class CommandExecutor
         _cancel = false;
         _wait = false;
         Volatile.Write(ref _expectedDiceSides, 0);
+        ClearExpectedPlayerDice();
         _internalDepth = 0;
         _currentGroupName = string.Empty;
         _currentTargetPlayer = string.Empty;
