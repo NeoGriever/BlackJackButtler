@@ -158,7 +158,8 @@ public partial class BlackJackButtlerWindow
                 ImGui.PopStyleColor(5);
             }
         }
-        if (ImGui.BeginTable("bjb_main_table", 10, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
+        int playerColumnCount = _config.PlayerRollingForThemselves ? 11 : 10;
+        if (ImGui.BeginTable("bjb_main_table", playerColumnCount, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
         {
             SetupTableColumns();
             DrawPlayerTableHeaders();
@@ -343,6 +344,8 @@ public partial class BlackJackButtlerWindow
         ImGui.TableSetupColumn("Bet", ImGuiTableColumnFlags.WidthStretch, 1.0f);
         ImGui.TableSetupColumn("Cards", ImGuiTableColumnFlags.WidthFixed, compact ? 120 : 150);
         ImGui.TableSetupColumn("Points", ImGuiTableColumnFlags.WidthFixed, compact ? 55 : 80);
+        if (_config.PlayerRollingForThemselves)
+            ImGui.TableSetupColumn("S", ImGuiTableColumnFlags.WidthFixed, 25);
         ImGui.TableSetupColumn("Controls", ImGuiTableColumnFlags.WidthFixed, compact ? 110 : 120);
     }
 
@@ -370,7 +373,7 @@ public partial class BlackJackButtlerWindow
         {
             ImGui.TableSetColumnIndex(column);
             string? name = ImGui.TableGetColumnName(column);
-            if (name is "V" or "A" or "J" or "R" or "P")
+            if (name is "V" or "A" or "J" or "R" or "P" or "S")
             {
                 CenteredHeader(name);
             }
@@ -1172,6 +1175,21 @@ public partial class BlackJackButtlerWindow
         DrawMultiHandCards(p);
         ImGui.TableNextColumn();
         DrawMultiHandPoints(p);
+        if (_config.PlayerRollingForThemselves)
+        {
+            ImGui.TableNextColumn();
+            bool selfRoll = PlayerRollPreferenceManager.GetPreference(_config, p);
+            if (ImGui.Checkbox($"##self_roll_{p.UIID}", ref selfRoll))
+            {
+                PlayerRollPreferenceManager.SetPreference(_config, p, selfRoll);
+                _save();
+                SaveSessionFromUI();
+            }
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip(selfRoll
+                    ? "This player rolls their own 13-sided dice."
+                    : "The dealer system rolls automatically for this player.");
+        }
         ImGui.TableNextColumn();
         DrawPlayerControls(p);
 

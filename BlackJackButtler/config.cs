@@ -47,6 +47,7 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool FirstDealThenPlay = true;
     public bool PlayerRollingForThemselves = false;
+    public Dictionary<string, bool> PlayerSelfRollPreferences = new();
     public bool IdenticalSplitOnly = true;
     public bool EnableSplit = true;
     public bool EnableDoubleDown = true;

@@ -370,7 +370,7 @@ public partial class BlackJackButtlerWindow
     internal void DrawPlayersPanelV2(string idSuffix = "")
     {
         _partyDissolved = _players.Count > 0 && !_players.Any(x => x.IsInParty);
-        const int columnCount = 10;
+        int columnCount = _config.PlayerRollingForThemselves ? 11 : 10;
         if (ImGui.BeginTable($"bjb_main_table_v2{idSuffix}", columnCount, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.Resizable))
         {
             SetupTableColumns();

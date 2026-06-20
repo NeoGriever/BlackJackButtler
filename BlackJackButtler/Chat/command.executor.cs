@@ -538,10 +538,10 @@ public static class CommandExecutor
                     Volatile.Write(
                         ref _expectedDiceSides,
                         parsedSides);
-                    waitForPlayerRoll = cfg.PlayerRollingForThemselves
-                        && pState != null
+                    waitForPlayerRoll = pState != null
                         && !pState.IsDealer
-                        && parsedSides == 13;
+                        && parsedSides == 13
+                        && PlayerRollPreferenceManager.ShouldPlayerRoll(cfg, pState);
                     if (waitForPlayerRoll)
                     {
                         ExpectPlayerDice(pState!);
