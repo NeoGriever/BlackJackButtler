@@ -12,24 +12,18 @@ public class UpdatePopupWindow : Window
     private readonly Action _save;
 
     private static readonly string CurrentChangelog =
-        "v1.8.4.4\n" +
-        "\n" +
-        "NEW - Short-Result Message Configuration:\n" +
-        "- Build the ${results} message from a top-to-bottom list of rules\n" +
-        "- Each rule picks a data source (Winners, Pushed, Lost, Busted, or none) and its own template with a <data> placeholder\n" +
-        "- Conditional visibility: show a rule only when the content before or after is empty, or only when its own data is empty\n" +
-        "- Per-rule de-duplication of repeated names, with an optional outer template wrapping the whole result\n" +
-        "- Live example preview, per-step Undo, and JSON import/export of the entire rule list\n" +
-        "\n" +
-        "NEW - Display & Navigation:\n" +
-        "- Gil visual setting (General): three display styles for all Gil input fields (incl. Stats) - plain digits, grouped, and fixed-width grouped (default)\n" +
-        "- Top Tabs menu style (General, experimental): pages can now be selected as tabs across the top, alongside Sidebar (default) and Burger Menu\n" +
-        "\n" +
-        "NEW - Gameplay:\n" +
-        "- \"Player rolling for themselves\" setting: players roll their required cards with /dice 13, /dice alliance 13, or /random (dealer rolls unchanged)\n" +
+        "v1.8.4.5\n" +
         "\n" +
         "FIXED:\n" +
-        "- Player aliases work again: editing an alias by clicking the player name (after the old \"A\" button was removed) was broken; aliases are now displayed and matched correctly\n";
+        "- No more 0 cards in Auto Mode when Player Roll Mode is enabled\n" +
+        "- Auto Mode now explicitly waits for the active player's valid 13-sided roll\n" +
+        "- Rolls from other players cannot satisfy the pending self-roll\n" +
+        "\n" +
+        "NEW - Individual Player Roll Mode:\n" +
+        "- A checkbox beside each player's actions controls whether that player rolls for themselves\n" +
+        "- All player checkboxes are enabled by default\n" +
+        "- Disabled players are rolled automatically by the dealer system\n" +
+        "- Each player's choice is saved persistently\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",
