@@ -1,4 +1,4 @@
-`v1.8.4.5`
+`v1.8.4.6`
 
 # BlackJack Buttler
 
@@ -441,8 +441,7 @@ These settings require **Advanced** user level or higher.
 | Enable Dirty Blackjack | On | Allows 21 with 3+ cards to be treated as dirty blackjack instead of normal 21 behavior. |
 | Enable Charlie | Off | Enables configured-card-count Charlie hands. |
 | Charlie Instant Win | On | Charlie wins immediately against the dealer result when enabled. |
-| Autostart round only on multiple players | On | NextRound trigger only auto-starts with 2+ active player votes. With 1 player, highlights the button instead. |
-| Auto-confirm payout trades | Off | Lets Payout Management confirm prepared payout trades automatically after entering Gil. |
+| Player Ready Start requires 2 or more participants | On | Player Ready / RoundStart only auto-starts with 2+ active participants. The dealer is not counted. This does not affect Auto Continue. |
 | Small Result Message | Off | Sends one compressed result message instead of individual messages per player hand. |
 | Result Template | `${results}` | Template used for compressed results. Supports `<results>` and result variables. |
 

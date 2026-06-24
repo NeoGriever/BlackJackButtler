@@ -342,13 +342,8 @@ public partial class BlackJackButtlerWindow
             ImGui.Separator();
 
             ImGui.Spacing();
-            if (ImGui.Checkbox("Autostart round only on multiple players", ref _config.AutostartRoundOnlyOnMultiplePlayers)) _save();
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: NextRound trigger only auto-starts when 2+ active players voted.\nWith only 1 player, it highlights the button instead.\nInactive: NextRound auto-starts regardless of player count.");
-
-            ImGui.Spacing();
-            if (ImGui.Checkbox("Auto-confirm payout trades", ref _config.PayoutAutoConfirmTrade)) _save();
-            if (ImGui.IsItemHovered())
-                ImGui.SetTooltip("Active: Payout Management confirms the prepared trade automatically after entering Gil.\nInactive: BJB targets the player, opens trade, and enters Gil; final confirmation stays manual.");
+            if (ImGui.Checkbox("Player Ready Start requires 2 or more participants", ref _config.AutostartRoundOnlyOnMultiplePlayers)) _save();
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Enabled: the Player Ready / RoundStart trigger requires at least 2 active participants.\nDisabled: one active participant is enough.\nThe dealer is not counted. This does not affect the Auto-Continue timer.");
 
             ImGui.Spacing();
             if (ImGui.Checkbox("Anti-Double", ref _config.EnableAntiDouble)) _save();
@@ -1188,7 +1183,6 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "ButtonBarFixedWidth",                    v => _config.ButtonBarFixedWidth = v);
         TryApply<float> (j, "ButtonBarFixedWidthValue",               v => _config.ButtonBarFixedWidthValue = v);
         TryApply<Vector4>(j, "ButtonBarBackgroundColor",              v => _config.ButtonBarBackgroundColor = v);
-        TryApply<bool>  (j, "PayoutAutoConfirmTrade",                 v => _config.PayoutAutoConfirmTrade = v);
         TryApply<float> (j, "InitialViewDirection",                   v => _config.InitialViewDirection = v);
         TryApply<bool>  (j, "LookEveryTime",                         v => _config.LookEveryTime = v);
         TryApply<bool>  (j, "UnlockWaitTimer",                       v => _config.UnlockWaitTimer = v);

@@ -4,12 +4,12 @@
     "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
     "Description": "/bjb - opens the blackjack buttler tool",
     "InternalName": "BlackJackButtler",
-    "AssemblyVersion": "1.8.4.5",
+    "AssemblyVersion": "1.8.4.6",
     "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "TestingDalamudApiLevel": 15,
     "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/BlackJackButtler/images/icon.png",
     "Tags": ["BlackJack", "Helper", "Chat"],
-    "Changelog": "v1.8.4.5\n\nFIXED:\n- No more 0 cards in Auto Mode when Player Roll Mode is enabled: the game now waits for the active player's valid 13-sided roll\n- Only the player whose turn is active can satisfy the pending self-roll\n\nNEW:\n- Player Roll Mode can now be configured individually per player from the player table\n- All players default to self-roll; disabled players are rolled automatically by the dealer system\n- Per-player choices are saved persistently"
+    "Changelog": "v1.8.4.6\n\nSETTINGS:\n- Version 2 Automation now provides a direct Player Ready Start switch: require 2 or more active participants, or start every time. The dealer is excluded and Auto Continue remains timer-only."
 }
