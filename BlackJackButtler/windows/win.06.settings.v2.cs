@@ -158,6 +158,32 @@ public partial class BlackJackButtlerWindow
             _config.AutoRun = false;
 
         ImGui.Spacing();
+        ImGui.TextUnformatted("Player Ready Start");
+        bool requireMultipleParticipants = _config.AutostartRoundOnlyOnMultiplePlayers;
+        if (requireMultipleParticipants)
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1f, 0.5f, 0f, 1f));
+        if (BJBGui.SmallButton("Only at 2 or more participants##v2_ready_start_multiple") && !requireMultipleParticipants)
+        {
+            _config.AutostartRoundOnlyOnMultiplePlayers = true;
+            _save();
+        }
+        if (requireMultipleParticipants)
+            ImGui.PopStyleColor();
+
+        ImGui.SameLine();
+        if (!requireMultipleParticipants)
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1f, 0.5f, 0f, 1f));
+        if (BJBGui.SmallButton("Every time##v2_ready_start_every_time") && requireMultipleParticipants)
+        {
+            _config.AutostartRoundOnlyOnMultiplePlayers = false;
+            _save();
+        }
+        if (!requireMultipleParticipants)
+            ImGui.PopStyleColor();
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Counts active participants only; the dealer is excluded.\nThis does not affect the Auto-Continue timer.");
+
+        ImGui.Spacing();
         Header("Initial Rotation");
         var currentRotation = Plugin.ObjectTable.LocalPlayer?.Rotation;
         var currentText = currentRotation.HasValue

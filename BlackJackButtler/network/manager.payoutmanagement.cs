@@ -128,7 +128,7 @@ public static class PayoutManagement
                 _currentChunk = Math.Min(player.Bank, MaxGilPerTrade);
                 _confirmAllowed = false;
                 _bankBeforeCurrentTrade = player.Bank;
-                _currentTradeAutoConfirm = Plugin.Instance.Configuration.PayoutAutoConfirmTrade;
+                _currentTradeAutoConfirm = false;
 
                 if (TryStartDropboxPayout(player, (int)_currentChunk))
                 {
@@ -255,12 +255,6 @@ public static class PayoutManagement
                 var progress = 1.0f - ((float)Math.Max(0, currentBank) / _startAmount);
                 ImGui.ProgressBar(Math.Clamp(progress, 0f, 1f), new Vector2(-1, 0), $"{(int)(progress * 100)}%");
             }
-
-            ImGui.Spacing();
-            ImGui.TextDisabled(Plugin.Instance.Configuration.PayoutAutoConfirmTrade
-                ? "Auto-confirm enabled"
-                : "Manual trade confirmation");
-            ImGui.Spacing();
 
             if (ImGui.Button("Cancel Payout", new Vector2(-1, 0)))
                 Cancel();

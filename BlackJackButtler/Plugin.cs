@@ -566,23 +566,23 @@ public sealed class Plugin : IDalamudPlugin
                     _autoContinueWaiting = false;
                     var players = mainWindow.GetPlayers();
                     var activePlayers = players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
-                    if (activePlayers.Count >= 2 || !Configuration.AutostartRoundOnlyOnMultiplePlayers)
-                    {
-                        var underfunded = activePlayers.Where(GameEngine.IsPlayerUnableToCoverBet).ToList();
-                        if (underfunded.Count > 0)
-                        {
-                            mainWindow.SetHighlightNewRound();
-                            InsufficientBetQueueManager.EnqueueMany(underfunded, Configuration, "AutoContinue");
-                            mainWindow.AddDebugLog("[AutoContinue] Auto-start blocked: at least one active player cannot cover their bet.");
-                            return;
-                        }
+                    if (activePlayers.Count == 0)
+                        return;
 
-                        RunAutoAction(
-                            "AutoContinue",
-                            () => GameEngine.StartInitialDeal(players, Configuration),
-                            () => Configuration.AutoContinue && GameEngine.CanAcceptInterRoundDetectors(),
-                            "RoundStart");
+                    var underfunded = activePlayers.Where(GameEngine.IsPlayerUnableToCoverBet).ToList();
+                    if (underfunded.Count > 0)
+                    {
+                        mainWindow.SetHighlightNewRound();
+                        InsufficientBetQueueManager.EnqueueMany(underfunded, Configuration, "AutoContinue");
+                        mainWindow.AddDebugLog("[AutoContinue] Auto-start blocked: at least one active player cannot cover their bet.");
+                        return;
                     }
+
+                    RunAutoAction(
+                        "AutoContinue",
+                        () => GameEngine.StartInitialDeal(players, Configuration),
+                        () => Configuration.AutoContinue && GameEngine.CanAcceptInterRoundDetectors(),
+                        "RoundStart");
                 }
             }
             else

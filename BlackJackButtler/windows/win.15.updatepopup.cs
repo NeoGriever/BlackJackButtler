@@ -12,18 +12,10 @@ public class UpdatePopupWindow : Window
     private readonly Action _save;
 
     private static readonly string CurrentChangelog =
-        "v1.8.4.5\n" +
+        "v1.8.4.6\n" +
         "\n" +
-        "FIXED:\n" +
-        "- No more 0 cards in Auto Mode when Player Roll Mode is enabled\n" +
-        "- Auto Mode now explicitly waits for the active player's valid 13-sided roll\n" +
-        "- Rolls from other players cannot satisfy the pending self-roll\n" +
-        "\n" +
-        "NEW - Individual Player Roll Mode:\n" +
-        "- A checkbox beside each player's actions controls whether that player rolls for themselves\n" +
-        "- All player checkboxes are enabled by default\n" +
-        "- Disabled players are rolled automatically by the dealer system\n" +
-        "- Each player's choice is saved persistently\n";
+        "SETTINGS:\n" +
+        "- Version 2 Automation now provides a direct Player Ready Start switch: require 2 or more active participants, or start every time. The dealer is excluded and Auto Continue remains timer-only.\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",
