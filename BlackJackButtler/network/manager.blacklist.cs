@@ -98,7 +98,8 @@ public static class BlacklistManager
             foreach (var entry in entries)
             {
                 if (string.Equals(entry.Name, playerName, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(entry.World, homeWorld, StringComparison.OrdinalIgnoreCase))
+                    (string.Equals(entry.World, "*", StringComparison.Ordinal) ||
+                     string.Equals(entry.World, homeWorld, StringComparison.OrdinalIgnoreCase)))
                 {
                     found = true;
                     break;

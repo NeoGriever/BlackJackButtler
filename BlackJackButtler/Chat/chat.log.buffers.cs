@@ -60,7 +60,7 @@ public sealed class ChatLogBuffer
   public static bool IsSupportedGroupChatType(int t, Configuration config)
   {
     return IsPartyChatType(t)
-        || (GroupContextManager.IsAllianceMode(config) && IsAllianceChatType(t));
+        || IsAllianceChatType(t);
   }
 
   public static bool IsTellChatType(int t)

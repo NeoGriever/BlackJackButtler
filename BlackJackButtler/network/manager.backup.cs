@@ -115,6 +115,21 @@ public static class SessionManager
         return File.Exists(path);
     }
 
+    public static bool HasRestorableGameSession()
+    {
+        var snapshot = LoadSession();
+        return IsRestorableGameSession(snapshot);
+    }
+
+    private static bool IsRestorableGameSession(SessionSnapshot? snapshot)
+    {
+        if (snapshot == null || !snapshot.IsRecognitionActive)
+            return false;
+
+        return snapshot.CurrentPhase != GamePhase.Waiting
+            || snapshot.Players.Any(p => p.IsActivePlayer || p.Bank > 0 || p.CurrentBet > 0);
+    }
+
     public static void ClearSession()
     {
         var path = GetSessionFilePath();
@@ -146,7 +161,7 @@ public static class SessionManager
         currentHistoryIndex = 0;
 
         var snapshot = LoadSession();
-        if (snapshot == null)
+        if (snapshot == null || !IsRestorableGameSession(snapshot))
             return false;
 
         try
