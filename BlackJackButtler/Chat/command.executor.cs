@@ -202,15 +202,16 @@ public static class CommandExecutor
         bool isTellCommand = trimmed.StartsWith("/tell ", StringComparison.OrdinalIgnoreCase)
                           || trimmed.StartsWith("/t ", StringComparison.OrdinalIgnoreCase);
 
-        if (isTellCommand && text.Contains("<t>"))
+        var targetToken = FindFirstTargetToken(text);
+        if (isTellCommand && targetToken.index >= 0)
         {
             string currentTarget = GameEngine.GetCurrentTargetName();
 
             bool isCorrectlyTargeted = pState != null
                 && !string.IsNullOrWhiteSpace(currentTarget)
-                && currentTarget.Equals(pState.Name, StringComparison.OrdinalIgnoreCase);
+                && (currentTarget.Equals(pState.Name, StringComparison.OrdinalIgnoreCase)
+                    || currentTarget.Equals(PlayerIdentityManager.GetQualifiedName(pState), StringComparison.OrdinalIgnoreCase));
 
-            var idx = text.IndexOf("<t>", StringComparison.Ordinal);
             string firstReplacement;
             if (isCorrectlyTargeted)
             {
@@ -226,8 +227,8 @@ public static class CommandExecutor
                     ? qualifiedName
                     : realName;
             }
-            var after = text[(idx + 3)..].Replace("<t>", aliasOrT);
-            text = string.Concat(text.AsSpan(0, idx), firstReplacement, after);
+            var after = text[(targetToken.index + targetToken.length)..].Replace("<t>", aliasOrT);
+            text = string.Concat(text.AsSpan(0, targetToken.index), firstReplacement, after);
         }
         else
         {
@@ -663,6 +664,18 @@ public static class CommandExecutor
         text = text.Replace("<.>", "<t>");
 
         return text;
+    }
+
+    private static (int index, int length) FindFirstTargetToken(string text)
+    {
+        var tIndex = text.IndexOf("<t>", StringComparison.Ordinal);
+        var protectedIndex = text.IndexOf("<.>", StringComparison.Ordinal);
+
+        if (tIndex < 0)
+            return protectedIndex < 0 ? (-1, 0) : (protectedIndex, 3);
+        if (protectedIndex < 0 || tIndex < protectedIndex)
+            return (tIndex, 3);
+        return (protectedIndex, 3);
     }
 
     private static (bool execute, bool skipDelay, string command) EvaluateConditionalCommand(string text)

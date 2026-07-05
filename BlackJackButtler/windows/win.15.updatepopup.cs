@@ -12,10 +12,12 @@ public class UpdatePopupWindow : Window
     private readonly Action _save;
 
     private static readonly string CurrentChangelog =
-        "v1.8.4.6\n" +
+        "v1.8.4.7\n" +
         "\n" +
         "SETTINGS:\n" +
-        "- Version 2 Automation now provides a direct Player Ready Start switch: require 2 or more active participants, or start every time. The dealer is excluded and Auto Continue remains timer-only.\n";
+        "- Version 2 Automation now provides a direct Player Ready Start switch: require 2 or more active participants, or start every time. The dealer is excluded and Auto Continue remains timer-only.\n" +
+        "\n" +
+        "First of all, Latency: I did not copy anything of SBJ, because i don't have SBJ. I have no access to any code or any file from SBJ. Just because i have the not finished idea of a companion tool does not mean, that this idea is stolen. Straigt blocking me after you blaming me for maked up things is just stupid. You're of course removed from the thanks page after all this bullshit you talking about me, where i have more than enough evidence, was a logical reaction. YOU are just a bad person and i don't have any regrets to kick you out of the plugin at all.\n";
 
     public UpdatePopupWindow(Configuration config, Action save)
         : base("The BlackJack Buttler has learned something new###BJBUpdatePopup",

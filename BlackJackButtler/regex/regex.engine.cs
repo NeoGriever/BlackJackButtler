@@ -159,9 +159,7 @@ public static class RegexEngine
 
     private static void ExecuteAction(UserRegexEntry entry, string matchedPattern, ParsedChatMessage msg, string cleanMessage, List<PlayerState> players, PlayerState dealer, Configuration cfg)
     {
-        var p = players.FirstOrDefault(x =>
-            x.Name.Equals(msg.Name, StringComparison.OrdinalIgnoreCase)
-            && (msg.WorldId <= 0 || x.WorldId == (uint)msg.WorldId));
+        var p = FindPlayerForMessage(players, msg);
 
         var options = entry.CaseSensitive ? RRX.RegexOptions.None : RRX.RegexOptions.IgnoreCase;
         var match = RRX.Regex.Match(cleanMessage, matchedPattern, options);
@@ -525,6 +523,26 @@ public static class RegexEngine
                 break;
             }
         }
+    }
+
+    private static PlayerState? FindPlayerForMessage(List<PlayerState> players, ParsedChatMessage msg)
+    {
+        if (string.IsNullOrWhiteSpace(msg.Name))
+            return null;
+
+        if (msg.WorldId > 0)
+        {
+            var worldMatch = players.FirstOrDefault(x =>
+                x.WorldId == (uint)msg.WorldId
+                && (x.Name.Equals(msg.Name, StringComparison.OrdinalIgnoreCase)
+                    || x.DisplayName.Equals(msg.Name, StringComparison.OrdinalIgnoreCase)
+                    || (!string.IsNullOrWhiteSpace(x.ResolvedName)
+                        && x.ResolvedName.Equals(msg.Name, StringComparison.OrdinalIgnoreCase))));
+            if (worldMatch != null)
+                return worldMatch;
+        }
+
+        return PlayerIdentityManager.Find(players, null, msg.Name);
     }
 
     private static void ExecuteDiceAction(

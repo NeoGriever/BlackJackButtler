@@ -180,7 +180,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
             }
         });
 
-        _showRestoreSessionButton = SessionManager.HasSavedSession();
+        _showRestoreSessionButton = SessionManager.HasRestorableGameSession();
     }
 
     public void SetHighlightNewRound() => _highlightNewRound = true;
@@ -465,7 +465,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         }
         else
         {
-            _showRestoreSessionButton = false;
+            _showRestoreSessionButton = SessionManager.HasRestorableGameSession();
             AddDebugLog("[SessionManager] Failed to restore session!", false);
         }
     }

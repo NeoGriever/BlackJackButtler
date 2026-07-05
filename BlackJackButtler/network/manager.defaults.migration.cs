@@ -388,6 +388,57 @@ public static class DefaultsMigration
         }
     }
 
+    internal static bool EnsureGameplayRegexPatterns(Configuration config)
+    {
+        if (config.GameplayRegexPatternsMigrated)
+            return false;
+
+        var changed = false;
+        changed |= EnsureRegexPatterns(
+            config,
+            RegexAction.BankTell,
+            "Bank Tell",
+            "^bank\\?$",
+            "^bank please\\.?$",
+            "^what does my bank say\\??$");
+        changed |= EnsureRegexPatterns(
+            config,
+            RegexAction.NextRound,
+            "New Round",
+            "^ready\\s*[!?.]*$",
+            "^rdy$",
+            "^let'?s go[!?.]*$");
+
+        config.GameplayRegexPatternsMigrated = true;
+        return true;
+    }
+
+    private static bool EnsureRegexPatterns(
+        Configuration config,
+        RegexAction action,
+        string fallbackName,
+        params string[] patterns)
+    {
+        var entry = config.UserRegexes.FirstOrDefault(x => x.Action == action)
+            ?? config.UserRegexes.FirstOrDefault(x => x.Name.Equals(fallbackName, StringComparison.OrdinalIgnoreCase));
+        if (entry == null)
+            return false;
+
+        entry.Patterns ??= new List<string>();
+        var changed = false;
+        foreach (var pattern in patterns)
+        {
+            if (entry.Patterns.Any(x => x.Equals(pattern, StringComparison.Ordinal)))
+                continue;
+
+            entry.Patterns.Add(pattern);
+            changed = true;
+            Plugin.Log.Information($"[DefaultsMigration] Added gameplay regex pattern to {entry.Name}: {pattern}");
+        }
+
+        return changed;
+    }
+
     internal static bool MigrateTellDotToken(Configuration config)
     {
         if (config.DotTokenMigrated) return false;

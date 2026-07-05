@@ -201,6 +201,9 @@ public sealed class Plugin : IDalamudPlugin
         if (DefaultsMigration.RunMigration(Configuration))
             Configuration.Save();
 
+        if (DefaultsMigration.EnsureGameplayRegexPatterns(Configuration))
+            Configuration.Save();
+
         if (DefaultsMigration.MigrateTellDotToken(Configuration))
             Configuration.Save();
 

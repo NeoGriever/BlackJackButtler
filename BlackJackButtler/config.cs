@@ -211,6 +211,7 @@ public sealed class Configuration : IPluginConfiguration
     public string DrawLogicStartEntry = "";
     public bool DrawLogicSeeded = false;
     public bool DotTokenMigrated = false;
+    public bool GameplayRegexPatternsMigrated = false;
     public bool NotifyGroupsMigrated = false;
     public string DrawLogicScriptDir = "";
 

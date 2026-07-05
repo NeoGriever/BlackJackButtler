@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "Name": "Latency Bryer",
+    "World": "*"
+  },
+  {
+    "Name": "Bryer Latency",
+    "World": "*"
+  }
+]
