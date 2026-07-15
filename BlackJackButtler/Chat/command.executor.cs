@@ -39,7 +39,6 @@ public static class CommandExecutor
     private static bool _currentGroupHasDice = false;
     private static int _preActionSnapshotIndex = -1;
     private static CancellationTokenSource? _delayCts = null;
-    private static string _lastSentRawText = string.Empty;
 
     public static string CurrentGroupName => _currentGroupName;
     public static string CurrentTargetPlayer => _currentTargetPlayer;
@@ -316,7 +315,7 @@ public static class CommandExecutor
             if (batch == null)
                 return string.Empty;
 
-            return batch.GetNextMessage(cfg.EnableAntiDouble) ?? string.Empty;
+            return batch.GetNextMessage() ?? string.Empty;
         });
     }
 
@@ -465,12 +464,6 @@ public static class CommandExecutor
                     continue;
                 }
 
-                if (cfg.EnableAntiDouble && effectiveCmd.NonDoubled && effectiveCmd.Text == _lastSentRawText)
-                {
-                    LogFlow(window, $"Step {step} skipped: anti-double");
-                    continue;
-                }
-
                 var commandText = effectiveCmd.Text;
                 LogFullDebug(window, $"Step {step} [Input] '{commandText}'");
                 if (TryResolveSkipCommand(
@@ -553,23 +546,29 @@ public static class CommandExecutor
                 if (isDiceCommand && waitForPlayerRoll)
                 {
                     LogFlow(window, $"Step {step} dealer dice dispatch suppressed for player self-roll");
-                    _lastSentRawText = effectiveCmd.Text;
                 }
                 else if (isDiceCommand && TryHandleDebugDice(processedText))
                 {
                     LogFlow(window, $"Step {step} handled by debug dice");
-                    _lastSentRawText = effectiveCmd.Text;
                 }
                 else
                 {
                     LogFlow(window, $"Step {step} dispatch requested");
-                    ChatCommandRouter.Send(
+                    var sendResult = await ChatCommandRouter.SendAsync(
                         processedText,
                         cfg,
                         $"{groupName}:{step}",
                         effectiveCmd.Text,
-                        allianceMode);
-                    _lastSentRawText = effectiveCmd.Text;
+                        allianceMode,
+                        cfg.EnableAntiDouble && effectiveCmd.NonDoubled);
+                    if (sendResult == ChatCommandSendResult.AntiDoubleSkipped)
+                    {
+                        LogFlow(
+                            window,
+                            $"[Anti-Double] Step {step} final Party/Alliance message matched the last " +
+                            "generated chat line; command and associated delay skipped");
+                        continue;
+                    }
                 }
 
                 if (isDiceCommand)
@@ -888,12 +887,6 @@ public static class CommandExecutor
                     continue;
                 }
 
-                if (cfg.EnableAntiDouble && effectiveCmd.NonDoubled && effectiveCmd.Text == _lastSentRawText)
-                {
-                    window.AddDebugLog($"[Executor-Internal] Step {step} skipped (Anti-Double: same as last sent)");
-                    continue;
-                }
-
                 var commandText = effectiveCmd.Text;
                 LogFullDebug(window, $"Internal {groupName}:{step} [Input] '{commandText}'");
                 if (TryResolveSkipCommand(
@@ -952,13 +945,20 @@ public static class CommandExecutor
                     $"Internal {groupName}:{step} [Final output] " +
                     $"mode={(allianceMode ? "Alliance" : "Party")} | '{processedText}'");
 
-                ChatCommandRouter.Send(
+                var sendResult = await ChatCommandRouter.SendAsync(
                     processedText,
                     cfg,
                     $"{groupName}:internal:{step}",
                     effectiveCmd.Text,
-                    allianceMode);
-                _lastSentRawText = effectiveCmd.Text;
+                    allianceMode,
+                    cfg.EnableAntiDouble && effectiveCmd.NonDoubled);
+                if (sendResult == ChatCommandSendResult.AntiDoubleSkipped)
+                {
+                    window.AddDebugLog(
+                        $"[Anti-Double] Internal step {step} final Party/Alliance message matched the last " +
+                        "generated chat line; command and associated delay skipped");
+                    continue;
+                }
 
                 float effectiveDelay = (Plugin.IsDebugMode && Plugin.IsSpeedMode) ? 0.2f
                     : Math.Max(MinCommandDelay, effectiveCmd.Delay * (effectiveCmd.FixedDelay ? 1f : cfg.CommandSpeedMultiplier));

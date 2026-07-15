@@ -81,7 +81,10 @@ public partial class BlackJackButtlerWindow
 
     // Regexes für Preview-Simulation
     private static readonly System.Text.RegularExpressions.Regex _pvSeRegex =
-        new(@"<se\.\d+>", System.Text.RegularExpressions.RegexOptions.Compiled);
+        new(
+            @"<se\.[^>]*>",
+            System.Text.RegularExpressions.RegexOptions.Compiled |
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     private static readonly System.Text.RegularExpressions.Regex _pvBatchRegex =
         new(@"#\{([^}]+)\}", System.Text.RegularExpressions.RegexOptions.Compiled);
 
@@ -701,6 +704,13 @@ public partial class BlackJackButtlerWindow
 
             if (preset.ApplyStandardCommands && snap.CommandGroups.Count > 0)
                 previewConfig.CommandGroups = snap.CommandGroups;
+            if (preset.ApplyOwnButtons && snap.CustomCommandGroups.Count > 0)
+            {
+                previewConfig.CustomCommandGroups = snap.CustomCommandGroups;
+                previewConfig.CustomButtonOrder = snap.CustomButtonOrder;
+            }
+            if (preset.ApplySettingsMessageSettings)
+                previewConfig.EnableAntiDouble = snap.EnableAntiDouble;
 
             if (preset.ApplyMessagesDefault || preset.ApplyMessagesCustom)
             {
@@ -746,6 +756,7 @@ public partial class BlackJackButtlerWindow
         string previewLoosers = string.Empty;
         string previewBusted = string.Empty;
         string previewResults = string.Empty;
+        string? lastPreviewGroupChatMessage = null;
 
         string ResolveBatch(string raw)
             => _pvBatchRegex.Replace(raw, m =>
@@ -848,8 +859,8 @@ public partial class BlackJackButtlerWindow
         string Process(string raw, string playerName)
         {
             RecomputePreviewResults();
-            raw = _pvSeRegex.Replace(raw, "");
             raw = ResolveBatch(raw);
+            raw = _pvSeRegex.Replace(raw, "");
             var currentCards = CardsText(currentTarget);
             var dealerCards = CardsText(previewDealer);
             return raw
@@ -878,7 +889,8 @@ public partial class BlackJackButtlerWindow
         static string ExtractChat(string text)
         {
             var t = text.TrimStart();
-            if (t.StartsWith("/p ", StringComparison.OrdinalIgnoreCase)) return t[3..].Trim();
+            if (ChatCommandRouter.TryGetAntiDoubleComparisonKey(t, out var groupMessage))
+                return groupMessage;
             if (t.StartsWith("/e ", StringComparison.OrdinalIgnoreCase)) return $"[/e] {t[3..].Trim()}";
             if (t.StartsWith("/s ", StringComparison.OrdinalIgnoreCase)) return $"[/s] {t[3..].Trim()}";
             if (t.StartsWith("/sh ", StringComparison.OrdinalIgnoreCase)) return $"[/sh] {t[4..].Trim()}";
@@ -947,9 +959,22 @@ public partial class BlackJackButtlerWindow
                 return;
             }
 
+            if (ChatCommandRouter.TryGetAntiDoubleComparisonKey(processed, out var comparisonKey))
+            {
+                if (src.EnableAntiDouble
+                    && cmd.NonDoubled
+                    && comparisonKey.Equals(lastPreviewGroupChatMessage, StringComparison.Ordinal))
+                    return;
+
+                // Every generated Party/Alliance line refreshes history. Only AD lines compare it.
+                lastPreviewGroupChatMessage = comparisonKey;
+            }
+
             var chat = ExtractChat(processed);
-            if (!string.IsNullOrWhiteSpace(chat))
-                sb.AppendLine(chat);
+            if (string.IsNullOrWhiteSpace(chat))
+                return;
+
+            sb.AppendLine(chat);
         }
 
         void AppendGroup(StringBuilder sb, string grpName, PlayerState target, int depth = 0)

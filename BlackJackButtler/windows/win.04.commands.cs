@@ -1,13 +1,25 @@
 using System;
 using System.Linq;
 using System.Numerics;
+using BlackJackButtler.Chat;
 using Dalamud.Bindings.ImGui;
+using Rx = System.Text.RegularExpressions.Regex;
+using RxOptions = System.Text.RegularExpressions.RegexOptions;
 
 namespace BlackJackButtler.Windows;
 
 public partial class BlackJackButtlerWindow
 {
+    private const string AntiDoubleApplyPopupId = "Apply Anti-Double to matching commands?##bjb_ad_apply_all";
+    private static readonly Rx CommandVariablePattern = new(
+        @"\$\$?\{[^}]+\}|\+\{[^}]+\}|<(?!se\.[^>]*>)[^>]+>",
+        RxOptions.Compiled | RxOptions.IgnoreCase);
+
     private string _filterCommands = string.Empty;
+    private PluginCommand? _pendingAntiDoubleCommand;
+    private string _pendingAntiDoubleText = string.Empty;
+    private string _pendingAntiDoubleComparisonKey = string.Empty;
+    private bool _openAntiDoubleApplyPopup;
 
     private void DrawCommandsPage()
     {
@@ -33,6 +45,8 @@ public partial class BlackJackButtlerWindow
             }
             ImGui.EndTabBar();
         }
+
+        DrawAntiDoubleApplyPopup();
     }
 
     private void DrawCommandChainsTab()
@@ -135,6 +149,7 @@ public partial class BlackJackButtlerWindow
             ImGui.PopID();
             ImGui.Spacing();
         }
+
     }
 
     /// <summary>
@@ -238,6 +253,8 @@ public partial class BlackJackButtlerWindow
             if (BJBGui.SmallButton($"C##cmdref_{group.Name}_{i}"))
             {
                 cmd.IsCommandRef = !cmd.IsCommandRef;
+                if (cmd.IsCommandRef)
+                    cmd.NonDoubled = false;
                 _save();
             }
             if (wasCmdRef) ImGui.PopStyleColor();
@@ -272,7 +289,12 @@ public partial class BlackJackButtlerWindow
             else
             {
                 ImGui.SetNextItemWidth(-1);
-                if (ImGui.InputText($"##text_{group.Name}_{i}", ref cmd.Text, 256)) _save();
+                if (ImGui.InputText($"##text_{group.Name}_{i}", ref cmd.Text, 256))
+                {
+                    if (!ChatCommandRouter.IsGroupChatMessageCommand(cmd.Text))
+                        cmd.NonDoubled = false;
+                    _save();
+                }
             }
             if (cmd.GroupId != 0) ImGui.Unindent(10f);
 
@@ -303,11 +325,39 @@ public partial class BlackJackButtlerWindow
 
             // Col 5 — anti-double
             ImGui.TableNextColumn();
+            bool canUseAntiDouble = !cmd.IsCommandRef
+                && ChatCommandRouter.IsGroupChatMessageCommand(cmd.Text);
+            if (!canUseAntiDouble && cmd.NonDoubled)
+            {
+                cmd.NonDoubled = false;
+                _save();
+            }
+            if (!canUseAntiDouble) ImGui.BeginDisabled();
             bool isAD = cmd.NonDoubled;
-            if (isAD
+            bool antiDoubleClicked = isAD
                 ? BJBGui.SmallButtonHighlighted($"AD##ad_{group.Name}_{i}", _config.HighlightColor, _config.HighlightTextColor)
-                : BJBGui.SmallButton($"AD##ad_{group.Name}_{i}"))
-            { cmd.NonDoubled = !cmd.NonDoubled; _save(); }
+                : BJBGui.SmallButton($"AD##ad_{group.Name}_{i}");
+            if (!canUseAntiDouble) ImGui.EndDisabled();
+
+            if (antiDoubleClicked)
+            {
+                if (cmd.NonDoubled)
+                {
+                    cmd.NonDoubled = false;
+                    _save();
+                }
+                else
+                {
+                    RequestAntiDoubleActivation(cmd);
+                }
+            }
+
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            {
+                ImGui.SetTooltip(canUseAntiDouble
+                    ? "Compare this line's final result with the last generated Party/Alliance message."
+                    : "Anti-Double is only available for /p, /party, /a, and /alliance messages.");
+            }
 
             // Col 6 — up / down
             ImGui.TableNextColumn();
@@ -358,5 +408,96 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.EndTable();
+    }
+
+    private void RequestAntiDoubleActivation(PluginCommand command)
+    {
+        if (CommandVariablePattern.IsMatch(command.Text))
+        {
+            ActivateAntiDouble(command, applyToMatchingCommands: false);
+            return;
+        }
+
+        _pendingAntiDoubleCommand = command;
+        _pendingAntiDoubleText = command.Text;
+        ChatCommandRouter.TryGetAntiDoubleComparisonKey(
+            command.Text,
+            out _pendingAntiDoubleComparisonKey);
+        _openAntiDoubleApplyPopup = true;
+        ImGui.OpenPopup(AntiDoubleApplyPopupId);
+    }
+
+    private void DrawAntiDoubleApplyPopup()
+    {
+        if (!ImGui.BeginPopupModal(
+                AntiDoubleApplyPopupId,
+                ref _openAntiDoubleApplyPopup,
+                ImGuiWindowFlags.AlwaysAutoResize))
+            return;
+
+        var matchingCount = AllCommandGroups()
+            .SelectMany(g => g.Commands)
+            .Count(c => !c.IsCommandRef
+                && ChatCommandRouter.TryGetAntiDoubleComparisonKey(c.Text, out var key)
+                && key.Equals(_pendingAntiDoubleComparisonKey, StringComparison.Ordinal));
+
+        ImGui.TextWrapped("Enable Anti-Double for every command line with the same normalized text?");
+        ImGui.TextDisabled("Party/Alliance prefixes, surrounding whitespace, and <se.*> tags are ignored.");
+        ImGui.Spacing();
+        ImGui.TextDisabled(_pendingAntiDoubleText);
+        ImGui.TextUnformatted($"Matching command lines: {matchingCount}");
+        ImGui.Spacing();
+
+        if (BJBGui.Button("Yes, enable all", new Vector2(170f, 0f)))
+        {
+            if (_pendingAntiDoubleCommand != null)
+                ActivateAntiDouble(_pendingAntiDoubleCommand, applyToMatchingCommands: true);
+            CloseAntiDoubleApplyPopup();
+        }
+
+        ImGui.SameLine();
+        if (BJBGui.Button("No, only this line", new Vector2(170f, 0f)))
+        {
+            if (_pendingAntiDoubleCommand != null)
+                ActivateAntiDouble(_pendingAntiDoubleCommand, applyToMatchingCommands: false);
+            CloseAntiDoubleApplyPopup();
+        }
+
+        ImGui.EndPopup();
+    }
+
+    private void ActivateAntiDouble(PluginCommand command, bool applyToMatchingCommands)
+    {
+        if (applyToMatchingCommands)
+        {
+            foreach (var candidate in AllCommandGroups().SelectMany(g => g.Commands))
+            {
+                if (!candidate.IsCommandRef
+                    && ChatCommandRouter.TryGetAntiDoubleComparisonKey(candidate.Text, out var key)
+                    && key.Equals(_pendingAntiDoubleComparisonKey, StringComparison.Ordinal))
+                    candidate.NonDoubled = true;
+            }
+        }
+        else
+        {
+            command.NonDoubled = true;
+        }
+
+        // One-shot activation: enabling an AD line turns the global option on now,
+        // but existing AD flags do not keep forcing the setting afterwards.
+        _config.EnableAntiDouble = true;
+        _save();
+    }
+
+    private System.Collections.Generic.IEnumerable<CommandGroup> AllCommandGroups()
+        => _config.CommandGroups.Concat(_config.CustomCommandGroups);
+
+    private void CloseAntiDoubleApplyPopup()
+    {
+        _pendingAntiDoubleCommand = null;
+        _pendingAntiDoubleText = string.Empty;
+        _pendingAntiDoubleComparisonKey = string.Empty;
+        _openAntiDoubleApplyPopup = false;
+        ImGui.CloseCurrentPopup();
     }
 }

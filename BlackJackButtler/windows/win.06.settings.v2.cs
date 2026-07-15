@@ -664,6 +664,10 @@ public partial class BlackJackButtlerWindow
     private void DrawSettingsV2Messages()
     {
         CheckSave("Avoid double Messages", ref _config.EnableAntiDouble);
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip(
+                "AD-marked Party/Alliance lines are compared after trimming and removing <se.*> tags.\n" +
+                "Every Party/Alliance line refreshes the history; only AD lines perform the comparison.");
         CheckSave("Seconds snapping delay input field", ref _config.DelaySecondSnapping);
     }
 

@@ -409,7 +409,6 @@ public sealed class MessageBatch
   public List<bool> ADFlags { get; set; } = new();
   public SelectionMode Mode { get; set; } = SelectionMode.Random;
   public int IterativeIndex { get; set; } = 0;
-  [Newtonsoft.Json.JsonIgnore] public string LastSelected = string.Empty;
 
   public bool GetAD(int index) => index >= 0 && index < ADFlags.Count && ADFlags[index];
 
@@ -419,39 +418,28 @@ public sealed class MessageBatch
     ADFlags[index] = value;
   }
 
-  public string GetNextMessage(bool enableAntiDouble = false)
+  public string GetNextMessage()
   {
     if (Messages.Count == 0) return string.Empty;
 
-    int startIndex;
+    int selectedIndex;
     switch (Mode)
     {
       case SelectionMode.First:
-        startIndex = 0;
+        selectedIndex = 0;
         break;
       case SelectionMode.Iterative:
         if (IterativeIndex >= Messages.Count) IterativeIndex = 0;
-        startIndex = IterativeIndex;
+        selectedIndex = IterativeIndex;
         IterativeIndex = (IterativeIndex + 1) % Messages.Count;
         break;
       case SelectionMode.Random:
       default:
-        startIndex = Random.Shared.Next(Messages.Count);
+        selectedIndex = Random.Shared.Next(Messages.Count);
         break;
     }
 
-    string picked = Messages[startIndex];
-
-    if (enableAntiDouble && GetAD(startIndex) && picked == LastSelected && Messages.Count > 1)
-    {
-      int nextIndex = (startIndex + 1) % Messages.Count;
-      picked = Messages[nextIndex];
-      if (Mode == SelectionMode.Iterative)
-        IterativeIndex = (nextIndex + 1) % Messages.Count;
-    }
-
-    LastSelected = picked;
-    return picked;
+    return Messages[selectedIndex];
   }
 }
 

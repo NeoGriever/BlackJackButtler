@@ -347,7 +347,10 @@ public partial class BlackJackButtlerWindow
 
             ImGui.Spacing();
             if (ImGui.Checkbox("Anti-Double", ref _config.EnableAntiDouble)) _save();
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Defines AD-flagged entries will not get executed twice.");
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip(
+                    "AD-marked Party/Alliance lines are compared after trimming and removing <se.*> tags.\n" +
+                    "Every Party/Alliance line refreshes the history; only AD lines perform the comparison.");
 
             ImGui.Spacing();
             if (ImGui.Checkbox("Second Snapping", ref _config.DelaySecondSnapping)) _save();
