@@ -20,6 +20,7 @@ public partial class BlackJackButtlerWindow
     private string _pendingAntiDoubleText = string.Empty;
     private string _pendingAntiDoubleComparisonKey = string.Empty;
     private bool _openAntiDoubleApplyPopup;
+    private bool _triggerAntiDoubleApplyPopup;
 
     private void DrawCommandsPage()
     {
@@ -44,6 +45,15 @@ public partial class BlackJackButtlerWindow
                 ImGui.EndTabItem();
             }
             ImGui.EndTabBar();
+        }
+
+        // The AD buttons are drawn below nested group/row ID scopes. Opening the
+        // popup from the click handler would bind it to that nested ID, while the
+        // modal itself is drawn here at the page scope and therefore never opens.
+        if (_triggerAntiDoubleApplyPopup)
+        {
+            ImGui.OpenPopup(AntiDoubleApplyPopupId);
+            _triggerAntiDoubleApplyPopup = false;
         }
 
         DrawAntiDoubleApplyPopup();
@@ -424,7 +434,7 @@ public partial class BlackJackButtlerWindow
             command.Text,
             out _pendingAntiDoubleComparisonKey);
         _openAntiDoubleApplyPopup = true;
-        ImGui.OpenPopup(AntiDoubleApplyPopupId);
+        _triggerAntiDoubleApplyPopup = true;
     }
 
     private void DrawAntiDoubleApplyPopup()
@@ -498,6 +508,7 @@ public partial class BlackJackButtlerWindow
         _pendingAntiDoubleText = string.Empty;
         _pendingAntiDoubleComparisonKey = string.Empty;
         _openAntiDoubleApplyPopup = false;
+        _triggerAntiDoubleApplyPopup = false;
         ImGui.CloseCurrentPopup();
     }
 }

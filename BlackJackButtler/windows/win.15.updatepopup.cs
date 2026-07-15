@@ -12,7 +12,7 @@ public class UpdatePopupWindow : Window
     private readonly Action _save;
 
     private static readonly string CurrentChangelog =
-        "v1.8.4.8\n" +
+        "v1.8.4.9\n" +
         "\n" +
         "COMMANDS:\n" +
         "- Anti-Double is now available only for Party and Alliance command lines. Static texts and matching message-block references can enable AD across all normalized matches.\n" +
