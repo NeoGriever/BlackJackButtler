@@ -18,7 +18,7 @@ public static class InsufficientBetQueueManager
 
     public static void EnqueueMany(IEnumerable<PlayerState> players, Configuration config, string source)
     {
-        if (!config.EnableAutomation || !config.ShowAutoRunButton || !config.AutoRun
+        if (!config.EnableAutomation || !config.AutoRun
             || string.IsNullOrWhiteSpace(config.InsufficientBetCommandName))
             return;
 
@@ -36,7 +36,7 @@ public static class InsufficientBetQueueManager
                 $"InsufficientBet:{displayName}",
                 () => Execute(playerName, displayName, config, source),
                 $"InsufficientBet:{playerName}",
-                () => config.EnableAutomation && config.ShowAutoRunButton && config.AutoRun,
+                () => config.EnableAutomation && config.AutoRun,
                 () =>
                 {
                     lock (Gate) PendingPlayers.Remove(playerName);

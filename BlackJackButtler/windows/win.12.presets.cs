@@ -15,14 +15,14 @@ public partial class BlackJackButtlerWindow
 {
     // Granulare Settings-Felder nach Kategorie
     private static readonly string[] SettingsGeneralFields = {
-        "EnableBankInput", "CommandSpeedMultiplier",
+        "EnableBankInput", "CommandSpeedMultiplier", "WageIntervalMode",
         "SmallResult", "ResultTemplate", "ShortResultRules", "AutostartRoundOnlyOnMultiplePlayers",
         "MainViewV2SuperCompact",
     };
     private static readonly string[] SettingsAutomationFields = {
         "EnableAutomation", "ShowAutoDealerDrawButton", "ShowAutoPlayerHandButton",
         "ShowAutoContinueButton", "ShowAutoRunButton",
-        "AutoInitialDeal", "AutoDealerDraw", "AutoRun", "AutoContinue", "AutoContinueDelay",
+        "AutoInitialDeal", "AutoDealerDraw", "AutoRun", "AutoActivateTradingPlayers", "AutoContinue", "AutoContinueDelay",
     };
     private static readonly string[] SettingsRulesFields = {
         "FirstDealThenPlay", "PlayerRollingForThemselves", "IdenticalSplitOnly", "AllowDoubleDownAfterSplit",
@@ -33,16 +33,16 @@ public partial class BlackJackButtlerWindow
         "DealerDrawsUntil", "DealerSoftRule",
     };
     private static readonly string[] SettingsBettingFields = {
-        "MinBet", "MaxBet", "ShortBetFormat", "VipBetTiers", "BetLimitEntries",
+        "MinBet", "MaxBet", "ShortBetFormat", "VipBetTiers", "BetLimitEntries", "BetLimitEntriesMigrated", "BettingPresets",
     };
     private static readonly string[] SettingsTimeDelayFields = {
-        "RecallUnlockSeconds", "DelaySecondSnapping", "UtcOffsetHours",
+        "RecallUnlockSeconds", "DelaySecondSnapping", "UtcOffsetHours", "UtcOffsetMinutes", "UtcTimeZoneName", "UtcSummerTime",
     };
     private static readonly string[] SettingsMessageSettingsFields = {
         "EnableAntiDouble",
     };
     private static readonly string[] SettingsNearbyPlayersFields = {
-        "NearbyAlertEnabled", "NearbyAlertSoundFiles", "NearbyAlertVolume", "NearbyAlertCooldown",
+        "NearbyAlertEnabled", "NearbyAlertSoundFiles", "NearbyAlertSoundEntries", "NearbyAlertSoundEntriesMigrated", "NearbyAlertVolume", "NearbyAlertCooldown",
         "NearbyAlertSoundMode", "NearbyAlwaysShowCircle", "NearbyQuestionCommandName",
         "NearbyShowFootNumbers", "NearbyOffsetX", "NearbyOffsetZ", "NearbyShape",
         "NearbyRectangleAspectRatio", "NearbyRectangleRotation", "NearbyUseFixedPosition",
@@ -75,7 +75,7 @@ public partial class BlackJackButtlerWindow
         .ToArray();
 
     private static readonly string[] StandardCommandFields = { "CommandGroups" };
-    private static readonly string[] OwnButtonFields = { "CustomCommandGroups", "CustomButtonOrder" };
+    private static readonly string[] OwnButtonFields = { "CustomCommandGroups", "CustomButtonEntries", "CustomButtonEntriesMigrated", "CustomButtonOrder" };
     private static readonly string[] MessageFields = { "MessageBatches" };
     private static readonly string[] RegexFields = { "UserRegexes" };
 
@@ -640,7 +640,6 @@ public partial class BlackJackButtlerWindow
         CChk("Settings > Rules", ref preset.ApplySettingsRules, cGold, Page.Settings); ImGui.SameLine(0, 2);
         CChk("Settings > Betting", ref preset.ApplySettingsBetting, cGold, Page.Settings); ImGui.SameLine(0, 2);
         CChk("Settings > Time & Delay", ref preset.ApplySettingsTimeDelay, cGold, Page.Settings); ImGui.SameLine(0, 2);
-        CChk("Settings > Msg Settings", ref preset.ApplySettingsMessageSettings, cGold, Page.Settings); ImGui.SameLine(0, 2);
         CChk("Settings > Nearby Players", ref preset.ApplySettingsNearbyPlayers, cGold, Page.Settings); ImGui.SameLine(0, 2);
         CChk("Settings > Visual", ref preset.ApplySettingsVisual, cGold, Page.Settings);
         ImGui.SameLine(0, 4); ImGui.TextColored(sepCol, "|"); ImGui.SameLine(0, 4);
@@ -707,11 +706,10 @@ public partial class BlackJackButtlerWindow
             if (preset.ApplyOwnButtons && snap.CustomCommandGroups.Count > 0)
             {
                 previewConfig.CustomCommandGroups = snap.CustomCommandGroups;
+                previewConfig.CustomButtonEntries = snap.CustomButtonEntries;
+                previewConfig.CustomButtonEntriesMigrated = snap.CustomButtonEntriesMigrated;
                 previewConfig.CustomButtonOrder = snap.CustomButtonOrder;
             }
-            if (preset.ApplySettingsMessageSettings)
-                previewConfig.EnableAntiDouble = snap.EnableAntiDouble;
-
             if (preset.ApplyMessagesDefault || preset.ApplyMessagesCustom)
             {
                 var standardNames = Configuration.StandardBatchNames.ToHashSet();
@@ -961,8 +959,7 @@ public partial class BlackJackButtlerWindow
 
             if (ChatCommandRouter.TryGetAntiDoubleComparisonKey(processed, out var comparisonKey))
             {
-                if (src.EnableAntiDouble
-                    && cmd.NonDoubled
+                if (cmd.NonDoubled
                     && comparisonKey.Equals(lastPreviewGroupChatMessage, StringComparison.Ordinal))
                     return;
 
@@ -1360,6 +1357,7 @@ public partial class BlackJackButtlerWindow
             _config.AutoInitialDeal              = snap.AutoInitialDeal;
             _config.AutoDealerDraw               = snap.AutoDealerDraw;
             _config.AutoRun                      = snap.AutoRun;
+            _config.AutoActivateTradingPlayers   = snap.AutoActivateTradingPlayers;
             _config.AutoContinue                 = snap.AutoContinue;
             _config.AutoContinueDelay            = snap.AutoContinueDelay;
         }
@@ -1393,22 +1391,25 @@ public partial class BlackJackButtlerWindow
             _config.ShortBetFormat   = snap.ShortBetFormat;
             _config.VipBetTiers      = snap.VipBetTiers;
             _config.BetLimitEntries  = snap.BetLimitEntries;
+            _config.BetLimitEntriesMigrated = snap.BetLimitEntriesMigrated;
+            _config.BettingPresets   = snap.BettingPresets;
         }
 
         if (preset.ApplySettingsTimeDelay)
         {
             _config.RecallUnlockSeconds    = snap.RecallUnlockSeconds;
-            _config.DelaySecondSnapping    = snap.DelaySecondSnapping;
             _config.UtcOffsetHours         = snap.UtcOffsetHours;
+            _config.UtcOffsetMinutes       = snap.UtcOffsetMinutes;
+            _config.UtcTimeZoneName        = snap.UtcTimeZoneName;
+            _config.UtcSummerTime          = snap.UtcSummerTime;
         }
-
-        if (preset.ApplySettingsMessageSettings)
-            _config.EnableAntiDouble = snap.EnableAntiDouble;
 
         if (preset.ApplySettingsNearbyPlayers)
         {
             _config.NearbyAlertEnabled          = snap.NearbyAlertEnabled;
             _config.NearbyAlertSoundFiles       = snap.NearbyAlertSoundFiles;
+            _config.NearbyAlertSoundEntries     = snap.NearbyAlertSoundEntries;
+            _config.NearbyAlertSoundEntriesMigrated = snap.NearbyAlertSoundEntriesMigrated;
             _config.NearbyAlertVolume           = snap.NearbyAlertVolume;
             _config.NearbyAlertCooldown         = snap.NearbyAlertCooldown;
             _config.NearbyAlertSoundMode        = snap.NearbyAlertSoundMode;
@@ -1482,7 +1483,10 @@ public partial class BlackJackButtlerWindow
         if (preset.ApplyOwnButtons)
         {
             _config.CustomCommandGroups = snap.CustomCommandGroups;
+            _config.CustomButtonEntries = snap.CustomButtonEntries;
+            _config.CustomButtonEntriesMigrated = snap.CustomButtonEntriesMigrated;
             _config.CustomButtonOrder   = snap.CustomButtonOrder;
+            _config.EnsureCustomButtonEntriesMigration();
         }
 
         if (preset.ApplyMessagesDefault || preset.ApplyMessagesCustom)
@@ -1501,6 +1505,8 @@ public partial class BlackJackButtlerWindow
         }
 
         if (preset.ApplyRegexes) _config.UserRegexes = snap.UserRegexes;
+
+        _config.EnsureLayout3Migrations();
 
         if (string.IsNullOrEmpty(preset.PresetId))
             preset.PresetId = Guid.NewGuid().ToString("N");

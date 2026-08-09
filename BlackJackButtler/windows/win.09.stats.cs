@@ -17,6 +17,9 @@ public partial class BlackJackButtlerWindow
     private bool _confirmEraseNormalStatsLog;
     private long _customTipValue = 100000;
     private string? _selectedUserStatisticsPath;
+    private bool _editingTips;
+    private bool _focusTipsInput;
+    private string _tipsInput = string.Empty;
 
     private void DrawStatsPage()
     {
@@ -128,38 +131,54 @@ public partial class BlackJackButtlerWindow
 
         ImGui.Separator();
 
-        ImGui.TextUnformatted($"Tips:            {StatsManager.Tips:N0}");
+        ImGui.TextUnformatted("Tips:");
+        ImGui.SameLine();
+        if (_editingTips)
+        {
+            if (_focusTipsInput)
+            {
+                ImGui.SetKeyboardFocusHere();
+                _focusTipsInput = false;
+            }
+            ImGui.SetNextItemWidth(180f);
+            var submitted = ImGui.InputText("##tips_direct_input", ref _tipsInput, 32,
+                ImGuiInputTextFlags.AutoSelectAll | ImGuiInputTextFlags.EnterReturnsTrue);
+            ImGui.SameLine();
+            if (submitted || BJBGui.SmallButton("OK##tips_direct_ok"))
+            {
+                var numeric = _tipsInput.Replace(",", string.Empty, StringComparison.Ordinal).Trim();
+                if (long.TryParse(numeric, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value))
+                {
+                    StatsManager.Tips = Math.Max(0, value);
+                    SaveSessionFromUI();
+                    _editingTips = false;
+                }
+            }
+        }
+        else
+        {
+            ImGui.TextUnformatted(StatsManager.Tips.ToString("N0", CultureInfo.InvariantCulture));
+            if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+            {
+                _tipsInput = StatsManager.Tips.ToString(CultureInfo.InvariantCulture);
+                _editingTips = true;
+                _focusTipsInput = true;
+            }
+        }
 
         var io = ImGui.GetIO();
         bool holdingShift = io.KeyShift;
 
-        if (BJBGui.SmallButton("50k"))
+        var tipButtons = new (string Label, long Amount)[]
         {
-            StatsManager.AddTip(holdingShift ? -50000 : 50000);
-            SaveSessionFromUI();
-        }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("100k"))
+            ("1k", 1_000), ("5k", 5_000), ("10k", 10_000), ("50k", 50_000),
+            ("100k", 100_000), ("250k", 250_000), ("500k", 500_000), ("1m", 1_000_000),
+        };
+        for (var i = 0; i < tipButtons.Length; i++)
         {
-            StatsManager.AddTip(holdingShift ? -100000 : 100000);
-            SaveSessionFromUI();
-        }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("500k"))
-        {
-            StatsManager.AddTip(holdingShift ? -500000 : 500000);
-            SaveSessionFromUI();
-        }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("1k"))
-        {
-            StatsManager.AddTip(holdingShift ? -1000 : 1000);
-            SaveSessionFromUI();
-        }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("5k"))
-        {
-            StatsManager.AddTip(holdingShift ? -5000 : 5000);
+            if (i > 0) ImGui.SameLine();
+            if (!BJBGui.SmallButton(tipButtons[i].Label)) continue;
+            StatsManager.AddTip(holdingShift ? -tipButtons[i].Amount : tipButtons[i].Amount);
             SaveSessionFromUI();
         }
         ImGui.SameLine();
@@ -196,28 +215,35 @@ public partial class BlackJackButtlerWindow
             _save();
         }
 
-        bool useFixed = _config.UseFixedWage;
-        if (ImGui.Checkbox("Fixed Wage", ref useFixed))
-        {
-            _config.UseFixedWage = useFixed;
-            _save();
-        }
-
+        ImGui.TextUnformatted("Fixed Wage");
+        ImGui.SameLine(170f);
+        if (BJBOnOffSwitch.Draw("stats_fixed_wage", ref _config.UseFixedWage)) _save();
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(170f);
         if (_config.UseFixedWage)
         {
-            long fixedWage = _config.FixedWage;
-            if (BJBGui.InputLongFormatted("Fixed Wage##input", ref fixedWage))
+            var fixedWage = _config.FixedWage;
+            if (BJBGui.InputLongFormatted("##fixed_wage", ref fixedWage))
             {
-                _config.FixedWage = fixedWage;
+                _config.FixedWage = Math.Max(0, fixedWage);
                 _save();
             }
         }
         else
         {
-            long gilPerHour = _config.GilPerHour;
-            if (BJBGui.InputLongFormatted("Gil/Hour", ref gilPerHour))
+            var gilPerInterval = _config.GilPerHour;
+            if (BJBGui.InputLongFormatted("##wage_rate", ref gilPerInterval))
             {
-                _config.GilPerHour = gilPerHour;
+                _config.GilPerHour = Math.Max(0, gilPerInterval);
+                _save();
+            }
+            ImGui.SameLine();
+            var interval = (int)_config.WageIntervalMode;
+            ImGui.SetNextItemWidth(130f);
+            if (BJBGui.Combo("##wage_interval", ref interval,
+                    "Gil/Minute\0Gil/15 Min\0Gil/30 Min\0Gil/Hour\0Gil/2 Hours\0"))
+            {
+                _config.WageIntervalMode = (WageInterval)Math.Clamp(interval, 0, 4);
                 _save();
             }
         }
@@ -229,7 +255,7 @@ public partial class BlackJackButtlerWindow
 
         if (!_config.UseFixedWage)
         {
-            ImGui.TextUnformatted("Clip hours:");
+            ImGui.TextUnformatted("Clip intervals:");
             ImGui.SameLine();
 
             string[] modes = { "Up", "Down", "Even" };
@@ -484,13 +510,13 @@ public partial class BlackJackButtlerWindow
         long tips = StatsManager.Tips;
         long profit = diff - tips;
         float payoutPercent = _config.PayoutPercent;
-        double clippedHours = StatsManager.GetClippedHours(_clipHoursMode);
+        double clippedWageUnits = StatsManager.GetClippedWageUnits(_clipHoursMode, _config.WageIntervalMode);
 
         long hourlyDeduction;
         if (_config.UseFixedWage)
             hourlyDeduction = _config.FixedWage;
         else
-            hourlyDeduction = (long)Math.Round(clippedHours * _config.GilPerHour);
+            hourlyDeduction = (long)Math.Round(clippedWageUnits * _config.GilPerHour);
 
         bool isLoss = profit < 0;
         long payoutAmount = isLoss ? 0 : (long)Math.Round(profit * (payoutPercent / 100.0));
@@ -578,8 +604,9 @@ public partial class BlackJackButtlerWindow
             string gilLabel = gilPerHour >= 1000000 ? $"{gilPerHour / 1000000.0:0.#}m"
                             : gilPerHour >= 1000    ? $"{gilPerHour / 1000}k"
                             : gilPerHour.ToString("N0");
-            string hoursLabel = $"  {(int)timePassed.TotalHours:D2}:{timePassed.Minutes:D2} x {gilLabel}";
-            lines.Add((Signed(hoursLabel, fHourly), null));
+            string intervalLabel = GetWageIntervalLabel(_config.WageIntervalMode);
+            string wageLabel = $"  {(int)timePassed.TotalHours:D2}:{timePassed.Minutes:D2} x {gilLabel}/{intervalLabel}";
+            lines.Add((Signed(wageLabel, fHourly), null));
         }
 
         lines.Add((ruler, null));
@@ -632,4 +659,13 @@ public partial class BlackJackButtlerWindow
             ImGui.SetClipboardText(sb.ToString());
         }
     }
+
+    private static string GetWageIntervalLabel(WageInterval interval) => interval switch
+    {
+        WageInterval.Minute => "min",
+        WageInterval.FifteenMinutes => "15m",
+        WageInterval.ThirtyMinutes => "30m",
+        WageInterval.TwoHours => "2h",
+        _ => "h",
+    };
 }

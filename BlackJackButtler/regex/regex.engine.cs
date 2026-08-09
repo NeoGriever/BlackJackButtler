@@ -30,7 +30,7 @@ public static class RegexEngine
         if (!activePlayers.All(pl => pl.ReadySkip || _nextRoundVotes.Contains(pl.Name))) return;
 
         _nextRoundVotes.Clear();
-        if (cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun)
+        if (cfg.EnableAutomation && cfg.AutoRun)
         {
             var underfunded = activePlayers.Where(GameEngine.IsPlayerUnableToCoverBet).ToList();
             if (underfunded.Count > 0)
@@ -44,7 +44,7 @@ public static class RegexEngine
             Plugin.Instance.RunAutoAction(
                 "ReadyStart",
                 () => GameEngine.StartInitialDeal(players, cfg),
-                () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun
+                () => cfg.EnableAutomation && cfg.AutoRun
                     && GameEngine.CanAcceptInterRoundDetectors(),
                 "RoundStart");
         }
@@ -79,8 +79,15 @@ public static class RegexEngine
 
         foreach (var entry in cfg.UserRegexes)
         {
-            if (!entry.Enabled || entry.Patterns == null || entry.Patterns.Count == 0) continue;
+            // Trade processing and variable extraction are system plumbing. Their
+            // per-entry enabled flag must not be coupled to gameplay reactions.
+            var alwaysActiveSystemEntry = entry.Mode == RegexEntryMode.SetVariable || IsTradeAction(entry.Action);
+            if ((!entry.Enabled && !alwaysActiveSystemEntry) || entry.Patterns == null || entry.Patterns.Count == 0) continue;
             if (!IsSourceAllowed(entry, msg, cfg)) continue;
+            if (entry.Mode == RegexEntryMode.Trigger
+                && IsGameplayMessageReactionAction(entry.Action)
+                && !IsMessageReactionEnabled(cfg))
+                continue;
 
             if (!diceHandled
                 && entry.Action == RegexAction.DiceRollValue
@@ -157,6 +164,21 @@ public static class RegexEngine
             or RegexAction.TradeCancel;
     }
 
+    private static bool IsGameplayMessageReactionAction(RegexAction action)
+    {
+        return action is RegexAction.WantHit
+            or RegexAction.WantStand
+            or RegexAction.WantDD
+            or RegexAction.WantSplit
+            or RegexAction.NextRound
+            or RegexAction.SetBet
+            or RegexAction.BankTell
+            or RegexAction.Withdraw;
+    }
+
+    private static bool IsMessageReactionEnabled(Configuration cfg)
+        => cfg.EnableAutomation && cfg.AutoRun;
+
     private static void ExecuteAction(UserRegexEntry entry, string matchedPattern, ParsedChatMessage msg, string cleanMessage, List<PlayerState> players, PlayerState dealer, Configuration cfg)
     {
         var p = FindPlayerForMessage(players, msg);
@@ -213,7 +235,7 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantHit:
-                if (!cfg.EnableAutomation || !cfg.ShowAutoRunButton || !cfg.AutoRun)
+                if (!cfg.EnableAutomation || !cfg.AutoRun)
                 {
                     if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
                         p.HighlightHit = true;
@@ -231,7 +253,7 @@ public static class RegexEngine
                         Plugin.Instance.RunAutoAction(
                             "RegexHit",
                             () => GameEngine.ActionHit(p, cfg, players),
-                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun
+                            () => cfg.EnableAutomation && cfg.AutoRun
                                 && p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn,
                             $"PlayerAction:{p.Name}");
                     }
@@ -239,7 +261,7 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantStand:
-                if (!cfg.EnableAutomation || !cfg.ShowAutoRunButton || !cfg.AutoRun)
+                if (!cfg.EnableAutomation || !cfg.AutoRun)
                 {
                     if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
                         p.HighlightStand = true;
@@ -256,7 +278,7 @@ public static class RegexEngine
                         Plugin.Instance.RunAutoAction(
                             "RegexStand",
                             () => GameEngine.ActionStand(p, cfg, players),
-                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun
+                            () => cfg.EnableAutomation && cfg.AutoRun
                                 && p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn,
                             $"PlayerAction:{p.Name}");
                     }
@@ -264,7 +286,7 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantDD:
-                if (!cfg.EnableAutomation || !cfg.ShowAutoRunButton || !cfg.AutoRun)
+                if (!cfg.EnableAutomation || !cfg.AutoRun)
                 {
                     if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
                         p.HighlightDD = true;
@@ -285,7 +307,7 @@ public static class RegexEngine
                         Plugin.Instance.RunAutoAction(
                             "RegexDD",
                             () => GameEngine.ActionDD(p, cfg, players),
-                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun
+                            () => cfg.EnableAutomation && cfg.AutoRun
                                 && p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn,
                             $"PlayerAction:{p.Name}");
                     }
@@ -293,7 +315,7 @@ public static class RegexEngine
                 break;
 
             case RegexAction.WantSplit:
-                if (!cfg.EnableAutomation || !cfg.ShowAutoRunButton || !cfg.AutoRun)
+                if (!cfg.EnableAutomation || !cfg.AutoRun)
                 {
                     if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
                         p.HighlightSplit = true;
@@ -318,7 +340,7 @@ public static class RegexEngine
                             Plugin.Instance.RunAutoAction(
                                 "RegexSplit",
                                 () => GameEngine.ActionSplit(p, cfg, players),
-                                () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun
+                                () => cfg.EnableAutomation && cfg.AutoRun
                                     && p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn,
                                 $"PlayerAction:{p.Name}");
                         }
@@ -333,6 +355,21 @@ public static class RegexEngine
             case RegexAction.Payout:
                 if (p != null)
                     PayoutManagement.StartPayout(p);
+                break;
+
+            case RegexAction.Withdraw:
+                if (p == null || !match.Success || match.Groups.Count < 2)
+                    break;
+
+                if (!PayoutManagement.TryParseWithdrawAmount(match.Groups[1].Value, p.Bank, out var withdrawAmount))
+                    break;
+
+                if (PayoutManagement.TryStartPayout(p, withdrawAmount)
+                    == PayoutManagement.PayoutStartResult.InsufficientFunds)
+                {
+                    ChatCommandRouter.Send("/p You don't have that much on your bank!", cfg,
+                        $"RegexWithdrawInsufficient:{p.Name}");
+                }
                 break;
 
             case RegexAction.TakeBatch:
@@ -390,7 +427,7 @@ public static class RegexEngine
                     {
                         Plugin.Instance.GetMainWindow().SetHighlightNewRound();
                     }
-                    else if (cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun)
+                    else if (cfg.EnableAutomation && cfg.AutoRun)
                     {
                         var underfunded = activePlayers.Where(GameEngine.IsPlayerUnableToCoverBet).ToList();
                         if (underfunded.Count > 0)
@@ -404,7 +441,7 @@ public static class RegexEngine
                         Plugin.Instance.RunAutoAction(
                             "RegexNextRound",
                             () => GameEngine.StartInitialDeal(players, cfg),
-                            () => cfg.EnableAutomation && cfg.ShowAutoRunButton && cfg.AutoRun
+                            () => cfg.EnableAutomation && cfg.AutoRun
                                 && GameEngine.CanAcceptInterRoundDetectors(),
                             "RoundStart");
                     }
@@ -471,7 +508,7 @@ public static class RegexEngine
                     break;
                 }
 
-                if (!cfg.EnableAutomation || !cfg.ShowAutoRunButton || !cfg.AutoRun)
+                if (!cfg.EnableAutomation || !cfg.AutoRun)
                 {
                     p.HighlightTell = true;
                     btWindow.AddDebugLog($"[RegexEngine] BankTell highlight set for {p.DisplayName} (AutoRun off)");

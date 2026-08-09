@@ -560,7 +560,7 @@ public static class CommandExecutor
                         $"{groupName}:{step}",
                         effectiveCmd.Text,
                         allianceMode,
-                        cfg.EnableAntiDouble && effectiveCmd.NonDoubled);
+                        effectiveCmd.NonDoubled);
                     if (sendResult == ChatCommandSendResult.AntiDoubleSkipped)
                     {
                         LogFlow(
@@ -951,7 +951,7 @@ public static class CommandExecutor
                     $"{groupName}:internal:{step}",
                     effectiveCmd.Text,
                     allianceMode,
-                    cfg.EnableAntiDouble && effectiveCmd.NonDoubled);
+                    effectiveCmd.NonDoubled);
                 if (sendResult == ChatCommandSendResult.AntiDoubleSkipped)
                 {
                     window.AddDebugLog(

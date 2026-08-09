@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
@@ -44,11 +45,22 @@ public static class PayoutManagement
         LocalClone,
     }
 
+    public enum PayoutStartResult
+    {
+        Started,
+        InvalidAmount,
+        InsufficientFunds,
+        AlreadyActive,
+    }
+
     private static PayoutState _state = PayoutState.Idle;
     private static DateTime _stateEnteredAt = DateTime.UtcNow;
     private static string _targetName = string.Empty;
     private static uint _targetWorldId;
     private static long _startAmount;
+    // Tracks the requested payout independently of the player's remaining bank.  This lets a
+    // withdrawal settle after its requested amount even when the bank still contains Gil.
+    private static long _remainingAmount;
     private static long _lastKnownBank;
     private static long _currentChunk;
     private static bool _cancelRequested;
@@ -65,14 +77,24 @@ public static class PayoutManagement
 
     public static void StartPayout(PlayerState p)
     {
-        if (p.Bank <= 0) return;
-        if (IsActive) return;
+        _ = TryStartPayout(p, p.Bank);
+    }
+
+    public static PayoutStartResult TryStartPayout(PlayerState p, long amount)
+    {
+        if (amount <= 0)
+            return PayoutStartResult.InvalidAmount;
+        if (amount > p.Bank)
+            return PayoutStartResult.InsufficientFunds;
+        if (IsActive)
+            return PayoutStartResult.AlreadyActive;
 
         _targetName = p.Name;
         _targetWorldId = p.WorldId;
-        _startAmount = p.Bank;
+        _startAmount = amount;
+        _remainingAmount = amount;
         _lastKnownBank = p.Bank;
-        _currentChunk = Math.Min(p.Bank, MaxGilPerTrade);
+        _currentChunk = Math.Min(amount, MaxGilPerTrade);
         _cancelRequested = false;
         _confirmAllowed = false;
         _sentTradeCommand = false;
@@ -82,7 +104,45 @@ public static class PayoutManagement
         _lastTradeActionAt = DateTime.MinValue;
         _executor = TradeExecutor.None;
 
-        SetState(PayoutState.Targeting, $"Started for {p.DisplayName}, bank={p.Bank:N0}, chunk={_currentChunk:N0}");
+        SetState(PayoutState.Targeting,
+            $"Started for {p.DisplayName}, payout={amount:N0}, bank={p.Bank:N0}, chunk={_currentChunk:N0}");
+        return PayoutStartResult.Started;
+    }
+
+    public static bool TryParseWithdrawAmount(string rawAmount, long availableBank, out long amount)
+    {
+        amount = 0;
+        var text = (rawAmount ?? string.Empty).Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(text) || text.Contains('-'))
+            return false;
+
+        if (text is "all" or "everything")
+        {
+            amount = availableBank;
+            return amount > 0;
+        }
+
+        var multiplier = 1L;
+        var hasSuffix = false;
+        if (text.EndsWith("k", StringComparison.Ordinal))
+        {
+            multiplier = 1_000L;
+            hasSuffix = true;
+            text = text[..^1].Trim();
+        }
+        else if (text.EndsWith("m", StringComparison.Ordinal))
+        {
+            multiplier = 1_000_000L;
+            hasSuffix = true;
+            text = text[..^1].Trim();
+        }
+
+        if (text.Any(ch => !char.IsDigit(ch) && ch != '.' && ch != ',' && !char.IsWhiteSpace(ch))
+            || !TryParsePayoutNumber(text, hasSuffix, out var parsed))
+            return false;
+
+        amount = SafeMultiply(parsed, multiplier);
+        return amount > 0;
     }
 
     public static void Tick()
@@ -102,9 +162,18 @@ public static class PayoutManagement
             return;
         }
 
-        if (player.Bank <= 0)
+        if (_remainingAmount <= 0)
         {
-            Reset("Bank reached 0");
+            Reset("Payout complete");
+            return;
+        }
+
+        var settlementPending = _state is PayoutState.ConfirmingTrade
+            or PayoutState.WaitingTradeClose
+            or PayoutState.TradeClosedSettle;
+        if (player.Bank <= 0 && !settlementPending)
+        {
+            Reset("Bank reached 0 before requested payout completed");
             return;
         }
 
@@ -125,7 +194,12 @@ public static class PayoutManagement
                     return;
                 }
 
-                _currentChunk = Math.Min(player.Bank, MaxGilPerTrade);
+                _currentChunk = Math.Min(_remainingAmount, Math.Min(player.Bank, MaxGilPerTrade));
+                if (_currentChunk <= 0)
+                {
+                    Reset("No Gil available for remaining payout");
+                    return;
+                }
                 _confirmAllowed = false;
                 _bankBeforeCurrentTrade = player.Bank;
                 _currentTradeAutoConfirm = false;
@@ -210,21 +284,35 @@ public static class PayoutManagement
 
             case PayoutState.TradeClosedSettle:
                 if (StateElapsed < TradeClosedSettleSeconds) return;
-                if (player.Bank >= _bankBeforeCurrentTrade)
+                var transferred = _bankBeforeCurrentTrade - player.Bank;
+                if (transferred <= 0)
                 {
                     Reset("Trade cancelled or closed without payout");
                     return;
                 }
-                if (player.Bank <= 0)
+                if (transferred != _currentChunk)
+                {
+                    Reset($"Unexpected payout amount: expected {_currentChunk:N0}, received {transferred:N0}");
+                    return;
+                }
+
+                _remainingAmount -= _currentChunk;
+                if (_remainingAmount <= 0)
                 {
                     Reset("Payout complete");
+                    return;
+                }
+                if (player.Bank <= 0)
+                {
+                    Reset("Bank reached 0 before requested payout completed");
                     return;
                 }
                 _sentTradeCommand = false;
                 _confirmAllowed = false;
                 _currentTradeAutoConfirm = false;
                 _executor = TradeExecutor.None;
-                SetState(PayoutState.Targeting, $"Remaining bank={player.Bank:N0}, continuing");
+                SetState(PayoutState.Targeting,
+                    $"Remaining payout={_remainingAmount:N0}, bank={player.Bank:N0}, continuing");
                 break;
         }
     }
@@ -245,14 +333,15 @@ public static class PayoutManagement
             var player = GetCurrentPlayer();
             var currentBank = player?.Bank ?? _lastKnownBank;
 
-            ImGui.TextColored(new Vector4(1, 0.8f, 0, 1), $"Remaining: {currentBank:N0} Gil");
+            ImGui.TextColored(new Vector4(1, 0.8f, 0, 1), $"Remaining payout: {_remainingAmount:N0} Gil");
+            ImGui.TextDisabled($"Player bank: {currentBank:N0} Gil");
             ImGui.TextUnformatted($"Current chunk: {_currentChunk:N0} Gil");
             ImGui.TextDisabled($"State: {_state}");
             ImGui.Spacing();
 
             if (_startAmount > 0)
             {
-                var progress = 1.0f - ((float)Math.Max(0, currentBank) / _startAmount);
+                var progress = 1.0f - ((float)Math.Max(0, _remainingAmount) / _startAmount);
                 ImGui.ProgressBar(Math.Clamp(progress, 0f, 1f), new Vector2(-1, 0), $"{(int)(progress * 100)}%");
             }
 
@@ -280,6 +369,7 @@ public static class PayoutManagement
         _targetName = string.Empty;
         _targetWorldId = 0;
         _startAmount = 0;
+        _remainingAmount = 0;
         _lastKnownBank = 0;
         _currentChunk = 0;
         _cancelRequested = false;
@@ -323,10 +413,64 @@ public static class PayoutManagement
             return;
         }
 
-        if (player.Bank <= 0)
+        if (_remainingAmount <= 0)
             Reset("Payout complete");
         else
             SetState(PayoutState.TradeClosedSettle, "Trade closed before payout completed");
+    }
+
+    private static bool TryParsePayoutNumber(string text, bool hasSuffix, out decimal value)
+    {
+        value = 0m;
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
+
+        if (!hasSuffix)
+        {
+            var digits = new string(text.Where(char.IsDigit).ToArray());
+            return !string.IsNullOrWhiteSpace(digits)
+                && decimal.TryParse(digits, NumberStyles.None, CultureInfo.InvariantCulture, out value);
+        }
+
+        var normalized = NormalizeSuffixedPayoutNumber(text);
+        return !string.IsNullOrWhiteSpace(normalized)
+            && decimal.TryParse(normalized, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value);
+    }
+
+    private static string NormalizeSuffixedPayoutNumber(string text)
+    {
+        var token = new string(text.Where(ch => char.IsDigit(ch) || ch == '.' || ch == ',').ToArray());
+        if (string.IsNullOrWhiteSpace(token))
+            return string.Empty;
+
+        var lastDot = token.LastIndexOf('.');
+        var lastComma = token.LastIndexOf(',');
+        var separatorIndex = Math.Max(lastDot, lastComma);
+        if (separatorIndex < 0)
+            return new string(token.Where(char.IsDigit).ToArray());
+
+        var hasMixedSeparators = lastDot >= 0 && lastComma >= 0;
+        var fractionLength = token.Length - separatorIndex - 1;
+        var treatAsDecimal = hasMixedSeparators || fractionLength is > 0 and <= 2;
+        if (!treatAsDecimal)
+            return new string(token.Where(char.IsDigit).ToArray());
+
+        var whole = new string(token[..separatorIndex].Where(char.IsDigit).ToArray());
+        var fraction = new string(token[(separatorIndex + 1)..].Where(char.IsDigit).ToArray());
+        return string.IsNullOrEmpty(whole) ? $"0.{fraction}" : $"{whole}.{fraction}";
+    }
+
+    private static long SafeMultiply(decimal value, long multiplier)
+    {
+        try
+        {
+            var result = value * multiplier;
+            return result > long.MaxValue ? long.MaxValue : decimal.ToInt64(decimal.Truncate(result));
+        }
+        catch (OverflowException)
+        {
+            return long.MaxValue;
+        }
     }
 
     private static void TargetPayoutPlayer(PlayerState player)

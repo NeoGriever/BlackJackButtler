@@ -18,9 +18,16 @@ public partial class BlackJackButtlerWindow
     private DateTime? _groupDetectorActivatedAt;
     private bool _triggerUserStatsSessionPrompt;
     private bool _userStatsSessionPromptOpen;
+    private float _rotationEditDegrees;
 
     private void DrawMainPage()
     {
+        if (_config.MainViewVersion == 3)
+        {
+            DrawMainPageV3();
+            return;
+        }
+
         if (_config.MainViewVersion == 2)
         {
             DrawMainPageV2();
@@ -410,6 +417,8 @@ public partial class BlackJackButtlerWindow
         {
             SetGroupDetectorActive(!IsRecognitionActive);
         }
+        ImGui.SameLine();
+        DrawRotationButton("v1", new Vector2(72f, 0f));
 
         if (!IsRecognitionActive)
         {
@@ -492,7 +501,8 @@ public partial class BlackJackButtlerWindow
         bool autoDealActive = _config.AutoInitialDeal;
         if (autoDealActive) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
 
-        if (BJBGui.Button(auto_deal_text))
+        if (BJBGui.Button(auto_deal_text,
+                autoDealActive ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor))
         {
             var newValue = !_config.AutoInitialDeal;
             _config.AutoInitialDeal = newValue;
@@ -511,7 +521,8 @@ public partial class BlackJackButtlerWindow
         bool autoDealerActive = _config.AutoDealerDraw;
         if (autoDealerActive) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
 
-        if (BJBGui.Button(auto_dealer_text))
+        if (BJBGui.Button(auto_dealer_text,
+                autoDealerActive ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor))
         {
             var newValue = !_config.AutoDealerDraw;
             _config.AutoDealerDraw = newValue;
@@ -530,7 +541,8 @@ public partial class BlackJackButtlerWindow
         bool autoContinueActive = _config.AutoContinue;
         if (autoContinueActive) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
 
-        if (BJBGui.Button(auto_continue_text))
+        if (BJBGui.Button(auto_continue_text,
+                autoContinueActive ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor))
         {
             var newValue = !_config.AutoContinue;
             _config.AutoContinue = newValue;
@@ -556,7 +568,8 @@ public partial class BlackJackButtlerWindow
             bool autoRunActive = _config.AutoRun;
             if (autoRunActive) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
 
-            if (BJBGui.Button(auto_run_text))
+            if (BJBGui.Button(auto_run_text,
+                    autoRunActive ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor))
             {
                 var newValue = !_config.AutoRun;
                 _config.AutoRun = newValue;
@@ -580,17 +593,47 @@ public partial class BlackJackButtlerWindow
                 GameEngine.TargetPlayer(leaderName);
         }
 
-        if (IsRecognitionActive && _config.CurrentLevel == UserLevel.Dev
-            && (!IsLocalPlayerPartyLeader() || GroupContextManager.CurrentMemberCount() == 0))
+    }
+
+    private void DrawRotationButton(string id, Vector2 size)
+    {
+        var savedDegrees = NormalizeRotationDegrees(_config.InitialViewDirection);
+        if (BJBGui.Button($"{MathF.Round(savedDegrees):0}°##rotation_{id}", size))
         {
-            if (BJBGui.SmallButton("Activate debug mode"))
-            {
-                IsRecognitionActive = false;
-                SessionManager.ClearSession();
-                EnableDebugMode();
-                Plugin.Instance.UpdateEventHooks();
-            }
+            var current = Plugin.ObjectTable.LocalPlayer?.Rotation ?? _config.InitialViewDirection;
+            _rotationEditDegrees = NormalizeRotationDegrees(current);
+            ImGui.OpenPopup($"rotation_editor_{id}");
         }
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Configure saved facing rotation");
+
+        if (!ImGui.BeginPopup($"rotation_editor_{id}")) return;
+        ImGui.TextUnformatted("Rotation");
+        ImGui.SetNextItemWidth(280f);
+        ImGui.SliderFloat("Current rotation##edit", ref _rotationEditDegrees, 0f, 360f, "%.0f°");
+        ImGui.TextDisabled("Saved rotation");
+        var readOnlyDegrees = NormalizeRotationDegrees(_config.InitialViewDirection);
+        ImGui.BeginDisabled();
+        ImGui.SetNextItemWidth(280f);
+        ImGui.SliderFloat("##saved", ref readOnlyDegrees, 0f, 360f, "%.0f°");
+        ImGui.EndDisabled();
+        if (BJBGui.Button("OK##rotation_ok"))
+        {
+            _config.InitialViewDirection = NormalizeRotationDegrees(_rotationEditDegrees) * (MathF.PI / 180f);
+            _save();
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.SameLine();
+        if (BJBGui.Button("Cancel##rotation_cancel")) ImGui.CloseCurrentPopup();
+        ImGui.EndPopup();
+    }
+
+    private static float NormalizeRotationDegrees(float radians)
+    {
+        var degrees = radians * (180f / MathF.PI);
+        degrees %= 360f;
+        if (degrees < 0f) degrees += 360f;
+        return degrees;
     }
 
     private void DrawProminentPanicButton(string id)
@@ -611,7 +654,7 @@ public partial class BlackJackButtlerWindow
 
     private void DrawCustomButtonBar()
     {
-        if (_config.CustomButtonOrder.Count == 0 && _config.CustomCommandGroups.Count == 0) return;
+        if (_config.CustomButtonEntries.Count == 0 && _config.CustomCommandGroups.Count == 0) return;
 
         if (_config.ButtonBarPopout)
         {
@@ -642,25 +685,32 @@ public partial class BlackJackButtlerWindow
 
     internal void RenderCustomButtons(string idSuffix, bool vertical = false)
     {
+        EnsureButtonOrderMigration();
         bool isRunning = CommandExecutor.IsRunning;
         if (isRunning) ImGui.BeginDisabled();
 
         bool prevWasButton = false;
 
-        for (int i = 0; i < _config.CustomButtonOrder.Count; i++)
+        for (int i = 0; i < _config.CustomButtonEntries.Count; i++)
         {
-            var entry = _config.CustomButtonOrder[i];
+            var entry = _config.CustomButtonEntries[i];
 
-            if (entry == "---")
+            if (entry.IsBreak)
             {
+                if (!entry.IsVisible) continue;
                 if (prevWasButton)
                 {
                     bool hasButtonAfter = false;
-                    for (int j = i + 1; j < _config.CustomButtonOrder.Count; j++)
+                    for (int j = i + 1; j < _config.CustomButtonEntries.Count; j++)
                     {
-                        if (_config.CustomButtonOrder[j] == "---") continue;
-                        if (_config.CustomCommandGroups.Any(g => g.Name == _config.CustomButtonOrder[j]))
-                        { hasButtonAfter = true; break; }
+                        var followingEntry = _config.CustomButtonEntries[j];
+                        if (followingEntry.IsBreak) continue;
+                        var followingGroup = FindCustomButtonGroup(followingEntry);
+                        if (followingGroup != null && followingGroup.IsActive && followingGroup.IsVisible)
+                        {
+                            hasButtonAfter = true;
+                            break;
+                        }
                     }
                     if (!hasButtonAfter) continue;
                     prevWasButton = false;
@@ -668,7 +718,7 @@ public partial class BlackJackButtlerWindow
                 continue;
             }
 
-            var group = _config.CustomCommandGroups.FirstOrDefault(g => g.Name == entry);
+            var group = FindCustomButtonGroup(entry);
             if (group == null) continue;
             if (!group.IsActive || !group.IsVisible) continue;
 
@@ -824,15 +874,7 @@ public partial class BlackJackButtlerWindow
                 : BJBGui.Button($">##{p.UIID}", new Vector2(-1, 0));
             if (clickedJoin)
             {
-                p.HighlightJoin = false;
-                p.IsActivePlayer = true;
-                var joinPhase = GameEngine.CurrentPhase;
-                if (joinPhase == GamePhase.InitialDeal || joinPhase == GamePhase.PlayersTurn || joinPhase == GamePhase.DealerTurn)
-                    p.JoinedMidRound = true;
-                ActivityLogManager.LogPlayerJoin(p.DisplayName);
-                RoundLogManager.RecordPlayerJoin(p.DisplayName);
-                SaveSessionFromUI();
-                CompanionSyncManager.SendPlayerBankBetUpdate(_config, p);
+                ActivatePlayer(p);
             }
         }
         else {
@@ -842,6 +884,9 @@ public partial class BlackJackButtlerWindow
                 ? BJBGui.ButtonHighlighted($"X##{p.UIID}", new Vector2(-1, 0), _config.HighlightColor, _config.HighlightTextColor)
                 : BJBGui.Button($"X##{p.UIID}", new Vector2(-1, 0));
             if (clickedLeave) {
+                // A manual removal is an explicit opt-out for this membership.  The member
+                // becomes eligible again only after a later leave and rejoin is observed.
+                _newTradingPlayerKeys.Remove(GetGroupMemberKey(p.Name, p.WorldId));
                 p.HighlightLeave = false;
                 var leavePhase = GameEngine.CurrentPhase;
                 if (leavePhase == GamePhase.InitialDeal || leavePhase == GamePhase.PlayersTurn || leavePhase == GamePhase.DealerTurn)
@@ -931,7 +976,9 @@ public partial class BlackJackButtlerWindow
 
             bool clickedHold = holdHighlighted
                 ? BJBGui.ButtonHighlighted($"H##hold_{p.UIID}", _config.HighlightColor, _config.HighlightTextColor)
-                : BJBGui.Button($"H##hold_{p.UIID}");
+                : p.IsOnBench
+                    ? BJBGui.Button($"H##hold_{p.UIID}", BJBGui.OrangeHighlightTextColor)
+                    : BJBGui.Button($"H##hold_{p.UIID}");
             if (clickedHold)
             {
                 p.HighlightPause = false;
@@ -1077,7 +1124,7 @@ public partial class BlackJackButtlerWindow
                 if (hasUndo)
                 {
                     ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1f));
-                    if (BJBGui.SmallButton($"U##heart_{p.UIID}"))
+                    if (BJBGui.SmallButton($"U##heart_{p.UIID}", BJBGui.OrangeHighlightTextColor))
                     {
                         p.Bank = undoEntry.amount;
                         StatsManager.AddTip(-undoEntry.amount);
@@ -1662,6 +1709,49 @@ public partial class BlackJackButtlerWindow
         if (!enabled) ImGui.EndDisabled();
     }
 
+    private void ActivatePlayer(PlayerState player)
+    {
+        player.HighlightJoin = false;
+        player.IsActivePlayer = true;
+        var joinPhase = GameEngine.CurrentPhase;
+        if (joinPhase == GamePhase.InitialDeal || joinPhase == GamePhase.PlayersTurn || joinPhase == GamePhase.DealerTurn)
+            player.JoinedMidRound = true;
+        ActivityLogManager.LogPlayerJoin(player.DisplayName);
+        RoundLogManager.RecordPlayerJoin(player.DisplayName);
+        SaveSessionFromUI();
+        CompanionSyncManager.SendPlayerBankBetUpdate(_config, player);
+    }
+
+    public void TryAutoActivateTradingPlayer(string partnerName)
+    {
+        if (!_config.AutoActivateTradingPlayers || !IsRecognitionActive || string.IsNullOrWhiteSpace(partnerName))
+            return;
+
+        // The trade chat line can arrive before the regular one-second party sync. Refreshing
+        // here makes a just-joined member eligible before the trade is completed.
+        SyncParty();
+
+        var player = TradeManager.ResolvePlayer(partnerName, _players);
+        if (player == null || !player.IsInParty)
+            return;
+
+        var memberKey = GetGroupMemberKey(player.Name, player.WorldId);
+        if (!_newTradingPlayerKeys.Remove(memberKey))
+            return;
+
+        if (player.IsActivePlayer)
+        {
+            AddDebugLog($"[TradeAutoActivate] Consumed new status for already active player {player.DisplayName}", false);
+            return;
+        }
+
+        ActivatePlayer(player);
+        AddDebugLog($"[TradeAutoActivate] Activated newly joined trading player {player.DisplayName}", false);
+    }
+
+    private static string GetGroupMemberKey(string name, uint worldId)
+        => $"{name.Trim()}@{worldId}";
+
     public void SyncParty()
     {
         if (Plugin.IsDebugMode) return;
@@ -1690,6 +1780,7 @@ public partial class BlackJackButtlerWindow
         var localName = Plugin.PlayerState.CharacterName ?? Plugin.ObjectTable.LocalPlayer?.Name.TextValue ?? string.Empty;
         var localWorldId = Plugin.PlayerState.HomeWorld.RowId;
         var localContentId = Plugin.PlayerState.ContentId;
+        var currentGroupMemberKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         if (!string.IsNullOrWhiteSpace(localName))
         {
@@ -1745,6 +1836,14 @@ public partial class BlackJackButtlerWindow
                 }
             }
 
+            var memberKey = GetGroupMemberKey(name, homeWorldId);
+            currentGroupMemberKeys.Add(memberKey);
+            if (_hasGroupMembershipBaseline && !_knownGroupMemberKeys.Contains(memberKey))
+            {
+                _newTradingPlayerKeys.Add(memberKey);
+                AddDebugLog($"[TradeAutoActivate] Marked newly joined member {name}@{homeWorldId}", false);
+            }
+
             var existing = _players.FirstOrDefault(x =>
                 x.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
                 && (x.WorldId == 0 || homeWorldId == 0 || x.WorldId == homeWorldId));
@@ -1769,6 +1868,15 @@ public partial class BlackJackButtlerWindow
                 });
             }
         }
+
+        // The first authoritative snapshot after a load is only a baseline: existing members
+        // must not be treated as newly joined.  Later authoritative changes are the source of
+        // truth for new/left/rejoined membership.  These collections intentionally are not
+        // persisted with the session or configuration.
+        _newTradingPlayerKeys.IntersectWith(currentGroupMemberKeys);
+        _knownGroupMemberKeys.Clear();
+        _knownGroupMemberKeys.UnionWith(currentGroupMemberKeys);
+        _hasGroupMembershipBaseline = true;
 
         foreach (var p in _players)
         {

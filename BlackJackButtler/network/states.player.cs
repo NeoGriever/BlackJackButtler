@@ -206,7 +206,8 @@ public class PlayerState
             if (match != null) return match.Amount;
 
             var fallback = cfg.BetLimitEntries
-                .Where(e => e.Active && e.Kind == BetLimitEntryKind.Vip && e.VipLevel == 0)
+                .Where(e => e.Active && (e.Kind == BetLimitEntryKind.Normal
+                    || (e.Kind == BetLimitEntryKind.Vip && e.VipLevel == 0)))
                 .OrderByDescending(e => e.Amount)
                 .FirstOrDefault();
             if (fallback != null) return fallback.Amount;

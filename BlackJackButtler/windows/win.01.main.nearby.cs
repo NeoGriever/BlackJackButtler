@@ -24,19 +24,30 @@ public partial class BlackJackButtlerWindow
     private bool _showNearbySettingsWindow;
     private bool _showNearbyIgnoreWindow;
     private bool _nearbyDistSliderEditMode;
+    private bool _nearbyListVisible = true;
     private string _nearbyIgnoreNameInput = string.Empty;
     private string _nearbyIgnoreWorldInput = string.Empty;
     private DateTime _nearbyWorldInputBlockedUntil = DateTime.MinValue;
 
     internal void DrawNearbyPlayersSection(bool version2 = false)
     {
-        if (!_config.ShowNearbyPlayers) return;
+        if (!_config.ShowNearbyPlayers)
+        {
+            _showNearbySettingsWindow = false;
+            return;
+        }
 
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 
         ImGui.TextColored(new Vector4(0.4f, 0.8f, 1f, 1f), "NEARBY PLAYERS");
+        if (ImGui.IsItemHovered() && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            _nearbyListVisible = !_nearbyListVisible;
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip(_nearbyListVisible ? "Click to hide nearby players" : "Click to show nearby players");
+        DrawNearbySettingsWindow();
+        if (!_nearbyListVisible) return;
         ImGui.SameLine();
 
         var allianceMode = GroupContextManager.IsAllianceMode(_config);
@@ -59,8 +70,6 @@ public partial class BlackJackButtlerWindow
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Detection Radius and Nearby Players configuration");
         }
-
-        DrawNearbySettingsWindow();
 
         NearbyPlayersManager.PauseSorting = _config.NearbySticky || _nearbyListHovered;
         var allPlayers = NearbyPlayersManager.GetNearbyPlayers(_config);
@@ -103,13 +112,27 @@ public partial class BlackJackButtlerWindow
             NearbyNumberManager.DrawFootNumbers(sorted);
 
         int columns = Math.Clamp(_config.NearbyColumns, 1, 5);
-        float availWidth = ImGui.GetContentRegionAvail().X;
+        var availableRegion = ImGui.GetContentRegionAvail();
+        // The list is rendered immediately in the same frame in which the
+        // setting is enabled. A constrained/saved main-window size can leave no
+        // usable content region at that moment; never pass a non-positive size
+        // to native ImGui child-window code.
+        if (availableRegion.X <= 1f || availableRegion.Y <= 1f)
+        {
+            _nearbyListHovered = false;
+            NearbyPlayersManager.PauseSorting = _config.NearbySticky;
+            ImGui.TextDisabled("Resize the window to show nearby players.");
+            DrawDistanceCircle();
+            return;
+        }
+
+        float availWidth = availableRegion.X;
         float colWidth = availWidth / columns;
         float rowHeight = ImGui.GetTextLineHeightWithSpacing() + 2f;
 
         int totalItems = sorted.Count;
         int totalRows = (int)Math.Ceiling(totalItems / (double)columns);
-        float availHeight = ImGui.GetContentRegionAvail().Y;
+        float availHeight = availableRegion.Y;
         float childHeight;
         if (availHeight > rowHeight * 4)
         {
@@ -124,7 +147,8 @@ public partial class BlackJackButtlerWindow
 
         bool partyFull = GroupContextManager.CurrentMemberCount() >= 8;
 
-        if (ImGui.BeginChild("bjb_nearby_scroll", new Vector2(availWidth, childHeight), true))
+        childHeight = Math.Max(rowHeight, childHeight);
+        if (ImGui.BeginChild("bjb_nearby_scroll", new Vector2(Math.Max(1f, availWidth), childHeight), true))
         {
             ImGui.PushFont(UiBuilder.MonoFont);
 
@@ -456,6 +480,11 @@ public partial class BlackJackButtlerWindow
 
         ImGui.Separator();
         if (ImGui.Checkbox("Foot numbers", ref _config.NearbyShowFootNumbers)) _save();
+        if (_config.MainViewVersion == 3)
+        {
+            DrawV3OnOff("Always show range circle", "nearby_always_show_circle", ref _config.NearbyAlwaysShowCircle);
+            DrawCommandSelector("Nearby Player Custom Command Button", ref _config.NearbyQuestionCommandName);
+        }
 
         ImGui.Separator();
         ImGui.TextUnformatted("Area");

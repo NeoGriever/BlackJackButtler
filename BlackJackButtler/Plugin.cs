@@ -192,6 +192,9 @@ public sealed class Plugin : IDalamudPlugin
         if (Configuration.EnsureShortResultRules())
             Configuration.Save();
 
+        if (Configuration.EnsureLayout3Migrations())
+            Configuration.Save();
+
         if (!Configuration.EnableAllianceSupport)
         {
             Configuration.EnableAllianceSupport = true;
@@ -439,8 +442,8 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         // Auto Initial Deal
-        if (Configuration.EnableAutomation && Configuration.ShowAutoPlayerHandButton
-            && Configuration.AutoInitialDeal && GameEngine.CurrentPhase == GamePhase.InitialDeal)
+        if (Configuration.EnableAutomation && Configuration.AutoInitialDeal
+            && GameEngine.CurrentPhase == GamePhase.InitialDeal)
         {
             if (!CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending)
             {
@@ -482,8 +485,8 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         // Auto Dealer Draw
-        if (Configuration.EnableAutomation && Configuration.ShowAutoDealerDrawButton
-            && Configuration.AutoDealerDraw && GameEngine.CurrentPhase == GamePhase.DealerTurn)
+        if (Configuration.EnableAutomation && Configuration.AutoDealerDraw
+            && GameEngine.CurrentPhase == GamePhase.DealerTurn)
         {
             if (!CommandExecutor.IsRunning && !CommandExecutor.IsFollowUpPending)
             {

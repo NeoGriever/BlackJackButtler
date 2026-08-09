@@ -73,4 +73,24 @@ public static class StatsManager
             _ => Math.Ceiling(minutes / 60.0),
         };
     }
+
+    public static double GetClippedWageUnits(int mode, WageInterval interval)
+    {
+        var intervalMinutes = interval switch
+        {
+            WageInterval.Minute => 1d,
+            WageInterval.FifteenMinutes => 15d,
+            WageInterval.ThirtyMinutes => 30d,
+            WageInterval.TwoHours => 120d,
+            _ => 60d,
+        };
+        var units = GetTimePassed().TotalMinutes / intervalMinutes;
+        return mode switch
+        {
+            0 => Math.Ceiling(units),
+            1 => Math.Floor(units),
+            2 => Math.Round(units, MidpointRounding.AwayFromZero),
+            _ => Math.Ceiling(units),
+        };
+    }
 }

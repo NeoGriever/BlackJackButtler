@@ -10,8 +10,16 @@ namespace BlackJackButtler.Windows;
 internal static class BJBGui
 {
     public static Vector4 ButtonTextColor = new Vector4(1f, 1f, 1f, 1f);
+    public static readonly Vector4 OrangeHighlightTextColor = new Vector4(0f, 0f, 0f, 1f);
     public static GilVisualMode GilVisual = GilVisualMode.FixedGroup;
-    private static readonly Dictionary<string, string> LongInputBuffers = new();
+    private sealed class LongInputState
+    {
+        public bool IsEditing;
+        public bool FocusPending;
+        public string Text = string.Empty;
+    }
+
+    private static readonly Dictionary<string, LongInputState> LongInputStates = new();
 
     public static bool MatchesFilter(string filter, params string?[] haystacks)
     {
@@ -66,6 +74,22 @@ internal static class BJBGui
         return r;
     }
 
+    public static bool Button(string label, Vector2 size, Vector4 textColor)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Text, textColor);
+        var r = ImGui.Button(label, size);
+        ImGui.PopStyleColor();
+        return r;
+    }
+
+    public static bool Button(string label, Vector4 textColor)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Text, textColor);
+        var r = ImGui.Button(label);
+        ImGui.PopStyleColor();
+        return r;
+    }
+
     public static bool ButtonHighlighted(string label, Vector4 buttonColor, Vector4 textColor)
     {
         ImGui.PushStyleColor(ImGuiCol.Button, buttonColor);
@@ -92,6 +116,14 @@ internal static class BJBGui
         return r;
     }
 
+    public static bool SmallButton(string label, Vector4 textColor)
+    {
+        ImGui.PushStyleColor(ImGuiCol.Text, textColor);
+        var r = ImGui.SmallButton(label);
+        ImGui.PopStyleColor();
+        return r;
+    }
+
     public static bool SmallButtonHighlighted(string label, Vector4 buttonColor, Vector4 textColor)
     {
         ImGui.PushStyleColor(ImGuiCol.Button, buttonColor);
@@ -104,7 +136,7 @@ internal static class BJBGui
     public static bool InputInt(string label, ref int v, int step)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
-        var r = ImGui.InputInt(label, ref v, step);
+        var r = BJBStepInput.InputInt(label, ref v, step);
         ImGui.PopStyleColor();
         return r;
     }
@@ -112,7 +144,7 @@ internal static class BJBGui
     public static bool InputLong(string label, ref long v, long step, long step_fast)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
-        var r = ImGui.InputLong(label, ref v, step, step_fast);
+        var r = BJBStepInput.InputLong(label, ref v, step, step_fast);
         ImGui.PopStyleColor();
         return r;
     }
@@ -127,43 +159,62 @@ internal static class BJBGui
 
     public static bool InputLongFormatted(string label, ref long value, Vector4? textColor = null)
     {
-        var mode = GilVisual;
-        if (!LongInputBuffers.TryGetValue(label, out var text))
-            text = FormatGil(value, mode);
+        if (!LongInputStates.TryGetValue(label, out var state))
+        {
+            state = new LongInputState();
+            LongInputStates[label] = state;
+        }
 
         ImGui.PushFont(UiBuilder.MonoFont);
-        var itemWidth = ImGui.CalcItemWidth();
-        if (!LongInputBuffers.ContainsKey(label))
-            text = AlignGil(text, itemWidth, mode);
+        if (!state.IsEditing)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, textColor ?? ButtonTextColor);
+            ImGui.PushStyleColor(ImGuiCol.Button, Vector4.Zero);
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.25f, 0.25f, 0.25f, 0.35f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.35f, 0.35f, 0.35f, 0.45f));
+            ImGui.PushStyleVar(ImGuiStyleVar.ButtonTextAlign, new Vector2(1f, 0.5f));
+            var clicked = ImGui.Button($"{FormatGil(value, GilVisual)}##gil_label_{label}", new Vector2(ImGui.CalcItemWidth(), 0f));
+            ImGui.PopStyleVar();
+            ImGui.PopStyleColor(4);
+            if (clicked)
+            {
+                state.Text = value.ToString(CultureInfo.InvariantCulture);
+                state.IsEditing = true;
+                state.FocusPending = true;
+            }
+            ImGui.PopFont();
+            return false;
+        }
+
+        if (state.FocusPending)
+        {
+            ImGui.SetKeyboardFocusHere();
+            state.FocusPending = false;
+        }
         ImGui.PushStyleColor(ImGuiCol.Text, textColor ?? ButtonTextColor);
-        var edited = ImGui.InputText(label, ref text, 64);
+        var submitted = ImGui.InputText(label, ref state.Text, 64,
+            ImGuiInputTextFlags.AutoSelectAll | ImGuiInputTextFlags.EnterReturnsTrue);
         ImGui.PopStyleColor();
 
         var valueChanged = false;
-        if (edited)
+        if (submitted)
         {
-            LongInputBuffers[label] = text;
-            var normalized = text
-                .Replace(",", string.Empty, StringComparison.Ordinal)
-                .Replace(" ", string.Empty, StringComparison.Ordinal)
-                .Trim();
-            if (long.TryParse(
-                    normalized,
-                    NumberStyles.AllowLeadingSign,
-                    CultureInfo.InvariantCulture,
-                    out var parsed)
+            var normalized = state.Text.Replace(",", string.Empty, StringComparison.Ordinal).Trim();
+            if (long.TryParse(normalized, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var parsed)
                 && parsed != value)
             {
                 value = parsed;
                 valueChanged = true;
             }
+            state.IsEditing = false;
+        }
+        else if (ImGui.IsItemDeactivated())
+        {
+            // Leaving the editor without Enter discards temporary text and restores the label.
+            state.IsEditing = false;
         }
 
-        if (!ImGui.IsItemActive())
-            LongInputBuffers[label] = AlignGil(FormatGil(value, mode), itemWidth, mode);
-
         ImGui.PopFont();
-
         return valueChanged;
     }
 
@@ -174,54 +225,18 @@ internal static class BJBGui
         _ => FormatFixedGil(value),
     };
 
-    private static string AlignGil(string text, float itemWidth, GilVisualMode mode)
-        => mode == GilVisualMode.Plain ? text : PadToRightEdge(text, itemWidth);
-
     private static string FormatFixedGil(long value)
     {
-        var negative = value < 0;
-        var absolute = value == long.MinValue ? (ulong)long.MaxValue + 1UL : (ulong)Math.Abs(value);
-        if (absolute > 999_999_999_999UL)
-            return value.ToString("N0", CultureInfo.InvariantCulture);
-
-        var numericGroups = new ulong[4];
-        for (var i = 3; i >= 0; i--)
-        {
-            numericGroups[i] = absolute % 1000UL;
-            absolute /= 1000UL;
-        }
-
-        var firstValueGroup = Array.FindIndex(numericGroups, group => group != 0UL);
-        if (firstValueGroup < 0)
-            firstValueGroup = 3;
-
-        var groups = new string[4];
-        for (var i = 0; i < groups.Length; i++)
-            groups[i] = i < firstValueGroup
-                ? "   "
-                : i == firstValueGroup
-                    ? numericGroups[i].ToString(CultureInfo.InvariantCulture).PadLeft(3)
-                    : numericGroups[i].ToString("D3", CultureInfo.InvariantCulture);
-
-        var formatted = string.Join(',', groups);
-        return negative ? $"-{formatted}" : formatted;
+        // Right alignment is supplied by the display button. The persisted/displayed
+        // number itself must never be padded with spaces.
+        return value.ToString("N0", CultureInfo.InvariantCulture);
     }
 
-    private static string PadToRightEdge(string text, float itemWidth)
-    {
-        var available = Math.Max(0f, itemWidth - ImGui.GetStyle().FramePadding.X * 2f);
-        var missing = available - ImGui.CalcTextSize(text).X;
-        if (missing <= 0f)
-            return text;
-
-        var spaceWidth = Math.Max(1f, ImGui.CalcTextSize(" ").X);
-        return new string(' ', (int)(missing / spaceWidth)) + text;
-    }
 
     public static bool InputFloat(string label, ref float v, float step, float step_fast, string format)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
-        var r = ImGui.InputFloat(label, ref v, step, step_fast, format);
+        var r = BJBStepInput.InputFloat(label, ref v, step, step_fast, format);
         ImGui.PopStyleColor();
         return r;
     }
@@ -256,6 +271,16 @@ internal static class BJBGui
         var r = ImGui.Combo(label, ref current_item, items_separated_by_zeros);
         ImGui.PopStyleColor();
         return r;
+    }
+
+    public static bool Combo(string label, ref int currentItem, string itemsSeparatedByZeros, float popupWidth)
+    {
+        // This affects the selection popup only; the closed combo keeps the
+        // width assigned by its surrounding layout or table column.
+        ImGui.SetNextWindowSizeConstraints(
+            new Vector2(popupWidth, 0f),
+            new Vector2(popupWidth, float.MaxValue));
+        return Combo(label, ref currentItem, itemsSeparatedByZeros);
     }
 
     public static bool Combo(string label, ref int current_item, string[] items, int items_count)

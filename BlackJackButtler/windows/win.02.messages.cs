@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using System.Linq;
 using Dalamud.Bindings.ImGui;
@@ -8,6 +9,15 @@ namespace BlackJackButtler.Windows;
 public partial class BlackJackButtlerWindow
 {
     private string _filterMessages = string.Empty;
+    private readonly Dictionary<MessageBatch, MessageBatchTextEditState> _messageTextEditors = new();
+    private MessageBatch? _messageTextBackBatch;
+    private bool _messageTextBackPopupOpen;
+
+    private sealed class MessageBatchTextEditState
+    {
+        public string Original = string.Empty;
+        public string Draft = string.Empty;
+    }
 
     private void DrawMessagesPage()
     {
@@ -18,17 +28,13 @@ public partial class BlackJackButtlerWindow
 
         BJBGui.DrawFilterBar("messages", ref _filterMessages, "Search batch name or message...");
 
-        var hideStd = _config.HideStandardBatches;
-        if (ImGui.Checkbox("Hide standard batches", ref hideStd)) { _config.HideStandardBatches = hideStd; _save(); }
-
-        ImGui.SameLine();
         var io = ImGui.GetIO();
         bool keysDown = io.KeyCtrl && io.KeyShift;
 
         if (!keysDown) ImGui.BeginDisabled();
         if (keysDown) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
 
-        if (BJBGui.Button("Hard Reset…##hard_reset"))
+        if (BJBGui.Button("Restore default messages (Hard reset)##hard_reset"))
         {
             _openForceDefaultsPopup = true;
             ImGui.OpenPopup("bjb.restore.confirm");
@@ -73,84 +79,256 @@ public partial class BlackJackButtlerWindow
             ImGui.EndPopup();
         }
 
-        if (BJBGui.Button("+ New Batch")) { _config.MessageBatches.Add(new MessageBatch()); _save(); }
+        if (ImGui.BeginTabBar("##message_batch_tabs"))
+        {
+            if (ImGui.BeginTabItem("Standard Message Batches"))
+            {
+                DrawMessageBatches(standard: true, io.KeyCtrl);
+                ImGui.EndTabItem();
+            }
 
-        for (int i = 0; i < _config.MessageBatches.Count; i++)
+            if (ImGui.BeginTabItem("Custom Message Batches"))
+            {
+                if (BJBGui.Button("+ New Batch"))
+                {
+                    _config.MessageBatches.Add(new MessageBatch());
+                    _save();
+                }
+                ImGui.Spacing();
+                DrawMessageBatches(standard: false, io.KeyCtrl);
+                ImGui.EndTabItem();
+            }
+
+            ImGui.EndTabBar();
+        }
+
+        if (_messageTextBackPopupOpen && _messageTextBackBatch != null)
+            ImGui.OpenPopup("bjb_message_text_unsaved");
+        DrawMessageTextBackPopup();
+    }
+
+    private void DrawMessageBatches(bool standard, bool ctrlHeld)
+    {
+        for (var i = 0; i < _config.MessageBatches.Count; i++)
         {
             var batch = _config.MessageBatches[i];
-            bool isStd = IsStandardBatch(batch.Name);
-            if (isStd && _config.HideStandardBatches) continue;
+            var isStandard = IsStandardBatch(batch.Name);
+            if (isStandard != standard || !BJBGui.MatchesFilter(_filterMessages, batch.Name, batch.Messages))
+                continue;
 
-            if (!BJBGui.MatchesFilter(_filterMessages, batch.Name, batch.Messages)) continue;
+            ImGui.PushID($"batch_{i}");
+            if (isStandard) ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.1f, 0.3f, 0.1f, 1f));
 
-            ImGui.PushID(i);
-            if (isStd) ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(0.1f, 0.3f, 0.1f, 1f));
-
-            // Get mode name for display
-            string modeName = batch.Mode switch
+            var modeName = batch.Mode switch
             {
                 SelectionMode.Random => "Random",
                 SelectionMode.First => "First",
                 SelectionMode.Iterative => "Iterative",
-                _ => "Unknown"
+                _ => "Unknown",
             };
 
             if (!string.IsNullOrEmpty(_filterMessages))
                 ImGui.SetNextItemOpen(true, ImGuiCond.Always);
 
-            // Draw header with mode text
-            bool open = ImGui.CollapsingHeader($"{(isStd ? "● " : "")}{batch.Name} [{modeName}]###batch_{i}");
-
-            if (isStd) ImGui.PopStyleColor();
+            var open = ImGui.CollapsingHeader($"{(isStandard ? "● " : "")}{batch.Name} [{modeName}]###batch_header");
+            if (isStandard) ImGui.PopStyleColor();
 
             if (open)
             {
-                if (!isStd) { var n = batch.Name; if (ImGui.InputText("Batch Name", ref n, 64)) { batch.Name = n; _save(); } }
-
-                for (int m = 0; m < batch.Messages.Count; m++)
+                if (!isStandard)
                 {
-                    var msg = batch.Messages[m];
-                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 35);
-                    if (ImGui.InputText($"##msg_{batch.Name}_{m}", ref msg, 256)) { batch.Messages[m] = msg; _save(); }
-                    ImGui.SameLine();
-                    if (BJBGui.Button($"X##{batch.Name}_{m}")) { batch.Messages.RemoveAt(m); if (m < batch.ADFlags.Count) batch.ADFlags.RemoveAt(m); _save(); break; }
-                }
-
-                // Draw "+ Line" button and mode combo on same line
-                if (BJBGui.Button("+ Line")) { batch.Messages.Add(""); _save(); }
-                ImGui.SameLine();
-                ImGui.Text("Mode:");
-                ImGui.SameLine();
-                ImGui.SetNextItemWidth(120);
-                int mode = (int)batch.Mode;
-                if (BJBGui.Combo($"##mode_{batch.Name}", ref mode, "Random\0First\0Iterative\0")) { batch.Mode = (SelectionMode)mode; _save(); }
-
-                if (!isStd)
-                {
-                    ImGui.Spacing();
-                    ImGui.Separator();
-
-                    if (io.KeyCtrl)
+                    var name = batch.Name;
+                    if (ImGui.InputText("Batch Name", ref name, 64))
                     {
-                        if (BJBGui.Button("Delete (Hold CTRL)", new Vector2(-1, 0)))
-                        {
-                            _config.MessageBatches.RemoveAt(i);
-                            _save();
-                            ImGui.PopID();
-                            break;
-                        }
-                    }
-                    else
-                    {
-                        ImGui.BeginDisabled();
-                        BJBGui.Button("Delete (Hold CTRL)", new Vector2(-1, 0));
-                        ImGui.EndDisabled();
+                        batch.Name = name;
+                        _save();
                     }
                 }
+
+                if (_messageTextEditors.TryGetValue(batch, out var textEditor))
+                    DrawMessageTextEditor(batch, textEditor);
+                else
+                    DrawMessageListEditor(batch, isStandard, ctrlHeld, i);
             }
 
             ImGui.PopID();
+            ImGui.Spacing();
         }
+    }
+
+    private void DrawMessageListEditor(MessageBatch batch, bool isStandard, bool ctrlHeld, int batchIndex)
+    {
+        for (var messageIndex = 0; messageIndex < batch.Messages.Count; messageIndex++)
+        {
+            var message = batch.Messages[messageIndex];
+            ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - 35f);
+            if (ImGui.InputText($"##msg_{messageIndex}", ref message, 256))
+            {
+                batch.Messages[messageIndex] = message;
+                _save();
+            }
+            ImGui.SameLine();
+            if (BJBGui.Button($"X##msg_{messageIndex}"))
+            {
+                batch.Messages.RemoveAt(messageIndex);
+                if (messageIndex < batch.ADFlags.Count) batch.ADFlags.RemoveAt(messageIndex);
+                _save();
+                break;
+            }
+        }
+
+        if (BJBGui.Button("+ Line"))
+        {
+            batch.Messages.Add(string.Empty);
+            _save();
+        }
+        ImGui.SameLine();
+        ImGui.TextUnformatted("Mode:");
+        ImGui.SameLine();
+        ImGui.SetNextItemWidth(120f);
+        var mode = (int)batch.Mode;
+        if (BJBGui.Combo("##mode", ref mode, "Random\0First\0Iterative\0"))
+        {
+            batch.Mode = (SelectionMode)mode;
+            _save();
+        }
+
+        ImGui.SameLine();
+        if (BJBGui.Button("Text Edit Mode"))
+            _messageTextEditors[batch] = new MessageBatchTextEditState
+            {
+                Original = BuildMessageText(batch),
+                Draft = BuildMessageText(batch),
+            };
+
+        if (isStandard)
+            return;
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        if (ctrlHeld)
+        {
+            if (BJBGui.Button("Delete (Hold CTRL)", new Vector2(-1f, 0f)))
+            {
+                _messageTextEditors.Remove(batch);
+                _config.MessageBatches.RemoveAt(batchIndex);
+                _save();
+            }
+        }
+        else
+        {
+            ImGui.BeginDisabled();
+            BJBGui.Button("Delete (Hold CTRL)", new Vector2(-1f, 0f));
+            ImGui.EndDisabled();
+        }
+    }
+
+    private void DrawMessageTextEditor(MessageBatch batch, MessageBatchTextEditState state)
+    {
+        ImGui.SetNextItemWidth(-1f);
+        ImGui.InputTextMultiline("##message_text_editor", ref state.Draft, 16_384, new Vector2(-1f, 220f));
+        ImGui.TextDisabled("Prefix a line with [AD] to enable Anti-Double. Use \\[AD] for literal text.");
+
+        if (BJBGui.Button("Save"))
+            SaveMessageTextEditor(batch, state);
+        ImGui.SameLine();
+        if (BJBGui.Button("List Edit Mode"))
+        {
+            if (string.Equals(state.Original, state.Draft, StringComparison.Ordinal))
+            {
+                _messageTextEditors.Remove(batch);
+            }
+            else
+            {
+                _messageTextBackBatch = batch;
+                _messageTextBackPopupOpen = true;
+            }
+        }
+    }
+
+    private void DrawMessageTextBackPopup()
+    {
+        var batch = _messageTextBackBatch;
+        if (!_messageTextBackPopupOpen || batch == null)
+            return;
+
+        if (!ImGui.BeginPopupModal("bjb_message_text_unsaved", ref _messageTextBackPopupOpen, ImGuiWindowFlags.AlwaysAutoResize))
+            return;
+
+        ImGui.TextUnformatted("Save changes to this message batch?");
+        if (BJBGui.Button("Yes"))
+        {
+            if (_messageTextEditors.TryGetValue(batch, out var state))
+                SaveMessageTextEditor(batch, state);
+            _messageTextEditors.Remove(batch);
+            _messageTextBackBatch = null;
+            _messageTextBackPopupOpen = false;
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.SameLine();
+        if (BJBGui.Button("No"))
+        {
+            _messageTextEditors.Remove(batch);
+            _messageTextBackBatch = null;
+            _messageTextBackPopupOpen = false;
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.SameLine();
+        if (BJBGui.Button("Cancel"))
+        {
+            _messageTextBackPopupOpen = false;
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.EndPopup();
+    }
+
+    private void SaveMessageTextEditor(MessageBatch batch, MessageBatchTextEditState state)
+    {
+        var messages = new List<string>();
+        var adFlags = new List<bool>();
+        foreach (var rawLine in state.Draft.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
+        {
+            if (string.IsNullOrWhiteSpace(rawLine))
+                continue;
+
+            var line = rawLine;
+            var antiDouble = false;
+            if (line.StartsWith("\\[AD]", StringComparison.OrdinalIgnoreCase))
+                line = line[1..];
+            else if (line.StartsWith("[AD]", StringComparison.OrdinalIgnoreCase))
+            {
+                antiDouble = true;
+                line = line[4..];
+            }
+
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            messages.Add(line);
+            adFlags.Add(antiDouble);
+        }
+
+        batch.Messages = messages;
+        batch.ADFlags = adFlags;
+        state.Draft = BuildMessageText(batch);
+        state.Original = state.Draft;
+        _save();
+    }
+
+    private static string BuildMessageText(MessageBatch batch)
+    {
+        var lines = new List<string>(batch.Messages.Count);
+        for (var index = 0; index < batch.Messages.Count; index++)
+        {
+            var line = batch.Messages[index] ?? string.Empty;
+            if (batch.GetAD(index))
+                lines.Add("[AD]" + line);
+            else if (line.StartsWith("[AD]", StringComparison.OrdinalIgnoreCase))
+                lines.Add("\\" + line);
+            else
+                lines.Add(line);
+        }
+        return string.Join("\n", lines);
     }
 
     private bool IsStandardBatch(string name)

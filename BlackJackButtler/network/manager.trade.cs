@@ -27,6 +27,7 @@ public static class TradeManager
         _currentPartner = name.Trim();
         _buffer = 0;
         _closedAtUtc = null;
+        Plugin.Instance.GetMainWindow().TryAutoActivateTradingPlayer(_currentPartner);
     }
 
     public static void AddGil(string rawAmount, bool isPositive)
@@ -154,7 +155,7 @@ public static class TradeManager
         return name;
     }
 
-    private static PlayerState? ResolvePlayer(string partnerName, List<PlayerState> players)
+    internal static PlayerState? ResolvePlayer(string partnerName, List<PlayerState> players)
     {
         // Stage 1: Exact match (case-insensitive)
         var exact = players.FirstOrDefault(x =>

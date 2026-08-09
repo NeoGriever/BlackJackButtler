@@ -100,29 +100,37 @@ public partial class BlackJackButtlerWindow
             .Select(x => x.index)
             .ToList();
 
-        ImGui.TextDisabled("Standard Regex Entries");
-        foreach (var index in standardIndices)
+        if (ImGui.BeginTabBar("##regex_entry_tabs"))
         {
-            if (DrawRegexEntry(index, true, -1, customIndices))
-                break;
-        }
-
-        ImGui.Spacing();
-        ImGui.Separator();
-        ImGui.Spacing();
-        ImGui.TextDisabled("Custom Regex Entries");
-        if (customIndices.Count == 0)
-        {
-            ImGui.TextDisabled("No custom regex entries.");
-        }
-        else
-        {
-            for (int orderIndex = 0; orderIndex < customIndices.Count; orderIndex++)
+            if (ImGui.BeginTabItem("Standard Regex Entries"))
             {
-                var index = customIndices[orderIndex];
-                if (DrawRegexEntry(index, false, orderIndex, customIndices))
-                    break;
+                foreach (var index in standardIndices)
+                {
+                    if (DrawRegexEntry(index, true, -1, customIndices))
+                        break;
+                }
+                ImGui.EndTabItem();
             }
+
+            if (ImGui.BeginTabItem("Custom Regex Entries"))
+            {
+                if (customIndices.Count == 0)
+                {
+                    ImGui.TextDisabled("No custom regex entries.");
+                }
+                else
+                {
+                    for (int orderIndex = 0; orderIndex < customIndices.Count; orderIndex++)
+                    {
+                        var index = customIndices[orderIndex];
+                        if (DrawRegexEntry(index, false, orderIndex, customIndices))
+                            break;
+                    }
+                }
+                ImGui.EndTabItem();
+            }
+
+            ImGui.EndTabBar();
         }
     }
 
@@ -302,7 +310,8 @@ public partial class BlackJackButtlerWindow
                     "Own Button\0" +
                     "SetBet\0" +
                     "Invite Nearby\0" +
-                    "Payout\0"
+                    "Payout\0" +
+                    "Withdraw\0"
                 ))
                 {
                     e.Action = (RegexAction)action;
