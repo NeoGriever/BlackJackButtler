@@ -98,12 +98,8 @@ public static class JoinQueueManager
             {
                 entry.OutOfRangeSince ??= DateTime.Now;
 
-                if (!cfg.NoAutoDequeue && (DateTime.Now - entry.OutOfRangeSince.Value).TotalSeconds >= 90)
-                {
-                    var window = Plugin.Instance.GetMainWindow();
-                    window.AddDebugLog($"[JoinQueue] Auto-dequeue: {entry.FullKey} (out of range 90s)");
-                    _queue.RemoveAt(i);
-                }
+                // No-auto-dequeue is now a fixed behaviour. Keep the historic field only
+                // for loading old configurations; queued players are never removed here.
             }
         }
     }

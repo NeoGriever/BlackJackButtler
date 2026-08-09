@@ -4,12 +4,12 @@
     "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
     "Description": "/bjb - opens the blackjack buttler tool",
     "InternalName": "BlackJackButtler",
-    "AssemblyVersion": "1.8.4.9",
+    "AssemblyVersion": "1.9.0.0",
     "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "TestingDalamudApiLevel": 15,
     "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/BlackJackButtler/images/icon.png",
     "Tags": ["BlackJack", "Helper", "Chat"],
-    "Changelog": "v1.8.4.9\n\nCOMMANDS:\n- Anti-Double is now available only for Party and Alliance command lines. Static texts and matching message-block references can enable AD across all normalized matches.\n- AD comparisons trim the final text and ignore <se.*> tags. Every generated Party/Alliance line refreshes the history, while only AD lines compare against its latest entry.\n- A match skips both the message and its associated delay and is reported explicitly in the Verbose debug log. Enabling an AD command line switches on Avoid double Messages as a one-shot action.\n- Preset chat previews now simulate the same AD history and comparison rules.\n\nFirst of all, Latency: I did not copy anything of SBJ, because i don't have SBJ. I have no access to any code or any file from SBJ. Just because i have the not finished idea of a companion tool does not mean, that this idea is stolen. Straigt blocking me after you blaming me for maked up things is just stupid. You're of course removed from the thanks page after all this bullshit you talking about me, where i have more than enough evidence, was a logical reaction. YOU are just a bad person and i don't have any regrets to kick you out of the plugin at all."
+    "Changelog": "Version 1.9.0.0\n\n- Adds the Withdraw regex action with exact partial payouts, all/everything support, and insufficient-bank protection.\n- Includes Version 3 settings, migration-safe structured data, refined automation, and the complete in-game changelog.\n\nSee changelog.md or the in-game Changelog dialog for the complete categorized notes."
 }

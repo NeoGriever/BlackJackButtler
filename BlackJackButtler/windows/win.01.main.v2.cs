@@ -63,17 +63,6 @@ public partial class BlackJackButtlerWindow
                 GameEngine.TargetPlayer(leaderName);
         }
 
-        if (IsRecognitionActive && _config.CurrentLevel == UserLevel.Dev
-            && (!IsLocalPlayerPartyLeader() || GroupContextManager.CurrentMemberCount() == 0))
-        {
-            if (BJBGui.SmallButton("Activate debug mode"))
-            {
-                IsRecognitionActive = false;
-                SessionManager.ClearSession();
-                EnableDebugMode();
-                Plugin.Instance.UpdateEventHooks();
-            }
-        }
     }
 
     private const float _v2BtnW = 52f;
@@ -208,7 +197,8 @@ public partial class BlackJackButtlerWindow
         ImGui.SameLine();
         bool tblOn = _config.TablePopout;
         if (tblOn) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
-        if (BJBGui.Button("Tbl##v2_tbl", new Vector2(_v2BtnW, 0)))
+        if (BJBGui.Button("Tbl##v2_tbl", new Vector2(_v2BtnW, 0),
+                tblOn ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor))
         {
             _config.TablePopout = !_config.TablePopout;
             if (_tablePopoutWindow != null) _tablePopoutWindow.IsOpen = _config.TablePopout;
@@ -219,11 +209,17 @@ public partial class BlackJackButtlerWindow
             ? "Table is open in popup — click to close"
             : "Open dealer/player table as popup window");
 
+        ImGui.SameLine();
+        DrawRotationButton("v2", new Vector2(_v2BtnW, 0));
+
+        if (_config.ShowNearbyPlayers)
+        {
         // Nearby Popout — gleicher Snapshot-Fix
         ImGui.SameLine();
         bool nbyOn = _config.NearbyPopout;
         if (nbyOn) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
-        if (BJBGui.Button("Nby##v2_nby", new Vector2(_v2BtnW, 0)))
+        if (BJBGui.Button("Nby##v2_nby", new Vector2(_v2BtnW, 0),
+                nbyOn ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor))
         {
             _config.NearbyPopout = !_config.NearbyPopout;
             if (_nearbyPopoutWindow != null) _nearbyPopoutWindow.IsOpen = _config.NearbyPopout;
@@ -246,6 +242,7 @@ public partial class BlackJackButtlerWindow
             ref _config.NearbySticky,
             "Sticky sorting: keep the current Nearby Players order while enabled",
             _v2BtnW);
+        }
 
         // PANIC (nur bei Ctrl+Shift)
         if (io.KeyCtrl && io.KeyShift)
@@ -263,7 +260,8 @@ public partial class BlackJackButtlerWindow
     {
         bool wasOn = value;
         if (wasOn) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
-        if (BJBGui.Button(id, new Vector2(width, 0)))
+        if (BJBGui.Button(id, new Vector2(width, 0),
+                wasOn ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor))
         {
             value = !value;
             _save();
@@ -310,7 +308,7 @@ public partial class BlackJackButtlerWindow
 
     private void DrawCustomButtonBarV2()
     {
-        if (_config.CustomButtonOrder.Count == 0 && _config.CustomCommandGroups.Count == 0) return;
+        if (_config.CustomButtonEntries.Count == 0 && _config.CustomCommandGroups.Count == 0) return;
 
         ImGui.TextDisabled("Custom Actions");
         ImGui.SameLine();

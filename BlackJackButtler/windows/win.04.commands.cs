@@ -114,7 +114,7 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.Separator();
-        ImGui.TextDisabled("Define what happens when an action is triggered. Use <t> for the player name.");
+        // ImGui.TextDisabled("Define what happens when an action is triggered. Use <t> for the player name.");
 
         BJBGui.DrawFilterBar("commands", ref _filterCommands, "Search command name or text...");
         ImGui.Spacing();
@@ -315,14 +315,11 @@ public partial class BlackJackButtlerWindow
             float oldDelay = cmd.Delay;
             if (BJBGui.DragFloat("##delay", ref cmd.Delay, 0.01f, 0.01f, maxDelay, "%.2fs"))
             {
-                if (_config.DelaySecondSnapping)
-                {
-                    float nearestInt = MathF.Round(cmd.Delay);
-                    float oldDist = MathF.Abs(oldDelay - nearestInt);
-                    float newDist = MathF.Abs(cmd.Delay - nearestInt);
-                    if (newDist < 0.2f && oldDist > 0.2f)
-                        cmd.Delay = nearestInt;
-                }
+                float nearestInt = MathF.Round(cmd.Delay);
+                float oldDist = MathF.Abs(oldDelay - nearestInt);
+                float newDist = MathF.Abs(cmd.Delay - nearestInt);
+                if (newDist < 0.2f && oldDist > 0.2f)
+                    cmd.Delay = nearestInt;
                 cmd.Delay = Math.Clamp(cmd.Delay, 0.01f, maxDelay);
                 _save();
             }

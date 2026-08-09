@@ -19,7 +19,7 @@ public static class NearbyAlertManager
 
     public static void Update(List<NearbyPlayerInfo> current, Configuration config)
     {
-        if (!config.NearbyAlertEnabled || config.NearbyAlertSoundFiles.Count == 0)
+        if (!config.NearbyAlertEnabled || !GetEnabledEntries(config).Any())
         {
             var currentKeys = new HashSet<string>(current
                 .Where(p => p.IsInRange)
@@ -50,26 +50,56 @@ public static class NearbyAlertManager
 
     public static void PlayRandomSound(Configuration config)
     {
-        if (config.NearbyAlertSoundFiles.Count == 0) return;
-
-        var valid = config.NearbyAlertSoundFiles.Where(File.Exists).ToList();
+        var valid = GetEnabledEntries(config).Where(entry => File.Exists(entry.Path)).ToList();
         if (valid.Count == 0) return;
 
-        var path = config.NearbyAlertSoundMode switch
+        var sound = config.NearbyAlertSoundMode switch
         {
             NearbyAlertSoundMode.FirstOnly => valid[0],
             NearbyAlertSoundMode.Iterative => valid[_iterativeIndex++ % valid.Count],
             _ => valid[_rng.Next(valid.Count)]
         };
-        PlayFile(path, config.NearbyAlertVolume);
+        PlayFile(sound.Path, config.NearbyAlertVolume * sound.Volume / 100f, out _);
     }
 
-    public static void PlayTestSound(Configuration config)
+    public static bool PlayTestSound(Configuration config, out string status)
     {
-        PlayRandomSound(config);
+        var enabled = GetEnabledEntries(config).ToList();
+        if (enabled.Count == 0)
+        {
+            status = "No enabled sound file is configured.";
+            return false;
+        }
+
+        var valid = enabled.Where(entry => File.Exists(entry.Path)).ToList();
+        if (valid.Count == 0)
+        {
+            status = "No enabled sound file exists at its configured path.";
+            return false;
+        }
+
+        var sound = config.NearbyAlertSoundMode switch
+        {
+            NearbyAlertSoundMode.FirstOnly => valid[0],
+            NearbyAlertSoundMode.Iterative => valid[_iterativeIndex++ % valid.Count],
+            _ => valid[_rng.Next(valid.Count)]
+        };
+        var volume = config.NearbyAlertVolume * sound.Volume / 100f;
+        return PlayFile(sound.Path, volume, out status);
     }
 
-    private static void PlayFile(string path, float volumePercent)
+    private static IEnumerable<NearbyAlertSoundEntry> GetEnabledEntries(Configuration config)
+    {
+        if (config.NearbyAlertSoundEntriesMigrated)
+            return config.NearbyAlertSoundEntries.Where(entry => entry.Enabled && !string.IsNullOrWhiteSpace(entry.Path));
+
+        // Defensive fallback while a configuration is being loaded or imported.
+        return config.NearbyAlertSoundFiles
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => new NearbyAlertSoundEntry { Path = path });
+    }
+
+    private static bool PlayFile(string path, float volumePercent, out string status)
     {
         try
         {
@@ -106,11 +136,15 @@ public static class NearbyAlertManager
             _activePlayer = player;
             player.Play();
             _lastSoundPlayed = DateTime.Now;
+            status = $"Playing {Path.GetFileName(path)} at {volumePercent:0}% volume.";
+            return true;
         }
         catch (Exception ex)
         {
             Plugin.Log.Warning($"[NearbyAlert] Failed to play sound '{path}': {ex.Message}");
             StopActive();
+            status = $"Could not play {Path.GetFileName(path)}: {ex.Message}";
+            return false;
         }
     }
 

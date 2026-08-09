@@ -45,8 +45,8 @@ public partial class BlackJackButtlerWindow
         ImGui.SameLine();
         if (BJBGui.SmallButton("Debug##drawlogic_dbg")) Plugin.Instance.OpenDrawLogicDebug();
         ImGui.Separator();
-        ImGui.TextDisabled("Scriptable world-drawing system. Define draw commands that execute per frame.");
-        ImGui.TextDisabled("When 'Iterate' is on, the script runs once per active player + dealer.");
+        // ImGui.TextDisabled("Scriptable world-drawing system. Define draw commands that execute per frame.");
+        // ImGui.TextDisabled("When 'Iterate' is on, the script runs once per active player + dealer.");
         ImGui.Spacing();
 
         var entries = _config.DrawLogicEntries;

@@ -28,6 +28,11 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     public void SyncPartyPublic() => SyncParty();
 
     private List<PlayerState> _players = new();
+    // Deliberately transient: group members present in the first authoritative snapshot are
+    // baseline members, while members joining afterwards may be activated by their first trade.
+    private readonly HashSet<string> _knownGroupMemberKeys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _newTradingPlayerKeys = new(StringComparer.OrdinalIgnoreCase);
+    private bool _hasGroupMembershipBaseline;
 
     private bool _showRegexWarningPopup;
     private bool _openRegexResetPopup = false;
@@ -237,9 +242,10 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.5f, 0.0f, 1.0f));
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1.0f, 0.6f, 0.1f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.Text, BJBGui.OrangeHighlightTextColor);
             if (ImGui.Button("⚠ RESTORE PREVIOUS SESSION ⚠", new Vector2(restoreBtnWidth, 40)))
                 RestoreSessionFromFile();
-            ImGui.PopStyleColor(2);
+            ImGui.PopStyleColor(3);
 
             ImGui.SameLine();
 

@@ -48,6 +48,7 @@ public class CommandLineGroup
 [Serializable]
 public class CommandGroup
 {
+    public string Id = string.Empty;
     public string Name = string.Empty;
     public List<PluginCommand> Commands = new();
     public Dictionary<int, CommandLineGroup> LineGroups = new();
@@ -68,4 +69,14 @@ public class CommandGroup
     public float CustomFontScale = 1.0f;
     public bool UseCustomFont = false;
     public bool CustomUseMono = false;
+}
+
+[Serializable]
+public sealed class CustomButtonEntry
+{
+    public bool IsBreak = false;
+    public bool IsVisible = true;
+    public string GroupId = string.Empty;
+    // Retains unresolvable legacy order entries instead of silently discarding data.
+    public string LegacyGroupName = string.Empty;
 }

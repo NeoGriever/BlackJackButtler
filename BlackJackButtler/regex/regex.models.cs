@@ -42,6 +42,7 @@ public enum RegexAction
     SetBet,
     InviteNearby,
     Payout,
+    Withdraw,
 }
 
 [Flags]

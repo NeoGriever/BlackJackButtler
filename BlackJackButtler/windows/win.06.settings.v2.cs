@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using BlackJackButtler.Chat;
@@ -21,10 +22,14 @@ public partial class BlackJackButtlerWindow
     private bool _settingsV2DiscardPopupOpen;
     private readonly List<List<ShortResultRule>> _shortResultUndoHistory = new();
     private string _shortResultImportStatus = string.Empty;
+    private bool _nearbyCooldownEditMode;
+    private string _nearbyCooldownInput = string.Empty;
+    private string _nearbySoundTestStatus = string.Empty;
+    private bool _nearbySoundTestFailed;
 
     private static readonly string[] SettingsV2Tabs =
     {
-        "General", "Automation", "Rules", "Betting", "Time & Delay", "Message settings",
+        "General", "Automation", "Rules", "Betting", "Time & Delay",
         "Nearby Players", "Visual", "Alliance", "Preset Setup", "System"
     };
 
@@ -37,12 +42,11 @@ public partial class BlackJackButtlerWindow
             DrawSettingsV2Tab(2, "Rules", DrawSettingsV2Rules);
             DrawSettingsV2Tab(3, "Betting", DrawSettingsV2Betting);
             DrawSettingsV2Tab(4, "Time & Delay", DrawSettingsV2TimeDelay);
-            DrawSettingsV2Tab(5, "Message settings", DrawSettingsV2Messages);
-            DrawSettingsV2Tab(6, "Nearby Players", DrawSettingsV2Nearby);
-            DrawSettingsV2Tab(7, "Visual", DrawSettingsV2Visual);
-            DrawSettingsV2Tab(8, "Alliance", DrawSettingsAllianceBody);
-            DrawSettingsV2Tab(9, "Preset Setup", DrawSettingsPresetSetupBody);
-            DrawSettingsV2Tab(10, "System", () => DrawSettingsV2System(level));
+            DrawSettingsV2Tab(5, "Nearby Players", DrawSettingsV2Nearby);
+            DrawSettingsV2Tab(6, "Visual", DrawSettingsV2Visual);
+            DrawSettingsV2Tab(7, "Alliance", DrawSettingsAllianceBody);
+            DrawSettingsV2Tab(8, "Preset Setup", DrawSettingsPresetSetupBody);
+            DrawSettingsV2Tab(9, "System", () => DrawSettingsV2System(level));
             ImGui.EndTabBar();
         }
 
@@ -82,10 +86,10 @@ public partial class BlackJackButtlerWindow
 
         ImGui.Spacing();
         ImGui.TextUnformatted("Main View");
-        int mainView = _config.MainViewVersion == 2 ? 1 : 0;
-        DrawEnumButtons("main_view_v2", ref mainView, new[] { "Classic", "Version 2" }, idx =>
+        int mainView = _config.MainViewVersion switch { 2 => 1, 3 => 2, _ => 0 };
+        DrawEnumButtons("main_view_v2", ref mainView, new[] { "Classic", "Version 2", "Version 3" }, idx =>
         {
-            _config.MainViewVersion = idx == 1 ? 2 : 1;
+            _config.MainViewVersion = idx + 1;
             _save();
         });
 
@@ -104,14 +108,14 @@ public partial class BlackJackButtlerWindow
         ImGui.Spacing();
         ImGui.TextUnformatted("Menu Style");
         int menuMode = (int)_config.MenuStyle;
-        DrawEnumButtons("menu_style_v2", ref menuMode, new[] { "Sidebar", "Burger Menu", "Top Tabs (experimental)" }, idx =>
+        DrawEnumButtons("menu_style_v2", ref menuMode, new[] { "Side", "Burger", "Tabs" }, idx =>
         {
             _config.MenuStyle = (MenuStyleMode)idx;
             _save();
         });
 
         ImGui.Spacing();
-        ImGui.TextUnformatted("Gil visual");
+        ImGui.TextUnformatted("Gil Display");
         int gilVisual = (int)_config.GilVisual;
         ImGui.PushFont(UiBuilder.MonoFont);
         DrawEnumButtons("gil_visual_v2", ref gilVisual, new[] { "12345678", "     12,345,678", "   , 12,345,678" }, idx =>
@@ -157,12 +161,17 @@ public partial class BlackJackButtlerWindow
         if (CheckSaveChanged("Enable Auto Run", ref _config.ShowAutoRunButton) && !_config.ShowAutoRunButton)
             _config.AutoRun = false;
 
+        CheckSave("Auto Activate Trading Players", ref _config.AutoActivateTradingPlayers);
+        DrawSharedAutomationTimingControls("v2");
+
         ImGui.Spacing();
         ImGui.TextUnformatted("Player Ready Start");
         bool requireMultipleParticipants = _config.AutostartRoundOnlyOnMultiplePlayers;
         if (requireMultipleParticipants)
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1f, 0.5f, 0f, 1f));
-        if (BJBGui.SmallButton("Only at 2 or more participants##v2_ready_start_multiple") && !requireMultipleParticipants)
+        if (BJBGui.SmallButton("Only at 2 or more participants##v2_ready_start_multiple",
+                requireMultipleParticipants ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor)
+            && !requireMultipleParticipants)
         {
             _config.AutostartRoundOnlyOnMultiplePlayers = true;
             _save();
@@ -173,7 +182,9 @@ public partial class BlackJackButtlerWindow
         ImGui.SameLine();
         if (!requireMultipleParticipants)
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1f, 0.5f, 0f, 1f));
-        if (BJBGui.SmallButton("Every time##v2_ready_start_every_time") && requireMultipleParticipants)
+        if (BJBGui.SmallButton("Every time##v2_ready_start_every_time",
+                !requireMultipleParticipants ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor)
+            && requireMultipleParticipants)
         {
             _config.AutostartRoundOnlyOnMultiplePlayers = false;
             _save();
@@ -183,38 +194,6 @@ public partial class BlackJackButtlerWindow
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Counts active participants only; the dealer is excluded.\nThis does not affect the Auto-Continue timer.");
 
-        ImGui.Spacing();
-        Header("Initial Rotation");
-        var currentRotation = Plugin.ObjectTable.LocalPlayer?.Rotation;
-        var currentText = currentRotation.HasValue
-            ? FormatRotationLabel(currentRotation.Value)
-            : "n/a";
-        var targetText = FormatRotationLabel(_config.InitialViewDirection);
-
-        ImGui.TextUnformatted("Current Rotation");
-        ImGui.SameLine(260f);
-        ImGui.TextUnformatted(currentText);
-
-        ImGui.TextUnformatted("Target Rotation");
-        ImGui.SameLine(260f);
-        ImGui.TextUnformatted(targetText);
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("To current rotation##v2_settings_initial_rotation_current"))
-        {
-            ViewDirectionManager.CaptureCurrentRotation(_config);
-            _save();
-        }
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Sets the initial round rotation to your current facing direction.");
-    }
-
-    private static string FormatRotationLabel(float radians)
-    {
-        var degrees = radians * (180f / MathF.PI);
-        degrees %= 360f;
-        if (degrees < 0f)
-            degrees += 360f;
-        return $"{degrees:0.0}° / {radians:0.0000} rad";
     }
 
     private void DrawSettingsV2Rules()
@@ -222,11 +201,11 @@ public partial class BlackJackButtlerWindow
         Header("Dealing Behavior");
         Indent(() =>
         {
-        CheckSave("First Deal, then play", ref _config.FirstDealThenPlay);
-        CheckSave("Player rolling for themselves", ref _config.PlayerRollingForThemselves);
+        DrawV3RuleActionButton("First Deal, then play", "v2_first_deal", ref _config.FirstDealThenPlay);
+        DrawV3RuleActionButton("Player self-rolling", "v2_self_rolling", ref _config.PlayerRollingForThemselves);
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Players roll their own required cards with /dice 13, /dice alliance 13, or the native /random command.\nDealer rolls are unchanged.");
-        CheckSave("Hide card suits", ref _config.HideCardSuits);
+        DrawV3RuleActionButton("Hide card suits", "v2_hide_suits", ref _config.HideCardSuits);
         });
 
         Header("Dealer Rules");
@@ -234,7 +213,7 @@ public partial class BlackJackButtlerWindow
         {
         ImGui.TextUnformatted("Dealer Stands on:");
         ImGui.SameLine(260f);
-        CheckSave("Soft##v2_dealer_soft", ref _config.DealerSoftRule);
+        DrawV3RuleActionButton("Soft", "v2_dealer_soft", ref _config.DealerSoftRule);
         ImGui.SameLine(0f, 18f);
         ImGui.SetNextItemWidth(120f);
         if (BJBGui.InputInt("##v2_dealer_draws_until", ref _config.DealerDrawsUntil, 1))
@@ -271,7 +250,7 @@ public partial class BlackJackButtlerWindow
         Header("Dirty");
         Indent(() =>
         {
-        CheckSave("Enable Dirty Blackjack##v2_dirty", ref _config.EnableDirtyBlackjack);
+        CheckRuleSave("Enable Dirty Blackjack##v2_dirty", ref _config.EnableDirtyBlackjack);
         MultiplierInput("Payout", ref _config.MultiplierDirtyBlackjackWin, 2f, "v2_dirtybj");
         });
         });
@@ -279,8 +258,8 @@ public partial class BlackJackButtlerWindow
         Header("Charlie");
         Indent(() =>
         {
-        CheckSave("Enable Charlie", ref _config.EnableCharlie);
-        CheckSave("Instant-Win", ref _config.CharlieInstantWin);
+        CheckRuleSave("Enable Charlie", ref _config.EnableCharlie);
+        CheckRuleSave("Instant-Win", ref _config.CharlieInstantWin);
         IntInputSave("Cards##v2_charlie_cards", ref _config.CharlieCardCount, 3, 9, 1, 5);
         MultiplierInput("Payout", ref _config.MultiplierBlackjackWin, 2.5f, "v2_charlie_payout");
         });
@@ -288,8 +267,8 @@ public partial class BlackJackButtlerWindow
         Header("Split");
         Indent(() =>
         {
-        CheckSave("Enable Split", ref _config.EnableSplit);
-        CheckSave("Identical Split only", ref _config.IdenticalSplitOnly);
+        CheckRuleSave("Enable Split", ref _config.EnableSplit);
+        CheckRuleSave("Identical Split only", ref _config.IdenticalSplitOnly);
         IntInputSave("Max Hands##v2_max_hands", ref _config.MaxHandsPerPlayer, 2, 10, 1, 2);
         MultiplierInput("Payout", ref _config.MultiplierNormalWin, 2f, "v2_split_payout");
         });
@@ -297,9 +276,9 @@ public partial class BlackJackButtlerWindow
         Header("Double Down");
         Indent(() =>
         {
-        CheckSave("Enable Double Down", ref _config.EnableDoubleDown);
-        CheckSave("Allow Double-Down after Split", ref _config.AllowDoubleDownAfterSplit);
-        CheckSave("Refund Double Down on push", ref _config.RefundFullDoubleDownOnPush);
+        CheckRuleSave("Enable Double Down", ref _config.EnableDoubleDown);
+        CheckRuleSave("Allow Double-Down after Split", ref _config.AllowDoubleDownAfterSplit);
+        CheckRuleSave("Refund Double Down on push", ref _config.RefundFullDoubleDownOnPush);
         int tie = (int)_config.BlackjackTieRule;
         ImGui.TextUnformatted("BlackJack Tie Rule:");
         ImGui.SameLine(260f);
@@ -315,7 +294,7 @@ public partial class BlackJackButtlerWindow
         Header("Result");
         Indent(() =>
         {
-        CheckSave("Small Result Messages", ref _config.SmallResult);
+        CheckRuleSave("Short Result Messages", ref _config.SmallResult);
         DrawShortResultRulesEditor();
         });
     }
@@ -410,10 +389,10 @@ public partial class BlackJackButtlerWindow
                 ruleEdited = true;
             }
 
-            if (ImGui.Checkbox("Visible if empty", ref rule.VisibleIfEmpty)) ruleEdited = true;
-            if (ImGui.Checkbox("Visible if content before is empty", ref rule.VisibleIfContentBeforeIsEmpty)) ruleEdited = true;
-            if (ImGui.Checkbox("Visible if content after is empty", ref rule.VisibleIfContentAfterIsEmpty)) ruleEdited = true;
-            if (ImGui.Checkbox("Compress", ref rule.Compress)) ruleEdited = true;
+            if (DrawShortResultRuleToggle("Visible if empty", ref rule.VisibleIfEmpty)) ruleEdited = true;
+            if (DrawShortResultRuleToggle("Visible if content before is empty", ref rule.VisibleIfContentBeforeIsEmpty)) ruleEdited = true;
+            if (DrawShortResultRuleToggle("Visible if content after is empty", ref rule.VisibleIfContentAfterIsEmpty)) ruleEdited = true;
+            if (DrawShortResultRuleToggle("Compress", ref rule.Compress)) ruleEdited = true;
 
             ImGui.SetNextItemWidth(-1);
             if (ImGui.InputText("Template", ref rule.Template, 512)) ruleEdited = true;
@@ -513,33 +492,70 @@ public partial class BlackJackButtlerWindow
 
         ImGui.TableNextColumn();
         ImGui.TextUnformatted("Example output");
-        var winners = new[] { "Alice Winner", "Bob Winner" };
-        var pushed = new[] { "Cara Push", "Dorian Push" };
-        var loosed = new[] { "Eve Lost", "Finn Lost" };
-        var busted = new[] { "Gina Bust", "Hugo Bust" };
-        var ruleOutput = ShortResultFormatter.Render(_config, winners, pushed, loosed, busted);
-        var outerTemplate = string.IsNullOrWhiteSpace(_config.ResultTemplate)
-            ? "${results}"
-            : _config.ResultTemplate;
-        var preview = outerTemplate
-            .Replace("${results}", ruleOutput)
-            .Replace("<results>", ruleOutput)
-            .Replace("${winners}", $"Winners: {string.Join(", ", winners)}")
-            .Replace("${pushed}", $"Pushed: {string.Join(", ", pushed)}")
-            .Replace("${loosers}", $"Lost: {string.Join(", ", loosed)}")
-            .Replace("${busted}", $"Busted: {string.Join(", ", busted)}");
+        var examples = new[]
+        {
+            RenderShortResultExample(
+                new[] { "Alice Winner", "Bob Winner" },
+                new[] { "Cara Push", "Dorian Push" },
+                new[] { "Eve Lost", "Finn Lost" },
+                new[] { "Gina Bust", "Hugo Bust" }),
+            RenderShortResultExample(
+                Array.Empty<string>(),
+                new[] { "Cara Push", "Dorian Push" },
+                Array.Empty<string>(),
+                new[] { "Gina Bust", "Hugo Bust" }),
+            RenderShortResultExample(
+                new[] { "Alice Winner" },
+                new[] { "Cara Push" },
+                Array.Empty<string>(),
+                new[] { "Gina Bust", "Hugo Bust" }),
+            RenderShortResultExample(
+                new[] { "Gina Bust", "Hugo Bust" },
+                Array.Empty<string>(),
+                Array.Empty<string>(),
+                Array.Empty<string>()),
+        };
+        var preview = string.Join("\n---\n", examples);
         ImGui.InputTextMultiline(
             "##short_result_example_output",
             ref preview,
             4096,
-            new Vector2(-1f, 180f),
+            new Vector2(-1f, 260f),
             ImGuiInputTextFlags.ReadOnly);
 
         ImGui.EndTable();
     }
 
+    private string RenderShortResultExample(string[] winners, string[] pushed, string[] loosed, string[] busted)
+    {
+        var ruleOutput = ShortResultFormatter.Render(_config, winners, pushed, loosed, busted);
+        var outerTemplate = string.IsNullOrWhiteSpace(_config.ResultTemplate)
+            ? "${results}"
+            : _config.ResultTemplate;
+        return outerTemplate
+            .Replace("${results}", ruleOutput)
+            .Replace("<results>", ruleOutput)
+            .Replace("${winners}", $"Winners: {FormatShortResultPreviewData(winners)}")
+            .Replace("${pushed}", $"Pushed: {FormatShortResultPreviewData(pushed)}")
+            .Replace("${loosers}", $"Lost: {FormatShortResultPreviewData(loosed)}")
+            .Replace("${busted}", $"Busted: {FormatShortResultPreviewData(busted)}");
+    }
+
+    private static string FormatShortResultPreviewData(IEnumerable<string> values)
+    {
+        var joined = string.Join(", ", values);
+        return string.IsNullOrEmpty(joined) ? "~" : joined;
+    }
+
     private static List<ShortResultRule> CloneShortResultRules(IEnumerable<ShortResultRule> rules)
         => rules.Select(rule => rule.Clone()).ToList();
+
+    private static bool DrawShortResultRuleToggle(string label, ref bool value)
+    {
+        ImGui.TextUnformatted(label);
+        ImGui.SameLine(260f);
+        return BJBOnOffSwitch.Draw($"short_result_{label}", ref value);
+    }
 
     private void PushShortResultUndo(List<ShortResultRule> snapshot)
     {
@@ -638,81 +654,23 @@ public partial class BlackJackButtlerWindow
             ResetBetDraft();
     }
 
-    private void DrawSettingsV2TimeDelay()
-    {
-        ImGui.TextUnformatted("UTC Offset");
-        ImGui.SameLine(260f);
-        int utc = _config.UtcOffsetHours;
-        ImGui.SetNextItemWidth(80f);
-        if (BJBGui.InputInt("##v2_utc", ref utc, 1))
-        {
-            _config.UtcOffsetHours = Math.Clamp(utc, -12, 14);
-            _config.UtcOffsetConfigured = true;
-            _save();
-        }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("+##utc_plus")) { _config.UtcOffsetHours = Math.Clamp(_config.UtcOffsetHours + 1, -12, 14); _save(); }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("-##utc_minus")) { _config.UtcOffsetHours = Math.Clamp(_config.UtcOffsetHours - 1, -12, 14); _save(); }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("Reset##utc_reset")) { _config.UtcOffsetHours = 0; _config.UtcOffsetConfigured = false; _save(); }
-
-        SliderSave("Command Speed", ref _config.CommandSpeedMultiplier, 0.1f, 2f, 0.1f, 1f, "x");
-        SliderSave("Recall Unlock", ref _config.RecallUnlockSeconds, 1f, 60f, 1f, 20f, "s");
-    }
-
-    private void DrawSettingsV2Messages()
-    {
-        CheckSave("Avoid double Messages", ref _config.EnableAntiDouble);
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip(
-                "AD-marked Party/Alliance lines are compared after trimming and removing <se.*> tags.\n" +
-                "Every Party/Alliance line refreshes the history; only AD lines perform the comparison.");
-        CheckSave("Seconds snapping delay input field", ref _config.DelaySecondSnapping);
-    }
+    private void DrawSettingsV2TimeDelay() => DrawSettingsV3TimeDelay();
 
     private void DrawSettingsV2Nearby()
     {
-        CheckSave("Enable nearby Players Feature", ref _config.ShowNearbyPlayers);
-        IntInputSave("Nearby Player Columns", ref _config.NearbyColumns, 1, 5, 1, 2);
-        CheckSave("No auto dequeue", ref _config.NoAutoDequeue);
-        CheckSave("Always show range circle", ref _config.NearbyAlwaysShowCircle);
-        DrawCommandSelector("Nearby Player Custom Command Button", ref _config.NearbyQuestionCommandName);
+        if (_config.MainViewVersion == 3)
+            DrawV3OnOff("Enabled", "v3_nearby_enabled", ref _config.ShowNearbyPlayers);
+        else
+            CheckSave("Enable Nearby Players Feature", ref _config.ShowNearbyPlayers);
+        IntInputSave("Columns##nearby_columns", ref _config.NearbyColumns, 1, 5, 1, 2);
+        if (_config.MainViewVersion != 3)
+        {
+            CheckSave("Always show distance circle", ref _config.NearbyAlwaysShowCircle);
+            DrawCommandSelector("Nearby ? Command", ref _config.NearbyQuestionCommandName);
+        }
 
         Header("Sound");
-        Indent(() =>
-        {
-        CheckSave("Enable Sound on player enter range", ref _config.NearbyAlertEnabled);
-        ImGui.TextUnformatted("Volume");
-        ImGui.SameLine(260f);
-        float volume01 = _config.NearbyAlertVolume / 100f;
-        ImGui.SetNextItemWidth(220f);
-        if (BJBGui.SliderFloat("##v2_sound_volume", ref volume01, 0.01f, 1f, "%.2f"))
-        {
-            volume01 = (float)(Math.Round(volume01 / 0.01f) * 0.01f);
-            _config.NearbyAlertVolume = Math.Clamp(volume01, 0.01f, 1f) * 100f;
-            _save();
-        }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("Reset##v2_sound_volume_reset"))
-        {
-            _config.NearbyAlertVolume = 50f;
-            _save();
-        }
-        SliderSave("Cooldown", ref _config.NearbyAlertCooldown, 0.1f, 30f, 0.1f, 0.3f, "s");
-        int mode = (int)_config.NearbyAlertSoundMode;
-        DrawEnumButtons("sound_mode_v2", ref mode, new[] { "Iterative", "Random", "First only" }, idx =>
-        {
-            _config.NearbyAlertSoundMode = (NearbyAlertSoundMode)idx;
-            _save();
-        });
-
-        Header("Files");
-        Indent(() =>
-        {
-            DrawSoundFileListV2();
-        });
-        });
+        Indent(() => DrawNearbySoundSettings("v2"));
     }
 
     private void DrawSettingsV2Visual()
@@ -756,7 +714,8 @@ public partial class BlackJackButtlerWindow
         Header("Custom Buttons");
         Indent(() =>
         {
-            DrawButtonStyleEditor("Default##custom", _config.CustomButtonDefaultStyle, ButtonStyleConfig.Default(), applyToCustom: true);
+            DrawButtonStyleEditor("Default", _config.CustomButtonDefaultStyle, ButtonStyleConfig.Default(),
+                applyToCustom: true, styleId: "custom");
         });
 
         Header("Ingame Drawer");
@@ -791,6 +750,7 @@ public partial class BlackJackButtlerWindow
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Session-only setting. Resets to disabled when the plugin reloads.");
 
+        /* Card-Companion App UI is intentionally hidden, but retained for later reuse.
         Header("Card-Companion App");
         Indent(() =>
         {
@@ -804,8 +764,10 @@ public partial class BlackJackButtlerWindow
 
             IntInputSave("Timeout (ms)##v2_companion_timeout", ref _config.CompanionTimeoutMs, 1, 1000, 10, 200);
         });
+        */
 
-        if (BJBGui.Button("Reset default config file")) DefaultsMigration.ResetSnapshotFile();
+        // Retained but deliberately not exposed in the System UI.
+        // if (BJBGui.Button("Reset default config file")) DefaultsMigration.ResetSnapshotFile();
 
         ImGui.Spacing();
         ImGui.TextUnformatted("Wait-Range expanded:");
@@ -894,6 +856,17 @@ public partial class BlackJackButtlerWindow
         return true;
     }
 
+    private void CheckRuleSave(string label, ref bool value)
+    {
+        var separator = label.IndexOf("##", StringComparison.Ordinal);
+        var visibleLabel = separator < 0 ? label : label[..separator];
+        var id = separator < 0 ? label : label[(separator + 2)..];
+
+        ImGui.TextUnformatted(visibleLabel);
+        ImGui.SameLine(260f);
+        if (BJBOnOffSwitch.Draw($"rule_{id}", ref value)) _save();
+    }
+
     private void DisableAllAutomationStates()
     {
         _config.AutoDealerDraw = false;
@@ -903,6 +876,41 @@ public partial class BlackJackButtlerWindow
         _save();
     }
 
+    private void DrawSharedAutomationTimingControls(string id)
+    {
+        ImGui.Spacing();
+        ImGui.TextUnformatted("Command Speed");
+        ImGui.SameLine(260f);
+        ImGui.SetNextItemWidth(220f);
+        if (BJBGui.SliderFloat($"##{id}_command_speed", ref _config.CommandSpeedMultiplier, 0.1f, 4f, "%.2fx"))
+        {
+            _config.CommandSpeedMultiplier = Math.Clamp(
+                (float)Math.Round(_config.CommandSpeedMultiplier / 0.05f) * 0.05f, 0.1f, 4f);
+            _save();
+        }
+        ImGui.SameLine();
+        if (BJBGui.SmallButton($"Reset##{id}_command_speed"))
+        {
+            _config.CommandSpeedMultiplier = 1f;
+            _save();
+        }
+
+        ImGui.TextUnformatted("Recall Unlock");
+        ImGui.SameLine(260f);
+        ImGui.SetNextItemWidth(220f);
+        if (BJBGui.SliderFloat($"##{id}_recall_unlock", ref _config.RecallUnlockSeconds, 1f, 60f, "%.0fs"))
+        {
+            _config.RecallUnlockSeconds = Math.Clamp(MathF.Round(_config.RecallUnlockSeconds), 1f, 60f);
+            _save();
+        }
+        ImGui.SameLine();
+        if (BJBGui.SmallButton($"Reset##{id}_recall_unlock"))
+        {
+            _config.RecallUnlockSeconds = 20f;
+            _save();
+        }
+    }
+
     private void DrawEnumButtons(string id, ref int value, string[] labels, Action<int> onChanged)
     {
         for (int i = 0; i < labels.Length; i++)
@@ -910,7 +918,8 @@ public partial class BlackJackButtlerWindow
             if (i > 0) ImGui.SameLine();
             bool active = value == i;
             if (active) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1f, 0.5f, 0f, 1f));
-            if (BJBGui.Button($"{labels[i]}##{id}_{i}"))
+            if (BJBGui.Button($"{labels[i]}##{id}_{i}",
+                    active ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor))
             {
                 value = i;
                 onChanged(i);
@@ -940,10 +949,13 @@ public partial class BlackJackButtlerWindow
 
     private void IntInputSave(string label, ref int value, int min, int max, int step, int defaultValue)
     {
-        ImGui.TextUnformatted(label.Split("##")[0]);
+        var idSeparator = label.IndexOf("##", StringComparison.Ordinal);
+        var visibleLabel = idSeparator >= 0 ? label[..idSeparator] : label;
+        var inputId = idSeparator >= 0 ? $"##{label[(idSeparator + 2)..]}" : $"##{label}";
+        ImGui.TextUnformatted(visibleLabel);
         ImGui.SameLine(260f);
         ImGui.SetNextItemWidth(120f);
-        if (BJBGui.InputInt(label, ref value, step))
+        if (BJBGui.InputInt(inputId, ref value, step))
         {
             value = Math.Clamp(value, min, max);
             _save();
@@ -1025,16 +1037,17 @@ public partial class BlackJackButtlerWindow
     }
 
     private void DrawButtonStyleEditor(string label, ButtonStyleConfig style, ButtonStyleConfig defaults,
-        bool applyToGlobal = false, bool applyToCustom = false, bool applyToHighlight = false)
+        bool applyToGlobal = false, bool applyToCustom = false, bool applyToHighlight = false, string? styleId = null)
     {
+        var id = styleId ?? label;
         Header(label);
-        ColorRgbInputs($"Background##{label}", ref style.Background, defaults.Background);
-        ColorRgbInputs($"Text##{label}", ref style.Text, defaults.Text);
-        SliderSave($"Font-Size##{label}", ref style.FontSize, 0.25f, 3.5f, 0.25f, defaults.FontSize, "x");
-        PaddingInput("Padding top", ref style.PaddingTop, defaults.PaddingTop, label);
-        PaddingInput("Padding left", ref style.PaddingLeft, defaults.PaddingLeft, label);
-        PaddingInput("Padding bottom", ref style.PaddingBottom, defaults.PaddingBottom, label);
-        PaddingInput("Padding right", ref style.PaddingRight, defaults.PaddingRight, label);
+        ColorRgbInputs($"Background##{id}", ref style.Background, defaults.Background);
+        ColorRgbInputs($"Text##{id}", ref style.Text, defaults.Text);
+        SliderSave($"Font-Size##{id}", ref style.FontSize, 0.25f, 3.5f, 0.25f, defaults.FontSize, "x");
+        PaddingInput("Padding top", ref style.PaddingTop, defaults.PaddingTop, id);
+        PaddingInput("Padding left", ref style.PaddingLeft, defaults.PaddingLeft, id);
+        PaddingInput("Padding bottom", ref style.PaddingBottom, defaults.PaddingBottom, id);
+        PaddingInput("Padding right", ref style.PaddingRight, defaults.PaddingRight, id);
 
         if (applyToGlobal)
         {
@@ -1118,6 +1131,7 @@ public partial class BlackJackButtlerWindow
     private void EnsureBetDraft()
     {
         if (_betDraftEntries != null) return;
+        _config.EnsureBetLimitEntriesMigration();
         var source = _config.BetLimitEntries.Count > 0
             ? _config.BetLimitEntries
             : BuildBetEntriesFromLegacy();
@@ -1129,8 +1143,8 @@ public partial class BlackJackButtlerWindow
     {
         var list = new List<BetLimitEntry>
         {
-            new() { Active = true, Kind = BetLimitEntryKind.MinBet, Amount = _config.MinBet },
-            new() { Active = true, Kind = BetLimitEntryKind.Vip, VipLevel = 0, Name = GetDefaultVipName(0), Amount = _config.MaxBet }
+            new() { Active = true, Kind = BetLimitEntryKind.MinBet, Name = "Min", Amount = _config.MinBet },
+            new() { Active = true, Kind = BetLimitEntryKind.Normal, Name = "Max", Amount = _config.MaxBet }
         };
         for (int i = 0; i < _config.VipBetTiers.Count && i < 9; i++)
             list.Add(new BetLimitEntry { Active = true, Kind = BetLimitEntryKind.Vip, VipLevel = i + 1, Name = _config.VipBetTiers[i].Name, Amount = _config.VipBetTiers[i].MaxBet });
@@ -1150,7 +1164,7 @@ public partial class BlackJackButtlerWindow
     {
         EnsureBetDraft();
         var sorted = _betDraftEntries!
-            .OrderBy(e => e.Kind == BetLimitEntryKind.MinBet ? 0 : 1)
+            .OrderBy(e => e.Kind == BetLimitEntryKind.MinBet ? 0 : e.Kind == BetLimitEntryKind.Normal ? 1 : 2)
             .ThenBy(e => e.Kind == BetLimitEntryKind.Vip ? e.VipLevel : -1)
             .ThenBy(e => e.Amount)
             .Select(CloneBetEntry)
@@ -1159,8 +1173,9 @@ public partial class BlackJackButtlerWindow
         _config.BetLimitEntries = sorted;
         var min = sorted.FirstOrDefault(e => e.Active && e.Kind == BetLimitEntryKind.MinBet);
         if (min != null) _config.MinBet = min.Amount;
-        var vip0 = sorted.LastOrDefault(e => e.Active && e.Kind == BetLimitEntryKind.Vip && e.VipLevel == 0);
-        if (vip0 != null) _config.MaxBet = vip0.Amount;
+        var normal = sorted.LastOrDefault(e => e.Active && (e.Kind == BetLimitEntryKind.Normal
+            || (e.Kind == BetLimitEntryKind.Vip && e.VipLevel == 0)));
+        if (normal != null) _config.MaxBet = normal.Amount;
         _config.VipBetTiers = sorted
             .Where(e => e.Active && e.Kind == BetLimitEntryKind.Vip && e.VipLevel > 0)
             .GroupBy(e => e.VipLevel)
@@ -1213,35 +1228,141 @@ public partial class BlackJackButtlerWindow
 
     private void DrawSoundFileListV2()
     {
-        int removeIdx = -1;
-        for (int i = 0; i < _config.NearbyAlertSoundFiles.Count; i++)
+        DrawNearbySoundEntries("v2");
+    }
+
+    private void DrawNearbySoundSettings(string id)
+    {
+        if (_config.EnsureNearbyAlertSoundEntriesMigration()) _save();
+
+        if (_config.MainViewVersion == 3)
+            DrawV3OnOff("Player entering area sound trigger", $"{id}_sound_enabled", ref _config.NearbyAlertEnabled);
+        else if (ImGui.Checkbox("Player entering area sound trigger", ref _config.NearbyAlertEnabled))
+            _save();
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Play a sound when a new player enters your nearby area.");
+
+        ImGui.TextUnformatted("Volume");
+        ImGui.SameLine(260f);
+        ImGui.SetNextItemWidth(220f);
+        if (BJBGui.SliderFloat($"##{id}_sound_volume", ref _config.NearbyAlertVolume, 0f, 100f, "%.0f%%"))
         {
-            var path = _config.NearbyAlertSoundFiles[i];
-            ImGui.TextUnformatted(System.IO.Path.GetFileName(path));
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip(path);
-            ImGui.SameLine();
-            if (BJBGui.SmallButton($"X##v2_del_sound_{i}")) removeIdx = i;
-        }
-        if (removeIdx >= 0)
-        {
-            _config.NearbyAlertSoundFiles.RemoveAt(removeIdx);
+            _config.NearbyAlertVolume = Math.Clamp(_config.NearbyAlertVolume, 0f, 100f);
             _save();
         }
 
-        if (BJBGui.SmallButton("+ Add Sound##v2_add_sound"))
+        DrawNearbyCooldownEditor(id);
+
+        ImGui.TextUnformatted("Mode");
+        ImGui.SameLine(260f);
+        var mode = (int)_config.NearbyAlertSoundMode;
+        DrawEnumButtons($"sound_mode_{id}", ref mode, new[] { "Iterative", "Random", "First only" }, index =>
         {
-            _fileDialogManager.OpenFileDialog("Add Sound File", "Audio{.wav,.mp3,.ogg}",
-                (ok, path) =>
-                {
-                    if (ok && !string.IsNullOrWhiteSpace(path) && !_config.NearbyAlertSoundFiles.Contains(path))
-                    {
-                        _config.NearbyAlertSoundFiles.Add(path);
-                        _save();
-                    }
-                });
+            _config.NearbyAlertSoundMode = (NearbyAlertSoundMode)index;
+            _save();
+        });
+
+        Header("Files");
+        DrawNearbySoundEntries(id);
+    }
+
+    private void DrawNearbyCooldownEditor(string id)
+    {
+        ImGui.TextUnformatted("Cooldown");
+        ImGui.SameLine(260f);
+        if (_nearbyCooldownEditMode)
+        {
+            ImGui.SetNextItemWidth(110f);
+            ImGui.InputText($"##{id}_cooldown_input", ref _nearbyCooldownInput, 16,
+                ImGuiInputTextFlags.AutoSelectAll | ImGuiInputTextFlags.EnterReturnsTrue);
+            var confirm = ImGui.IsItemDeactivatedAfterEdit() || BJBGui.SmallButton($"OK##{id}_cooldown_ok");
+            if (confirm && float.TryParse(_nearbyCooldownInput, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+            {
+                _config.NearbyAlertCooldown = Math.Clamp(value, 0.02f, 30f);
+                _nearbyCooldownEditMode = false;
+                _save();
+            }
+            ImGui.SameLine();
+            if (BJBGui.SmallButton($"Cancel##{id}_cooldown_cancel")) _nearbyCooldownEditMode = false;
+            return;
+        }
+
+        ImGui.SetNextItemWidth(220f);
+        if (BJBGui.SliderFloat($"##{id}_sound_cooldown", ref _config.NearbyAlertCooldown, 0.02f, 30f, "%.2fs"))
+        {
+            _config.NearbyAlertCooldown = Math.Clamp(_config.NearbyAlertCooldown, 0.02f, 30f);
+            _save();
+        }
+        if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+        {
+            _nearbyCooldownInput = _config.NearbyAlertCooldown.ToString("0.##", CultureInfo.InvariantCulture);
+            _nearbyCooldownEditMode = true;
+        }
+    }
+
+    private void DrawNearbySoundEntries(string id)
+    {
+        if (_config.EnsureNearbyAlertSoundEntriesMigration()) _save();
+
+        var removeIndex = -1;
+        for (var i = 0; i < _config.NearbyAlertSoundEntries.Count; i++)
+        {
+            var entry = _config.NearbyAlertSoundEntries[i];
+            ImGui.PushID($"{id}_sound_{i}");
+            if (BJBGui.SmallButton("X##delete")) removeIndex = i;
+            ImGui.SameLine();
+            if (ImGui.Checkbox("##enabled", ref entry.Enabled)) SaveNearbySoundEntries();
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(104f);
+            if (BJBGui.SliderFloat("##volume", ref entry.Volume, 0f, 100f, "%.0f%%"))
+            {
+                entry.Volume = Math.Clamp(entry.Volume, 0f, 100f);
+                SaveNearbySoundEntries();
+            }
+            ImGui.SameLine();
+            ImGui.TextUnformatted(entry.Path);
+            if (ImGui.IsItemHovered()) ImGui.SetTooltip(entry.Path);
+            ImGui.PopID();
+        }
+
+        if (removeIndex >= 0)
+        {
+            _config.NearbyAlertSoundEntries.RemoveAt(removeIndex);
+            SaveNearbySoundEntries();
+        }
+
+        if (BJBGui.SmallButton($"Select file ...##{id}_add_sound"))
+        {
+            _fileDialogManager.OpenFileDialog("Select Sound File", "Audio{.wav,.mp3,.ogg}", (ok, path) =>
+            {
+                if (!ok || string.IsNullOrWhiteSpace(path)
+                    || _config.NearbyAlertSoundEntries.Any(entry => entry.Path.Equals(path, StringComparison.OrdinalIgnoreCase)))
+                    return;
+                _config.NearbyAlertSoundEntries.Add(new NearbyAlertSoundEntry { Path = path, Enabled = true, Volume = 100f });
+                SaveNearbySoundEntries();
+            });
         }
         ImGui.SameLine();
-        if (BJBGui.SmallButton("Test##v2_test_sound")) NearbyAlertManager.PlayTestSound(_config);
+        if (BJBGui.SmallButton($"Test##{id}_test_sound"))
+        {
+            var played = NearbyAlertManager.PlayTestSound(_config, out var status);
+            _nearbySoundTestStatus = status;
+            _nearbySoundTestFailed = !played;
+        }
+        if (!string.IsNullOrEmpty(_nearbySoundTestStatus))
+        {
+            ImGui.SameLine();
+            ImGui.TextColored(_nearbySoundTestFailed
+                ? new Vector4(1f, 0.4f, 0.35f, 1f)
+                : new Vector4(0.45f, 0.9f, 0.5f, 1f), _nearbySoundTestStatus);
+        }
+    }
+
+    private void SaveNearbySoundEntries()
+    {
+        _config.NearbyAlertSoundEntriesMigrated = true;
+        _config.SyncLegacyNearbyAlertSoundFiles();
+        _save();
     }
 
     private void ExportConfigV2()

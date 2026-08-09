@@ -11,10 +11,12 @@ public enum BlackjackTieRule { AlwaysPush, PlayerNatBJWins, DealerNatBJWins, Nat
 public enum NearbyAlertSoundMode { Iterative, Random, FirstOnly }
 public enum NearbyShapeMode { Circle, Rectangle }
 public enum ButtonBarLayout { Horizontal, Vertical }
-public enum BetLimitEntryKind { MinBet, Vip }
+// Keep the original numeric values for MinBet/Vip so existing JSON remains valid.
+public enum BetLimitEntryKind { MinBet, Vip, Normal }
 public enum ShortResultDataSource { None, Winners, Pushed, Loosed, Busted }
 public enum GilVisualMode { Plain, Grouped, FixedGroup }
 public enum MenuStyleMode { Sidebar, BurgerMenu, TopTabs }
+public enum WageInterval { Minute, FifteenMinutes, ThirtyMinutes, Hour, TwoHours }
 
 [Serializable]
 public sealed class ShortResultRule
@@ -78,6 +80,9 @@ public sealed class Configuration : IPluginConfiguration
 
     public List<CommandGroup> CommandGroups = new();
     public List<CommandGroup> CustomCommandGroups = new();
+    public List<CustomButtonEntry> CustomButtonEntries = new();
+    public bool CustomButtonEntriesMigrated = false;
+    // Legacy storage retained for import/export compatibility. New entries take priority.
     public List<string> CustomButtonOrder = new();
     public List<MessageBatch> MessageBatches = new();
     public List<UserRegexEntry> UserRegexes = new();
@@ -90,6 +95,8 @@ public sealed class Configuration : IPluginConfiguration
     public long MaxBet = 500000;
 
     public List<VipBetTier> VipBetTiers = new();
+    public List<BettingPreset> BettingPresets = new();
+    public bool BetLimitEntriesMigrated = false;
     public bool ShortBetFormat = true;
     public bool HideCardSuits = false;
 
@@ -100,6 +107,8 @@ public sealed class Configuration : IPluginConfiguration
     public bool AutoInitialDeal = false;
     public bool AutoDealerDraw = false;
     public bool AutoRun = false;
+    // Controls runtime handling of newly joined group members; defaults to enabled for existing configurations.
+    public bool AutoActivateTradingPlayers = true;
     public bool EnableAutomation = true;
     public bool ShowAutoDealerDrawButton = true;
     public bool ShowAutoPlayerHandButton = true;
@@ -121,11 +130,17 @@ public sealed class Configuration : IPluginConfiguration
 
     public float PayoutPercent = 30f;
     public long GilPerHour = 250000;
+    public WageInterval WageIntervalMode = WageInterval.Hour;
     public int ClipHoursMode = 0;
     public bool UseFixedWage = false;
     public long FixedWage = 500000;
 
+    // UtcOffsetHours remains for compatibility with existing configuration and presets.
+    // New code uses signed minutes so half- and quarter-hour time zones are lossless.
     public int UtcOffsetHours = 0;
+    public int UtcOffsetMinutes = int.MinValue;
+    public string UtcTimeZoneName = string.Empty;
+    public bool UtcSummerTime = false;
     public bool UtcOffsetConfigured = false;
 
     public bool dismissDevWarning = false;
@@ -184,7 +199,11 @@ public sealed class Configuration : IPluginConfiguration
     public bool AutoContinueBarShowText = false;
 
     public bool NearbyAlertEnabled = false;
+    // Legacy paths remain serialized for backwards-compatible import/export. Structured
+    // entries take precedence once migrated because they carry enabled state and volume.
     public List<string> NearbyAlertSoundFiles = new();
+    public List<NearbyAlertSoundEntry> NearbyAlertSoundEntries = new();
+    public bool NearbyAlertSoundEntriesMigrated = false;
     public float NearbyAlertVolume = 50f;
     public float NearbyAlertCooldown = 0.30f;
     public NearbyAlertSoundMode NearbyAlertSoundMode = NearbyAlertSoundMode.Random;
@@ -382,6 +401,217 @@ public sealed class Configuration : IPluginConfiguration
         return changed;
     }
 
+    public bool EnsureLayout3Migrations()
+    {
+        var changed = false;
+        if (UtcOffsetMinutes == int.MinValue)
+        {
+            UtcOffsetMinutes = Math.Clamp(UtcOffsetHours, -12, 14) * 60;
+            changed = true;
+        }
+        // Message settings were intentionally retired. Both behaviours are now invariant.
+        if (!EnableAntiDouble)
+        {
+            EnableAntiDouble = true;
+            changed = true;
+        }
+        if (!DelaySecondSnapping)
+        {
+            DelaySecondSnapping = true;
+            changed = true;
+        }
+        if (!NoAutoDequeue)
+        {
+            NoAutoDequeue = true;
+            changed = true;
+        }
+        changed |= EnsureBetLimitEntriesMigration();
+        changed |= EnsureNearbyAlertSoundEntriesMigration();
+        changed |= EnsureCustomButtonEntriesMigration();
+        return changed;
+    }
+
+    public bool EnsureNearbyAlertSoundEntriesMigration()
+    {
+        if (NearbyAlertSoundEntriesMigrated) return false;
+
+        if (NearbyAlertSoundEntries.Count == 0)
+        {
+            foreach (var path in NearbyAlertSoundFiles.Where(path => !string.IsNullOrWhiteSpace(path)).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                NearbyAlertSoundEntries.Add(new NearbyAlertSoundEntry { Path = path, Enabled = true, Volume = 100f });
+            }
+        }
+
+        NearbyAlertSoundEntriesMigrated = true;
+        SyncLegacyNearbyAlertSoundFiles();
+        return true;
+    }
+
+    public void SyncLegacyNearbyAlertSoundFiles()
+    {
+        NearbyAlertSoundFiles = NearbyAlertSoundEntries
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Path))
+            .Select(entry => entry.Path)
+            .ToList();
+    }
+
+    public bool EnsureBetLimitEntriesMigration()
+    {
+        if (BetLimitEntriesMigrated)
+        {
+            var repaired = false;
+            foreach (var entry in BetLimitEntries.Where(entry => entry.Kind == BetLimitEntryKind.Vip && entry.VipLevel == 0))
+            {
+                entry.Kind = BetLimitEntryKind.Normal;
+                entry.Name = string.IsNullOrWhiteSpace(entry.Name) || entry.Name == "VIP" ? "Max" : entry.Name;
+                repaired = true;
+            }
+            if (!BetLimitEntries.Any(entry => entry.Kind == BetLimitEntryKind.MinBet))
+            {
+                BetLimitEntries.Insert(0, new BetLimitEntry { Active = true, Kind = BetLimitEntryKind.MinBet, Name = "Min", Amount = MinBet });
+                repaired = true;
+            }
+            return repaired;
+        }
+
+        if (BetLimitEntries.Count == 0)
+        {
+            BetLimitEntries.Add(new BetLimitEntry { Active = true, Kind = BetLimitEntryKind.MinBet, Name = "Min", Amount = MinBet });
+            BetLimitEntries.Add(new BetLimitEntry { Active = true, Kind = BetLimitEntryKind.Normal, Name = "Max", Amount = MaxBet });
+
+            if (VipBetTiers.Count == 0)
+            {
+                BetLimitEntries.Add(new BetLimitEntry { Active = false, Kind = BetLimitEntryKind.Vip, VipLevel = 1, Name = "VIP", Amount = 1_000_000 });
+                BetLimitEntries.Add(new BetLimitEntry { Active = false, Kind = BetLimitEntryKind.Vip, VipLevel = 2, Name = "Lifetime", Amount = 2_000_000 });
+            }
+            else
+            {
+                for (var i = 0; i < VipBetTiers.Count; i++)
+                {
+                    var tier = VipBetTiers[i];
+                    BetLimitEntries.Add(new BetLimitEntry
+                    {
+                        Active = true,
+                        Kind = BetLimitEntryKind.Vip,
+                        VipLevel = i + 1,
+                        Name = string.IsNullOrWhiteSpace(tier.Name) ? $"VIP {i + 1}" : tier.Name,
+                        Amount = tier.MaxBet,
+                    });
+                }
+            }
+        }
+        else
+        {
+            foreach (var entry in BetLimitEntries)
+            {
+                // V2 used VIP level 0 as the normal maximum. Preserve its amount but
+                // migrate it to the explicit kind before the new editor sees it.
+                if (entry.Kind == BetLimitEntryKind.Vip && entry.VipLevel == 0)
+                {
+                    entry.Kind = BetLimitEntryKind.Normal;
+                    entry.Name = string.IsNullOrWhiteSpace(entry.Name) || entry.Name == "VIP" ? "Max" : entry.Name;
+                }
+                if (entry.Kind == BetLimitEntryKind.MinBet)
+                {
+                    entry.VipLevel = 0;
+                    if (string.IsNullOrWhiteSpace(entry.Name)) entry.Name = "Min";
+                }
+                if (entry.Kind == BetLimitEntryKind.Normal)
+                {
+                    entry.VipLevel = 0;
+                    if (string.IsNullOrWhiteSpace(entry.Name)) entry.Name = "Max";
+                }
+            }
+        }
+
+        if (!BetLimitEntries.Any(entry => entry.Kind == BetLimitEntryKind.MinBet))
+            BetLimitEntries.Insert(0, new BetLimitEntry { Active = true, Kind = BetLimitEntryKind.MinBet, Name = "Min", Amount = MinBet });
+
+        BetLimitEntriesMigrated = true;
+        return true;
+    }
+
+    public bool EnsureCustomButtonEntriesMigration()
+    {
+        var changed = false;
+        foreach (var group in CustomCommandGroups)
+        {
+            if (!string.IsNullOrWhiteSpace(group.Id)) continue;
+            group.Id = Guid.NewGuid().ToString("N");
+            changed = true;
+        }
+
+        if (!CustomButtonEntriesMigrated)
+        {
+            if (CustomButtonEntries.Count == 0)
+            {
+                foreach (var legacyEntry in CustomButtonOrder)
+                {
+                    if (legacyEntry == "---")
+                    {
+                        CustomButtonEntries.Add(new CustomButtonEntry { IsBreak = true });
+                        continue;
+                    }
+
+                    var group = CustomCommandGroups.FirstOrDefault(g =>
+                        g.Name.Equals(legacyEntry, StringComparison.OrdinalIgnoreCase));
+                    CustomButtonEntries.Add(new CustomButtonEntry
+                    {
+                        GroupId = group?.Id ?? string.Empty,
+                        LegacyGroupName = group == null ? legacyEntry : string.Empty,
+                    });
+                }
+            }
+
+            // The former Unassigned section is folded into the ordered list at the end.
+            foreach (var group in CustomCommandGroups)
+            {
+                if (CustomButtonEntries.Any(e => !e.IsBreak && e.GroupId == group.Id)) continue;
+                CustomButtonEntries.Add(new CustomButtonEntry { GroupId = group.Id });
+            }
+
+            CustomButtonEntriesMigrated = true;
+            changed = true;
+        }
+
+        if (changed)
+            SyncLegacyCustomButtonOrder();
+        return changed;
+    }
+
+    public void ResetCustomButtonEntriesFromLegacy()
+    {
+        CustomButtonEntries.Clear();
+        CustomButtonEntriesMigrated = false;
+    }
+
+    public void SyncLegacyCustomButtonOrder()
+    {
+        CustomButtonOrder = CustomButtonEntries.Select(entry =>
+        {
+            if (entry.IsBreak) return "---";
+            var group = CustomCommandGroups.FirstOrDefault(g => g.Id == entry.GroupId);
+            return group?.Name ?? entry.LegacyGroupName;
+        }).Where(entry => !string.IsNullOrWhiteSpace(entry)).ToList();
+    }
+
+    public int GetUtcOffsetMinutes()
+    {
+        var baseMinutes = UtcOffsetMinutes == int.MinValue
+            ? Math.Clamp(UtcOffsetHours, -12, 14) * 60
+            : UtcOffsetMinutes;
+        return baseMinutes + (UtcSummerTime ? 60 : 0);
+    }
+
+    public void SetUtcBaseOffsetMinutes(int minutes, string? timeZoneName)
+    {
+        UtcOffsetMinutes = Math.Clamp(minutes, -12 * 60, 14 * 60);
+        UtcOffsetHours = (int)MathF.Round(UtcOffsetMinutes / 60f);
+        UtcTimeZoneName = timeZoneName ?? string.Empty;
+        UtcOffsetConfigured = true;
+    }
+
     public void Save()
     {
         if (PresetsMigrated && Presets.Count > 0)
@@ -513,6 +743,22 @@ public sealed class BetLimitEntry
     public int VipLevel = 0;
     public string Name = "";
     public long Amount = 250000;
+}
+
+[Serializable]
+public sealed class BettingPreset
+{
+    public string Name = "New Preset";
+    public List<BetLimitEntry> Entries = new();
+    public Vector4? Color = null;
+}
+
+[Serializable]
+public sealed class NearbyAlertSoundEntry
+{
+    public string Path = string.Empty;
+    public bool Enabled = true;
+    public float Volume = 100f;
 }
 
 [Serializable]
