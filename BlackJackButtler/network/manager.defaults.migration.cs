@@ -439,6 +439,38 @@ public static class DefaultsMigration
         return changed;
     }
 
+    internal static bool EnsureBankTransferRegex(Configuration config)
+    {
+        var entry = config.UserRegexes.FirstOrDefault(x =>
+            x.Action == RegexAction.BankTransfer
+            || x.Name.Equals("Bank Transfer", StringComparison.OrdinalIgnoreCase));
+        var changed = false;
+        if (entry == null)
+        {
+            config.UserRegexes.Add(new UserRegexEntry
+            {
+                Name = "Bank Transfer",
+                Patterns = new List<string>
+                {
+                    @"^transfer\s+(-?(?:(?:\d[\d.,]*\s*[km]?)|half|50%|min|max))\s*$"
+                },
+                Action = RegexAction.BankTransfer,
+                Mode = RegexEntryMode.Trigger,
+                Enabled = true,
+            });
+            changed = true;
+            Plugin.Log.Information("[DefaultsMigration] Added Bank Transfer regex entry");
+        }
+
+        if (!config.BankTransferRegexMigrated)
+        {
+            config.BankTransferRegexMigrated = true;
+            changed = true;
+        }
+
+        return changed;
+    }
+
     internal static bool MigrateTellDotToken(Configuration config)
     {
         if (config.DotTokenMigrated) return false;

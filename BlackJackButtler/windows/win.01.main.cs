@@ -558,7 +558,8 @@ public partial class BlackJackButtlerWindow
         bool hasAutoTriggers = _config.UserRegexes.Any(r =>
             r.Enabled && r.Mode == RegexEntryMode.Trigger &&
             (r.Action == RegexAction.WantHit || r.Action == RegexAction.WantStand ||
-             r.Action == RegexAction.WantDD || r.Action == RegexAction.WantSplit));
+             r.Action == RegexAction.WantDD || r.Action == RegexAction.AutoTripleDown ||
+             r.Action == RegexAction.WantSplit));
 
         if (hasAutoTriggers)
         {
@@ -825,6 +826,17 @@ public partial class BlackJackButtlerWindow
         else if (p.IsOnHold) bgColor = ImGui.GetColorU32(new Vector4(0.15f, 0.15f, 0.15f, 1f));
         else bgColor = ImGui.GetColorU32(new Vector4(0.0f, 0.0f, 0.2f, 1f));
 
+        if (p.IsImaginaryPlayer)
+        {
+            bgColor = !p.IsActivePlayer
+                ? ImGui.GetColorU32(new Vector4(0.08f, 0.08f, 0.08f, 1f))
+                : p.IsCurrentTurn
+                    ? ImGui.GetColorU32(new Vector4(0.16f, 0.30f, 0.16f, 1f))
+                    : p.IsOnHold
+                        ? ImGui.GetColorU32(new Vector4(0.24f, 0.24f, 0.24f, 1f))
+                        : ImGui.GetColorU32(new Vector4(0.14f, 0.14f, 0.26f, 1f));
+        }
+
         ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, bgColor);
         ImGui.PushID(p.Name);
 
@@ -902,7 +914,7 @@ public partial class BlackJackButtlerWindow
                     p.ReadySkip = false;
                 }
                 SaveSessionFromUI();
-                if (TryRemoveEmptyInactiveDebugPlayer(p))
+                if (TryRemoveEmptyInactiveGeneratedPlayer(p))
                     removeRowAfterLeave = true;
                 else
                     CompanionSyncManager.SendPlayerBankBetUpdate(_config, p);
@@ -1036,6 +1048,22 @@ public partial class BlackJackButtlerWindow
                 else
                     ImGui.SetTooltip("Click to hold (skip next round)");
             }
+
+            if (ImGui.GetIO().KeyCtrl && !p.IsDebugPlayer && !p.IsImaginaryPlayer)
+            {
+                ImGui.SameLine();
+                bool hasImaginaryPlayer = _players.Any(candidate =>
+                    PlayerIdentityManager.References(candidate, p));
+                if (hasImaginaryPlayer) ImGui.BeginDisabled();
+                if (BJBGui.SmallButton($"i##imaginary_{p.UIID}"))
+                    AddImaginaryPlayer(p);
+                if (hasImaginaryPlayer) ImGui.EndDisabled();
+
+                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                    ImGui.SetTooltip(hasImaginaryPlayer
+                        ? "This player already has an imaginary player"
+                        : "Add an imaginary player controlled by this real player");
+            }
         }
 
         ImGui.TableNextColumn();
@@ -1092,7 +1120,7 @@ public partial class BlackJackButtlerWindow
                 if (bankChanged)
                 {
                     SaveSessionFromUI();
-                    if (TryRemoveEmptyInactiveDebugPlayer(p))
+                    if (TryRemoveEmptyInactiveGeneratedPlayer(p))
                         removeRowAfterBankEdit = true;
                     else
                         CompanionSyncManager.SendPlayerBankBetUpdate(_config, p);
@@ -1345,6 +1373,7 @@ public partial class BlackJackButtlerWindow
         { "Initial", "Auto-deal" },
         { "Hit", "Auto-draw" },
         { "DD", "Auto-DD" },
+        { "TD", "Auto-TD" },
         { "Split", "Auto-split" },
         { "SplitDraw", "Auto-split-draw" },
         { "Natural BlackJack Notify", "Nat.BJ" },
@@ -1404,7 +1433,7 @@ public partial class BlackJackButtlerWindow
             StatsManager.AddTip(p.Bank);
         p.Bank = 0;
         p.CurrentBet = 0;
-        if (TryRemoveEmptyInactiveDebugPlayer(p))
+        if (TryRemoveEmptyInactiveGeneratedPlayer(p))
             return;
         CompanionSyncManager.SendPlayerBankBetUpdate(_config, p);
     }
@@ -1481,7 +1510,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.PushFont(UiBuilder.IconFont);
                 if (BJBGui.SmallButton($"{FontAwesomeIcon.Crosshairs.ToIconString()}##target_{p.UIID}"))
                 {
-                    GameEngine.TargetPlayer(p.Name);
+                    GameEngine.TargetPlayer(p);
                     VariableManager.SetPlayerVariables(p);
                 }
                 ImGui.PopFont();
@@ -1550,11 +1579,13 @@ public partial class BlackJackButtlerWindow
 
             bool isSplitHand = p.Hands.Count > 1;
 
-            bool canHit = min < 21 && !currentHand.IsDoubleDown && !currentHand.IsStand;
+            bool canHit = min < 21 && !currentHand.IsDoubleDown && !currentHand.IsTripleDown && !currentHand.IsStand;
 
             bool canDD = canHit && currentHand.Cards.Count == 2;
             if (!_config.EnableDoubleDown) canDD = false;
             if (isSplitHand && !_config.AllowDoubleDownAfterSplit) canDD = false;
+
+            bool canTD = canHit && GameEngine.CanTripleDown(p, currentHand, _config);
 
             bool canSplit = false;
             if (_config.EnableSplit && canHit && currentHand.Cards.Count == 2 && p.Hands.Count < _config.MaxHandsPerPlayer)
@@ -1579,6 +1610,14 @@ public partial class BlackJackButtlerWindow
             {
                 BlackJackButtler.Chat.GameLog.PushSnapshot(_players, _dealer, phase, $"PlayerDD:{p.Name}");
                 GameActionQueueManager.Enqueue($"DD:{p.Name}", () => GameEngine.ActionDD(p, _config, _players),
+                    $"PlayerAction:{p.Name}", () => p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn);
+            });
+            ImGui.SameLine();
+
+            HighlightActionButton(p, "TD", ref p.HighlightTD, canTD, () =>
+            {
+                BlackJackButtler.Chat.GameLog.PushSnapshot(_players, _dealer, phase, $"PlayerTD:{p.Name}");
+                GameActionQueueManager.Enqueue($"TD:{p.Name}", () => GameEngine.ActionTD(p, _config, _players),
                     $"PlayerAction:{p.Name}", () => p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn);
             });
             ImGui.SameLine();
@@ -1769,7 +1808,8 @@ public partial class BlackJackButtlerWindow
         foreach (var p in _players)
         {
             p.IsDealer = false;
-            p.IsInParty = false;
+            if (!p.IsImaginaryPlayer)
+                p.IsInParty = false;
         }
 
         var allianceMode = GroupContextManager.IsAllianceMode(_config);
@@ -1878,7 +1918,7 @@ public partial class BlackJackButtlerWindow
         _knownGroupMemberKeys.UnionWith(currentGroupMemberKeys);
         _hasGroupMembershipBaseline = true;
 
-        foreach (var p in _players)
+        foreach (var p in _players.Where(x => !x.IsImaginaryPlayer))
         {
             if (!p.IsInParty)
             {
@@ -1888,7 +1928,7 @@ public partial class BlackJackButtlerWindow
             }
         }
 
-        foreach (var leaver in _players.Where(x => !x.IsInParty && !x.IsActivePlayer && x.Bank > 0).ToList())
+        foreach (var leaver in _players.Where(x => !x.IsImaginaryPlayer && !x.IsInParty && !x.IsActivePlayer && x.Bank > 0).ToList())
         {
             if (StatsManager.IsRunning)
             {
@@ -1900,7 +1940,7 @@ public partial class BlackJackButtlerWindow
         }
 
         var zeroBankLeavers = _players
-            .Where(x => !x.IsInParty && x.Bank == 0)
+            .Where(x => !x.IsImaginaryPlayer && !x.IsInParty && x.Bank == 0)
             .ToList();
         foreach (var leaver in zeroBankLeavers.Where(x => x.IsActivePlayer))
             GameEngine.DeactivatePlayerMidRound(leaver, _players, _config);
@@ -1909,7 +1949,8 @@ public partial class BlackJackButtlerWindow
             .Select(x => x.UIID)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         RemovePlayersWithCompanionErase(x =>
-            !x.IsInParty
+            !x.IsImaginaryPlayer
+            && !x.IsInParty
             && !x.IsActivePlayer
             && (x.Bank == 0 || zeroBankLeaverIds.Contains(x.UIID)));
     }
@@ -2021,10 +2062,16 @@ public partial class BlackJackButtlerWindow
             return;
         }
 
-        var removed = _players
+        var removedRealPlayers = _players
+            .Where(player => !player.IsImaginaryPlayer)
             .Where(player => !members.Any(member =>
                 member.Name.Equals(player.Name, StringComparison.OrdinalIgnoreCase)
                 && (member.WorldId == 0 || player.WorldId == 0 || member.WorldId == player.WorldId)))
+            .ToList();
+        var removed = removedRealPlayers
+            .Concat(_players.Where(player => player.IsImaginaryPlayer
+                && (removedRealPlayers.Any(realPlayer => PlayerIdentityManager.References(player, realPlayer))
+                    || PlayerIdentityManager.GetReferencedPlayer(_players, player) == null)))
             .ToList();
 
         foreach (var player in removed)
@@ -2232,14 +2279,53 @@ public partial class BlackJackButtlerWindow
         _players.Clear();
     }
 
-    private bool TryRemoveEmptyInactiveDebugPlayer(PlayerState player)
+    private void AddImaginaryPlayer(PlayerState referencedPlayer)
     {
-        if (!Plugin.IsDebugMode || !player.IsDebugPlayer || player.IsActivePlayer || player.Bank != 0)
+        if (referencedPlayer.IsImaginaryPlayer || referencedPlayer.IsDebugPlayer
+            || _players.Any(player => PlayerIdentityManager.References(player, referencedPlayer)))
+            return;
+
+        var phase = GameEngine.CurrentPhase;
+        var joinedMidRound = phase == GamePhase.InitialDeal
+            || phase == GamePhase.PlayersTurn
+            || phase == GamePhase.DealerTurn;
+        var ghost = new PlayerState
+        {
+            IsImaginaryPlayer = true,
+            ReferencedPlayerName = referencedPlayer.Name,
+            ReferencedPlayerWorldId = referencedPlayer.WorldId,
+            Name = $"{PlayerIdentityManager.GetFirstName(referencedPlayer.Name)} Ghost",
+            WorldId = referencedPlayer.WorldId,
+            IsActivePlayer = true,
+            IsInParty = false,
+            JoinedMidRound = joinedMidRound,
+            Bank = referencedPlayer.Bank,
+            CurrentBet = referencedPlayer.CurrentBet,
+            BankAtRoundStart = referencedPlayer.Bank,
+        };
+        ghost.Hands.Add(new HandState(ghost.CurrentBet));
+
+        var referenceIndex = _players.IndexOf(referencedPlayer);
+        _players.Insert(referenceIndex >= 0 ? referenceIndex + 1 : _players.Count, ghost);
+        PlayerIdentityManager.Refresh(_players, _dealer);
+        GameEngine.SetRuntimeContext(_players, _dealer);
+        ActivityLogManager.LogPlayerJoin(ghost.DisplayName);
+        RoundLogManager.RecordPlayerJoin(ghost.DisplayName);
+        AddDebugLog($"[ImaginaryPlayer] Added {ghost.DisplayName}, controlled by {referencedPlayer.DisplayName}", false);
+        SaveSessionFromUI();
+    }
+
+    private bool TryRemoveEmptyInactiveGeneratedPlayer(PlayerState player)
+    {
+        bool isRemovableDebugPlayer = Plugin.IsDebugMode && player.IsDebugPlayer;
+        if ((!isRemovableDebugPlayer && !player.IsImaginaryPlayer)
+            || player.IsActivePlayer || player.Bank != 0)
             return false;
 
         CompanionSyncManager.ClearPlayer(_config, player);
         _players.Remove(player);
-        AddDebugLog($"[DEBUG] Removed inactive zero-bank debug player: {player.DisplayName}", false);
+        var kind = player.IsImaginaryPlayer ? "imaginary" : "debug";
+        AddDebugLog($"[Player] Removed inactive zero-bank {kind} player: {player.DisplayName}", false);
         _save();
         return true;
     }

@@ -236,7 +236,8 @@ public static class RoundLogManager
         string actions = BuildActionString(hand);
 
         long baseBet = hand.Bet;
-        if (hand.IsDoubleDown) baseBet /= 2;
+        if (hand.IsTripleDown) baseBet /= 3;
+        else if (hand.IsDoubleDown) baseBet /= 2;
 
         long bankStart = p.BankAtRoundStart;
         long bankAfterBet = bankStart - baseBet;

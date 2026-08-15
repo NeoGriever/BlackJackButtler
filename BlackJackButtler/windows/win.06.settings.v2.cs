@@ -216,42 +216,45 @@ public partial class BlackJackButtlerWindow
         DrawV3RuleActionButton("Soft", "v2_dealer_soft", ref _config.DealerSoftRule);
         ImGui.SameLine(0f, 18f);
         ImGui.SetNextItemWidth(120f);
-        if (BJBGui.InputInt("##v2_dealer_draws_until", ref _config.DealerDrawsUntil, 1))
+        if (BJBGui.InputInt("##v2_dealer_draws_until", ref _config.DealerDrawsUntil, 1, defaultValue: 17))
         {
             _config.DealerDrawsUntil = Math.Clamp(_config.DealerDrawsUntil, 2, 21);
             _save();
         }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("Reset##v2_dealer_draws_until_reset"))
-        {
-            _config.DealerDrawsUntil = 17;
-            _save();
-        }
         });
 
-        Header("Game settings");
+        Header("Game Settings");
         Indent(() =>
         {
         Header("Win");
         Indent(() =>
         {
-            MultiplierInput("Payout", ref _config.MultiplierNormalWin, 2f, "v2_win");
+            MultiplierInput("Payout", ref _config.MultiplierNormalWin, 1f, "v2_win");
         });
 
         Header("BlackJack");
         Indent(() =>
         {
+        int tie = (int)_config.BlackjackTieRule;
+        ImGui.TextUnformatted("BlackJack Tie Rule:");
+        ImGui.SameLine(260f);
+        DrawEnumButtons("bj_tie_v2", ref tie, new[] { "Push", "Player NatBJ wins", "Dealer NatBJ wins", "NatBJ beats Dirty BJ" }, idx =>
+        {
+            _config.BlackjackTieRule = (BlackjackTieRule)idx;
+            _save();
+        });
+
         Header("Natural");
         Indent(() =>
         {
-        MultiplierInput("Payout", ref _config.MultiplierBlackjackWin, 2.5f, "v2_natbj");
+        MultiplierInput("Payout", ref _config.MultiplierBlackjackWin, 1.5f, "v2_natbj");
         });
 
         Header("Dirty");
         Indent(() =>
         {
         CheckRuleSave("Enable Dirty Blackjack##v2_dirty", ref _config.EnableDirtyBlackjack);
-        MultiplierInput("Payout", ref _config.MultiplierDirtyBlackjackWin, 2f, "v2_dirtybj");
+        MultiplierInput("Payout", ref _config.MultiplierDirtyBlackjackWin, 1f, "v2_dirtybj");
         });
         });
 
@@ -261,7 +264,7 @@ public partial class BlackJackButtlerWindow
         CheckRuleSave("Enable Charlie", ref _config.EnableCharlie);
         CheckRuleSave("Instant-Win", ref _config.CharlieInstantWin);
         IntInputSave("Cards##v2_charlie_cards", ref _config.CharlieCardCount, 3, 9, 1, 5);
-        MultiplierInput("Payout", ref _config.MultiplierBlackjackWin, 2.5f, "v2_charlie_payout");
+        MultiplierInput("Payout", ref _config.MultiplierCharlieWin, 1.5f, "v2_charlie_payout");
         });
 
         Header("Split");
@@ -269,25 +272,27 @@ public partial class BlackJackButtlerWindow
         {
         CheckRuleSave("Enable Split", ref _config.EnableSplit);
         CheckRuleSave("Identical Split only", ref _config.IdenticalSplitOnly);
-        IntInputSave("Max Hands##v2_max_hands", ref _config.MaxHandsPerPlayer, 2, 10, 1, 2);
-        MultiplierInput("Payout", ref _config.MultiplierNormalWin, 2f, "v2_split_payout");
+        IntInputSave("Max Hands##v2_max_hands", ref _config.MaxHandsPerPlayer, 2, 10, 1, 3);
+        MultiplierInput("Payout", ref _config.MultiplierSplitWin, 1f, "v2_split_payout");
         });
 
         Header("Double Down");
         Indent(() =>
         {
-        CheckRuleSave("Enable Double Down", ref _config.EnableDoubleDown);
-        CheckRuleSave("Allow Double-Down after Split", ref _config.AllowDoubleDownAfterSplit);
-        CheckRuleSave("Refund Double Down on push", ref _config.RefundFullDoubleDownOnPush);
-        int tie = (int)_config.BlackjackTieRule;
-        ImGui.TextUnformatted("BlackJack Tie Rule:");
-        ImGui.SameLine(260f);
-        DrawEnumButtons("bj_tie_v2", ref tie, new[] { "Always Push", "Player NatBJ wins", "Dealer NatBJ wins", "NatBJ beats Dirty BJ" }, idx =>
-        {
-            _config.BlackjackTieRule = (BlackjackTieRule)idx;
-            _save();
+        CheckRuleSave("Enabled##v2_double_down", ref _config.EnableDoubleDown);
+        CheckRuleSave("Allow DD after Split", ref _config.AllowDoubleDownAfterSplit);
+        CheckRuleSave("Refund DD on Push", ref _config.RefundFullDoubleDownOnPush);
+        MultiplierInput("Payout", ref _config.MultiplierDoubleDownWin, 1f, "v2_dd_payout");
         });
-        MultiplierInput("Payout", ref _config.MultiplierBlackjackWin, 2.5f, "v2_dd_payout");
+
+        Header("Triple Down");
+        Indent(() =>
+        {
+        CheckRuleSave("Enabled##v2_triple_down", ref _config.EnableTripleDown);
+        DrawV3TripleDownPointsLimit();
+        CheckRuleSave("Allow TD after Split", ref _config.AllowTripleDownAfterSplit);
+        CheckRuleSave("Refund TD on Push", ref _config.RefundFullTripleDownOnPush);
+        MultiplierInput("Payout", ref _config.MultiplierTripleDownWin, 1f, "v2_td_payout");
         });
         });
 
@@ -932,17 +937,11 @@ public partial class BlackJackButtlerWindow
     {
         ImGui.TextUnformatted(label);
         ImGui.SameLine(260f);
-        ImGui.SetNextItemWidth(180f);
-        if (BJBGui.InputFloat($"##{id}", ref value, 0.05f, 0.1f, "%.2fx"))
+        ImGui.SetNextItemWidth(90f);
+        if (BJBGui.InputFloat($"##{id}", ref value, 0.05f, 0.1f, "%.2fx", defaultValue: defaultValue))
         {
             value = (float)(Math.Round(value / 0.05f) * 0.05f);
             value = Math.Clamp(value, 1f, 3f);
-            _save();
-        }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton($"Reset##{id}_reset"))
-        {
-            value = defaultValue;
             _save();
         }
     }
@@ -955,15 +954,9 @@ public partial class BlackJackButtlerWindow
         ImGui.TextUnformatted(visibleLabel);
         ImGui.SameLine(260f);
         ImGui.SetNextItemWidth(120f);
-        if (BJBGui.InputInt(inputId, ref value, step))
+        if (BJBGui.InputInt(inputId, ref value, step, defaultValue: defaultValue))
         {
             value = Math.Clamp(value, min, max);
-            _save();
-        }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton($"Reset##{label}_reset"))
-        {
-            value = defaultValue;
             _save();
         }
     }
@@ -973,15 +966,9 @@ public partial class BlackJackButtlerWindow
         ImGui.TextUnformatted(label.Split("##")[0]);
         ImGui.SameLine(260f);
         ImGui.SetNextItemWidth(120f);
-        if (BJBGui.InputFloat($"##{label}", ref value, 1f, 10f, "%.2f"))
+        if (BJBGui.InputFloat($"##{label}", ref value, 1f, 10f, "%.2f", defaultValue: defaultValue))
         {
             value = Math.Clamp(value, min, max);
-            _save();
-        }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton($"Reset##{label}_reset"))
-        {
-            value = defaultValue;
             _save();
         }
     }
@@ -1010,11 +997,11 @@ public partial class BlackJackButtlerWindow
         ImGui.TextUnformatted(label.Split("##")[0]);
         ImGui.SameLine(260f);
         bool changed = false;
-        changed |= ColorComponent("R", ref color.X, label);
+        changed |= ColorComponent("R", ref color.X, defaultValue.X, label);
         ImGui.SameLine();
-        changed |= ColorComponent("G", ref color.Y, label);
+        changed |= ColorComponent("G", ref color.Y, defaultValue.Y, label);
         ImGui.SameLine();
-        changed |= ColorComponent("B", ref color.Z, label);
+        changed |= ColorComponent("B", ref color.Z, defaultValue.Z, label);
         color.W = 1f;
         if (changed) _save();
         ImGui.SameLine();
@@ -1025,10 +1012,10 @@ public partial class BlackJackButtlerWindow
         }
     }
 
-    private bool ColorComponent(string component, ref float value, string id)
+    private bool ColorComponent(string component, ref float value, float defaultValue, string id)
     {
         ImGui.SetNextItemWidth(70f);
-        if (BJBGui.InputFloat($"##{id}_{component}", ref value, 0.01f, 0.1f, "%.2f"))
+        if (BJBGui.InputFloat($"##{id}_{component}", ref value, 0.01f, 0.1f, "%.2f", defaultValue: defaultValue))
         {
             value = Math.Clamp(value, 0f, 1f);
             return true;
@@ -1072,15 +1059,9 @@ public partial class BlackJackButtlerWindow
         ImGui.TextUnformatted(text);
         ImGui.SameLine(260f);
         ImGui.SetNextItemWidth(90f);
-        if (BJBGui.InputInt($"##{id}_{text}", ref value, 1))
+        if (BJBGui.InputInt($"##{id}_{text}", ref value, 1, defaultValue: defaultValue))
         {
             value = Math.Clamp(value, 0, 25);
-            _save();
-        }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton($"Reset##{id}_{text}_reset"))
-        {
-            value = defaultValue;
             _save();
         }
     }

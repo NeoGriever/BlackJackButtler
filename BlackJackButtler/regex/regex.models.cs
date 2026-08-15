@@ -43,6 +43,8 @@ public enum RegexAction
     InviteNearby,
     Payout,
     Withdraw,
+    AutoTripleDown,
+    BankTransfer,
 }
 
 [Flags]

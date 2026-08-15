@@ -311,7 +311,9 @@ public partial class BlackJackButtlerWindow
                     "SetBet\0" +
                     "Invite Nearby\0" +
                     "Payout\0" +
-                    "Withdraw\0"
+                    "Withdraw\0" +
+                    "Auto Triple Down\0" +
+                    "Bank Transfer\0"
                 ))
                 {
                     e.Action = (RegexAction)action;

@@ -4,11 +4,20 @@
   "FirstDealThenPlay": true,
   "IdenticalSplitOnly": true,
   "AllowDoubleDownAfterSplit": false,
-  "MaxHandsPerPlayer": 2,
+  "EnableTripleDown": false,
+  "AllowTripleDownAfterSplit": false,
+  "LimitTripleDownToMaxPoints": false,
+  "TripleDownMaxPoints": 10,
+  "MaxHandsPerPlayer": 3,
   "MultiplierNormalWin": 1.0,
   "MultiplierBlackjackWin": 1.5,
   "MultiplierDirtyBlackjackWin": 1.0,
+  "MultiplierCharlieWin": 1.5,
+  "MultiplierSplitWin": 1.0,
+  "MultiplierDoubleDownWin": 1.0,
+  "MultiplierTripleDownWin": 1.0,
   "RefundFullDoubleDownOnPush": false,
+  "RefundFullTripleDownOnPush": true,
   "CommandSpeedMultiplier": 1.0,
   "CommandGroups": [
     {
@@ -122,6 +131,51 @@
         {
           "Enabled": true,
           "Text": "/p #{Player DD Messages Stand}",
+          "Delay": 1.3
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.8
+        }
+      ]
+    },
+    {
+      "Name": "TD",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Player TD Messages}",
+          "Delay": 1.2
+        },
+        {
+          "Enabled": true,
+          "Text": "/bstance motion",
+          "Delay": 4.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/dice party 13",
+          "Delay": 1.3
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Player TD First Card Messages}",
+          "Delay": 1.0
+        },
+        {
+          "Enabled": true,
+          "Text": "/bstance motion",
+          "Delay": 4.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/dice party 13",
+          "Delay": 1.3
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Player TD Messages Stand}",
           "Delay": 1.3
         },
         {
@@ -352,6 +406,66 @@
       ]
     },
     {
+      "Name": "StateHSDTS",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Player State Messages HSDTS} <se.7>",
+          "Delay": 0.5
+        }
+      ]
+    },
+    {
+      "Name": "StateHSTS",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Player State Messages HSTS} <se.7>",
+          "Delay": 0.5
+        }
+      ]
+    },
+    {
+      "Name": "StateHSDT",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Player State Messages HSDT} <se.7>",
+          "Delay": 0.5
+        }
+      ]
+    },
+    {
+      "Name": "StateHST",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.5
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Player State Messages HST} <se.7>",
+          "Delay": 0.5
+        }
+      ]
+    },
+    {
       "Name": "StateHSDS",
       "Commands": [
         {
@@ -402,6 +516,21 @@
         {
           "Enabled": true,
           "Text": "/p #{Player DD Forced Stand Messages}",
+          "Delay": 1.2
+        },
+        {
+          "Enabled": true,
+          "Text": "/p #{Dividor}",
+          "Delay": 0.8
+        }
+      ]
+    },
+    {
+      "Name": "PlayerTDForcedStand",
+      "Commands": [
+        {
+          "Enabled": true,
+          "Text": "/p #{Player TD Forced Stand Messages}",
           "Delay": 1.2
         },
         {
@@ -555,6 +684,42 @@
       "IterativeIndex": 0
     },
     {
+      "Name": "Player State Messages HSDTS",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> - You have splittable <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Double Down], [Triple Down] or [Split]? "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player State Messages HSTS",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> - You have splittable <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Triple Down] or [Split]? "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player State Messages HSDT",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Double Down] or [Triple Down]? "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player State Messages HST",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand] or [Triple Down]? "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
       "Name": "Player State Messages HSD",
       "IsExpanded": true,
       "Messages": [
@@ -577,6 +742,15 @@
       "IsExpanded": true,
       "Messages": [
         " Now you have <points> with ${playerCards}. Since it was a Double Down, this hand is now locked. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player TD Forced Stand Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " Now you have <points> with ${playerCards}. Since it was a Triple Down, this hand is now locked. "
       ],
       "Mode": 0,
       "IterativeIndex": 0
@@ -623,6 +797,35 @@
       "Messages": [
         " <t> drew the DD card. Hand is now locked at <points>. ",
         " Double Down complete. <t> stands automatically at <points>. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player TD Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> is going all in with a TRIPLE DOWN! Two cards are coming. ",
+        " Triple Down for <t>! The hand gets exactly two more cards. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player TD First Card Messages",
+      "IsExpanded": true,
+      "Messages": [
+        " The first Triple Down card is out. One mandatory card remains. "
+      ],
+      "Mode": 0,
+      "IterativeIndex": 0
+    },
+    {
+      "Name": "Player TD Messages Stand",
+      "IsExpanded": true,
+      "Messages": [
+        " <t> drew both TD cards. Hand is now locked at <points>. ",
+        " Triple Down complete. <t> stands automatically at <points>. "
       ],
       "Mode": 0,
       "IterativeIndex": 0

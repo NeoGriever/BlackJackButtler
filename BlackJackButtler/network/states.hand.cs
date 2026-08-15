@@ -44,6 +44,7 @@ public class HandState
     public bool IsStand = false;
     public bool IsBust = false;
     public bool IsDoubleDown = false;
+    public bool IsTripleDown = false;
     public bool IsNaturalBlackJack = false;
     public bool IsCharlie = false;
     public List<string> ActionLog = new();
@@ -57,6 +58,7 @@ public class HandState
         IsStand = IsStand,
         IsBust = IsBust,
         IsDoubleDown = IsDoubleDown,
+        IsTripleDown = IsTripleDown,
         IsNaturalBlackJack = IsNaturalBlackJack,
         IsCharlie = IsCharlie,
         ActionLog = new List<string>(ActionLog),

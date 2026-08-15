@@ -259,6 +259,8 @@ public partial class BlackJackButtlerWindow
                 "^stand\\!*$", "^stando\\!*$", "^standy\\!*$", "^stay\\!*$", "^s\\!*$"),
             CreateGameplayRegex("Double Down", true, RegexChatSource.Party, RegexAction.WantDD,
                 "^dd\\!*$", "^double down\\!*$"),
+            CreateGameplayRegex("Triple Down", true, RegexChatSource.Party, RegexAction.AutoTripleDown,
+                "^td$", "^triple down$"),
             CreateGameplayRegex("Split", true, RegexChatSource.Party, RegexAction.WantSplit,
                 "^split\\!*$"),
             CreateGameplayRegex("Ready", false, RegexChatSource.Party | RegexChatSource.Tell | RegexChatSource.Say, RegexAction.NextRound,
@@ -301,64 +303,119 @@ public partial class BlackJackButtlerWindow
     private void DrawSettingsV3Rules()
     {
         Header("Dealing Behavior");
-        DrawV3RuleActionButton("First Deal, then play", "first_deal", ref _config.FirstDealThenPlay);
-        DrawV3RuleActionButton("Player self-rolling", "self_rolling", ref _config.PlayerRollingForThemselves);
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Players roll their own required cards with /dice 13, /dice alliance 13, or the native /random command.\nDealer rolls are unchanged.");
-        DrawV3RuleActionButton("Hide card suits", "hide_suits", ref _config.HideCardSuits);
+        Indent(() =>
+        {
+            DrawV3RuleActionButton("First Deal, then play", "first_deal", ref _config.FirstDealThenPlay);
+            DrawV3RuleActionButton("Player self-rolling", "self_rolling", ref _config.PlayerRollingForThemselves);
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Players roll their own required cards with /dice 13, /dice alliance 13, or the native /random command.\nDealer rolls are unchanged.");
+            DrawV3RuleActionButton("Hide card suits", "hide_suits", ref _config.HideCardSuits);
+        });
 
         Header("Dealer Rules");
-        ImGui.TextUnformatted("Dealer stands on");
+        Indent(() =>
+        {
+            ImGui.TextUnformatted("Dealer stands on");
+            ImGui.SameLine(260f);
+            ImGui.SetNextItemWidth(90f);
+            if (BJBGui.InputInt("##v3_dealer_draws_until", ref _config.DealerDrawsUntil, 1, defaultValue: 17))
+            {
+                _config.DealerDrawsUntil = Math.Clamp(_config.DealerDrawsUntil, 2, 21);
+                _save();
+            }
+            ImGui.SameLine();
+            DrawV3RuleActionButton("Soft", "soft", ref _config.DealerSoftRule);
+        });
+
+        Header("Game Settings");
+        Indent(() =>
+        {
+            Header("Win");
+            Indent(() => MultiplierInput("Payout", ref _config.MultiplierNormalWin, 1f, "v3_win"));
+
+            Header("BlackJack");
+            Indent(() =>
+            {
+                var tie = (int)_config.BlackjackTieRule;
+                ImGui.TextUnformatted("BlackJack Tie Rule");
+                ImGui.SameLine(260f);
+                DrawEnumButtons("bj_tie_v3", ref tie, new[] { "Push", "Player Nat BJ wins", "Dealer Nat BJ wins", "NatBJ > DirtyBJ" }, idx =>
+                {
+                    _config.BlackjackTieRule = (BlackjackTieRule)idx;
+                    _save();
+                });
+
+                Header("Natural");
+                Indent(() => MultiplierInput("Payout", ref _config.MultiplierBlackjackWin, 1.5f, "v3_natbj"));
+
+                Header("Dirty");
+                Indent(() =>
+                {
+                    DrawV3OnOff("Enabled", "dirty", ref _config.EnableDirtyBlackjack);
+                    MultiplierInput("Payout", ref _config.MultiplierDirtyBlackjackWin, 1f, "v3_dirtybj");
+                });
+            });
+
+            Header("Charlie");
+            Indent(() =>
+            {
+                DrawV3OnOff("Enabled", "charlie", ref _config.EnableCharlie);
+                DrawV3OnOff("Instant win", "charlie_instant", ref _config.CharlieInstantWin);
+                DrawV3RuleInteger("Cards", "charlie_cards", ref _config.CharlieCardCount, 3, 9, 5);
+                MultiplierInput("Payout", ref _config.MultiplierCharlieWin, 1.5f, "v3_charlie_payout");
+            });
+
+            Header("Split");
+            Indent(() =>
+            {
+                DrawV3OnOff("Enabled", "split", ref _config.EnableSplit);
+                DrawV3OnOff("Identical Split only", "identical_split", ref _config.IdenticalSplitOnly);
+                DrawV3RuleInteger("Max Hands", "max_hands", ref _config.MaxHandsPerPlayer, 2, 10, 3);
+                MultiplierInput("Payout", ref _config.MultiplierSplitWin, 1f, "v3_split_payout");
+            });
+
+            Header("Double Down");
+            Indent(() =>
+            {
+                DrawV3OnOff("Enabled", "double_down", ref _config.EnableDoubleDown);
+                DrawV3OnOff("Allow DD after Split", "double_after_split", ref _config.AllowDoubleDownAfterSplit);
+                DrawV3OnOff("Refund DD on Push", "refund_double_down", ref _config.RefundFullDoubleDownOnPush);
+                MultiplierInput("Payout", ref _config.MultiplierDoubleDownWin, 1f, "v3_dd_payout");
+            });
+
+            Header("Triple Down");
+            Indent(() =>
+            {
+                DrawV3OnOff("Enabled", "triple_down", ref _config.EnableTripleDown);
+                DrawV3TripleDownPointsLimit();
+                DrawV3OnOff("Allow TD after Split", "triple_after_split", ref _config.AllowTripleDownAfterSplit);
+                DrawV3OnOff("Refund TD on Push", "refund_triple_down", ref _config.RefundFullTripleDownOnPush);
+                MultiplierInput("Payout", ref _config.MultiplierTripleDownWin, 1f, "v3_td_payout");
+            });
+
+            Header("Result");
+            Indent(() =>
+            {
+                DrawV3OnOff("Short Result Messages", "short_results", ref _config.SmallResult);
+                DrawShortResultRulesEditor();
+            });
+        });
+    }
+
+    private void DrawV3TripleDownPointsLimit()
+    {
+        ImGui.TextUnformatted("Allow TD only with");
         ImGui.SameLine(260f);
         ImGui.SetNextItemWidth(90f);
-        if (BJBGui.InputInt("##v3_dealer_draws_until", ref _config.DealerDrawsUntil, 1))
+        if (BJBGui.InputInt("##v3_triple_down_max_points", ref _config.TripleDownMaxPoints, 1, defaultValue: 10))
         {
-            _config.DealerDrawsUntil = Math.Clamp(_config.DealerDrawsUntil, 2, 21);
+            _config.TripleDownMaxPoints = Math.Clamp(_config.TripleDownMaxPoints, 2, 21);
             _save();
         }
         ImGui.SameLine();
-        DrawV3RuleActionButton("Soft", "soft", ref _config.DealerSoftRule);
-
-        Header("Game Settings");
-        Header("Win");
-        MultiplierInput("Payout", ref _config.MultiplierNormalWin, 2f, "v3_win");
-
-        Header("BlackJack");
-        Header("Natural");
-        MultiplierInput("Payout", ref _config.MultiplierBlackjackWin, 2.5f, "v3_natbj");
-        Header("Dirty");
-        DrawV3OnOff("Enable Dirty Blackjack", "dirty", ref _config.EnableDirtyBlackjack);
-        MultiplierInput("Payout", ref _config.MultiplierDirtyBlackjackWin, 2f, "v3_dirtybj");
-
-        Header("Charlie");
-        DrawV3OnOff("Enable Charlie", "charlie", ref _config.EnableCharlie);
-        DrawV3OnOff("Instant-Win", "charlie_instant", ref _config.CharlieInstantWin);
-        DrawV3RuleInteger("Cards", "charlie_cards", ref _config.CharlieCardCount, 3, 9, 5);
-        MultiplierInput("Payout", ref _config.MultiplierBlackjackWin, 2.5f, "v3_charlie_payout");
-
-        Header("Split");
-        DrawV3OnOff("Enable Split", "split", ref _config.EnableSplit);
-        DrawV3OnOff("Identical Split only", "identical_split", ref _config.IdenticalSplitOnly);
-        DrawV3RuleInteger("Max Hands", "max_hands", ref _config.MaxHandsPerPlayer, 2, 10, 2);
-        MultiplierInput("Payout", ref _config.MultiplierNormalWin, 2f, "v3_split_payout");
-
-        Header("Double Down");
-        DrawV3OnOff("Enable Double Down", "double_down", ref _config.EnableDoubleDown);
-        DrawV3OnOff("Allow Double-Down after Split", "double_after_split", ref _config.AllowDoubleDownAfterSplit);
-        DrawV3OnOff("Refund Double Down on push", "refund_double_down", ref _config.RefundFullDoubleDownOnPush);
-        var tie = (int)_config.BlackjackTieRule;
-        ImGui.TextUnformatted("BlackJack Tie Rule");
-        ImGui.SameLine(260f);
-        DrawEnumButtons("bj_tie_v3", ref tie, new[] { "Push", "Player Nat BJ wins", "Dealer Nat BJ wins", "NatBJ > DirtyBJ" }, idx =>
-        {
-            _config.BlackjackTieRule = (BlackjackTieRule)idx;
-            _save();
-        });
-        MultiplierInput("Payout", ref _config.MultiplierBlackjackWin, 2.5f, "v3_dd_payout");
-
-        Header("Result");
-        DrawV3OnOff("Short Result Messages", "short_results", ref _config.SmallResult);
-        DrawShortResultRulesEditor();
+        ImGui.TextUnformatted("Points or less");
+        ImGui.SameLine();
+        if (BJBOnOffSwitch.Draw("v3_triple_down_point_limit", ref _config.LimitTripleDownToMaxPoints)) _save();
     }
 
     private void DrawV3OnOff(string label, string id, ref bool value)
@@ -396,15 +453,9 @@ public partial class BlackJackButtlerWindow
         ImGui.TextUnformatted(label);
         ImGui.SameLine(260f);
         ImGui.SetNextItemWidth(90f);
-        if (BJBGui.InputInt($"##v3_rule_{id}", ref value, 1))
+        if (BJBGui.InputInt($"##v3_rule_{id}", ref value, 1, defaultValue: defaultValue))
         {
             value = Math.Clamp(value, min, max);
-            _save();
-        }
-        ImGui.SameLine();
-        if (BJBGui.SmallButton($"Reset##v3_rule_{id}_reset"))
-        {
-            value = defaultValue;
             _save();
         }
     }

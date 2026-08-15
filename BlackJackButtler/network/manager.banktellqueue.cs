@@ -9,6 +9,7 @@ namespace BlackJackButtler;
 
 public static class BankTellQueueManager
 {
+    private const int TellCooldownMilliseconds = 1_100;
     private static int _pendingCount;
 
     public static bool IsProcessing => Volatile.Read(ref _pendingCount) > 0;
@@ -36,6 +37,20 @@ public static class BankTellQueueManager
             Enqueue(player, config, source);
     }
 
+    public static void EnqueueWithImaginaryPlayer(PlayerState realPlayer, Configuration config, string source)
+    {
+        Enqueue(realPlayer, config, source);
+
+        var players = Plugin.Instance.GetMainWindow().GetPlayers();
+        var imaginaryPlayer = PlayerIdentityManager.GetImaginaryPlayer(players, realPlayer);
+        if (imaginaryPlayer == null)
+            return;
+
+        Enqueue(imaginaryPlayer, config, source);
+        Plugin.Instance.GetMainWindow().AddDebugLog(
+            $"[BankTellQueue] Queued paired bank tells for {realPlayer.DisplayName} and {imaginaryPlayer.DisplayName}");
+    }
+
     private static async Task Execute(string playerName, string displayName, Configuration config, string source)
     {
         try
@@ -56,6 +71,10 @@ public static class BankTellQueueManager
             GameEngine.TargetPlayer(player);
             VariableManager.SetPlayerVariables(player);
             await CommandExecutor.ExecuteGroup("BankTell", player.DisplayName, config);
+
+            // Keep the action queue locked after every tell as well.  This protects the
+            // following ghost tell (and every later queued tell) from client-side /tell overlap.
+            await Task.Delay(TellCooldownMilliseconds);
         }
         finally
         {

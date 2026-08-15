@@ -48,13 +48,21 @@ public static partial class GameEngine
 
     public static void TargetPlayer(PlayerState player)
     {
-        var qualifiedName = PlayerIdentityManager.GetQualifiedName(player);
+        var referencedPlayer = PlayerIdentityManager.GetReferencedPlayer(
+            Plugin.Instance.GetMainWindow().GetPlayers(), player);
+        var physicalPlayer = referencedPlayer ?? player;
+        var qualifiedName = PlayerIdentityManager.GetQualifiedName(physicalPlayer);
         var separatorIndex = qualifiedName.LastIndexOf('@');
         var worldName = separatorIndex >= 0 && separatorIndex < qualifiedName.Length - 1
             ? qualifiedName[(separatorIndex + 1)..]
             : null;
 
-        TargetPlayer(player.Name, worldName);
+        TargetPlayer(physicalPlayer.Name, worldName);
+
+        // The game client is focused on the real player, while card recognition and table
+        // variables must continue to belong to the imaginary player's independent hand.
+        if (referencedPlayer != null)
+            _virtualTargetName = player.Name;
     }
 
     public static void TargetPlayer(string name, string? worldName)

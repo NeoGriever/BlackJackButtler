@@ -12,11 +12,18 @@ public static class PlayerIdentityManager
             .Where(p => !string.IsNullOrWhiteSpace(p.Name)
                 && (ReferenceEquals(p, dealer) || p.IsInParty || p.IsActivePlayer))
             .ToList();
+        var realPlayers = all.Where(p => !p.IsImaginaryPlayer).ToList();
 
         foreach (var player in all)
         {
+            if (player.IsImaginaryPlayer)
+            {
+                player.ResolvedName = player.Name;
+                continue;
+            }
+
             var firstName = GetFirstName(player.Name);
-            var sameFirstName = all.Count(p =>
+            var sameFirstName = realPlayers.Count(p =>
                 GetFirstName(p.Name).Equals(firstName, StringComparison.OrdinalIgnoreCase));
             if (sameFirstName == 1)
             {
@@ -24,7 +31,7 @@ public static class PlayerIdentityManager
                 continue;
             }
 
-            var sameFullName = all.Count(p =>
+            var sameFullName = realPlayers.Count(p =>
                 p.Name.Equals(player.Name, StringComparison.OrdinalIgnoreCase));
             if (sameFullName == 1)
             {
@@ -69,7 +76,40 @@ public static class PlayerIdentityManager
             : player.Name;
     }
 
-    private static string GetFirstName(string fullName)
+    public static bool References(PlayerState imaginaryPlayer, PlayerState realPlayer)
+    {
+        return imaginaryPlayer.IsImaginaryPlayer
+            && !realPlayer.IsImaginaryPlayer
+            && imaginaryPlayer.ReferencedPlayerName.Equals(realPlayer.Name, StringComparison.OrdinalIgnoreCase)
+            && (imaginaryPlayer.ReferencedPlayerWorldId == 0
+                || realPlayer.WorldId == 0
+                || imaginaryPlayer.ReferencedPlayerWorldId == realPlayer.WorldId);
+    }
+
+    public static PlayerState? GetReferencedPlayer(IEnumerable<PlayerState> players, PlayerState player)
+    {
+        if (!player.IsImaginaryPlayer)
+            return null;
+
+        return players.FirstOrDefault(candidate => References(player, candidate));
+    }
+
+    public static PlayerState? GetImaginaryPlayer(IEnumerable<PlayerState> players, PlayerState realPlayer)
+    {
+        return players.FirstOrDefault(candidate => References(candidate, realPlayer));
+    }
+
+    public static PlayerState ResolveMessageActionPlayer(IEnumerable<PlayerState> players, PlayerState sourcePlayer)
+    {
+        return players.FirstOrDefault(candidate =>
+                   candidate.IsImaginaryPlayer
+                   && candidate.IsActivePlayer
+                   && candidate.IsCurrentTurn
+                   && References(candidate, sourcePlayer))
+               ?? sourcePlayer;
+    }
+
+    public static string GetFirstName(string fullName)
     {
         var trimmed = fullName.Trim();
         var separator = trimmed.IndexOf(' ');

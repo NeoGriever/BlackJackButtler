@@ -53,13 +53,22 @@ public sealed class Configuration : IPluginConfiguration
     public bool IdenticalSplitOnly = true;
     public bool EnableSplit = true;
     public bool EnableDoubleDown = true;
+    public bool EnableTripleDown = false;
     public bool EnableDirtyBlackjack = true;
     public bool AllowDoubleDownAfterSplit = false;
-    public int MaxHandsPerPlayer = 2;
+    public bool AllowTripleDownAfterSplit = false;
+    public bool LimitTripleDownToMaxPoints = false;
+    public int TripleDownMaxPoints = 10;
+    public int MaxHandsPerPlayer = 3;
     public float MultiplierNormalWin = 1.0f;
     public float MultiplierBlackjackWin = 1.5f;
     public float MultiplierDirtyBlackjackWin = 1.0f;
+    public float MultiplierCharlieWin = 1.5f;
+    public float MultiplierSplitWin = 1.0f;
+    public float MultiplierDoubleDownWin = 1.0f;
+    public float MultiplierTripleDownWin = 1.0f;
     public bool RefundFullDoubleDownOnPush = false;
+    public bool RefundFullTripleDownOnPush = true;
     public BlackjackTieRule BlackjackTieRule = BlackjackTieRule.AlwaysPush;
     public bool EnableCharlie = false;
     public int CharlieCardCount = 5;
@@ -231,6 +240,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool DrawLogicSeeded = false;
     public bool DotTokenMigrated = false;
     public bool GameplayRegexPatternsMigrated = false;
+    public bool BankTransferRegexMigrated = false;
     public bool NotifyGroupsMigrated = false;
     public string DrawLogicScriptDir = "";
 
@@ -329,6 +339,7 @@ public sealed class Configuration : IPluginConfiguration
         var names = defaults.Select(d => d.Name).ToList();
         UserRegexes.RemoveAll(r => names.Contains(r.Name));
         UserRegexes.AddRange(defaults);
+        DefaultsMigration.EnsureBankTransferRegex(this);
         DefaultRegexSeeded = true;
         RegexEngine.InvalidateCache();
     }

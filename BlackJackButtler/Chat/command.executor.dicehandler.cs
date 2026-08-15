@@ -123,6 +123,16 @@ public static class DiceResultHandler
             }
             else if (GameEngine.CurrentPhase == GamePhase.PlayersTurn)
             {
+                // Triple Down always deals both extra cards. The first card must
+                // not interrupt the command chain, even if it busts or reaches 21.
+                if (hand.IsTripleDown && hand.Cards.Count < 4)
+                {
+                    window.AddDebugLog("[DiceHandler] Triple down first card received; waiting for the required second card");
+                    GameEngine.SendCompanionTableUpdate(cfg, players.Where(x => x.IsActivePlayer));
+                    CommandExecutor.NotifyDiceResult();
+                    return;
+                }
+
                 if (best > 21)
                 {
                     hand.IsBust = true;
@@ -130,6 +140,22 @@ public static class DiceResultHandler
                     shouldCancel = true;
                     newGroup = "PlayerBust";
                     window.AddDebugLog($"[DiceHandler] Player bust ({best} points) - canceling current chain and triggering PlayerBust");
+                }
+                else if (hand.IsTripleDown && best == 21)
+                {
+                    hand.IsStand = true;
+                    shouldCancel = true;
+                    newGroup = !cfg.EnableDirtyBlackjack
+                        ? "Natural BlackJack Notify"
+                        : "Dirty BlackJack Notify";
+                    window.AddDebugLog("[DiceHandler] Triple down finished on 21 - triggering blackjack notification");
+                }
+                else if (hand.IsTripleDown)
+                {
+                    hand.IsStand = true;
+                    shouldCancel = true;
+                    newGroup = "PlayerTDForcedStand";
+                    window.AddDebugLog("[DiceHandler] Triple down second card dealt - triggering forced stand");
                 }
                 else if (cfg.EnableCharlie && hand.Cards.Count >= cfg.CharlieCardCount && !hand.IsBust)
                 {
@@ -193,7 +219,8 @@ public static class DiceResultHandler
                     window.AddDebugLog($"[DiceHandler-Cancel] Group {newGroup} completed");
 
                     if (!isDealer && (newGroup == "PlayerBust" || newGroup == "Natural BlackJack Notify" ||
-                        newGroup == "Dirty BlackJack Notify" || newGroup == "PlayerDDForcedStand" || newGroup == "Charlie Notify"))
+                        newGroup == "Dirty BlackJack Notify" || newGroup == "PlayerDDForcedStand" ||
+                        newGroup == "PlayerTDForcedStand" || newGroup == "Charlie Notify"))
                     {
                         window.AddDebugLog($"[DiceHandler-Cancel] Calling NextTurn after {newGroup}");
                         GameEngine.NextTurn(players, cfg);

@@ -15,38 +15,54 @@ internal static class BJBStepInput
     private const float MinimumStepButtonWidth = 14f;
     private const float MinimumInputWidth = 20f;
 
-    public static bool InputInt(string label, ref int value, int step)
+    public static bool InputInt(string label, ref int value, int step, int? defaultValue = null)
     {
         var totalWidth = GetTotalWidth();
         var stepButtonWidth = GetStepButtonWidth(totalWidth);
         var inputWidth = Math.Max(MinimumInputWidth, totalWidth - (stepButtonWidth * 2f));
+        var resetMode = defaultValue.HasValue && ImGui.GetIO().KeyCtrl;
 
-        var adjustment = DrawStepButton(label, true, stepButtonWidth);
+        var adjustment = resetMode ? 0 : DrawStepButton(label, true, stepButtonWidth);
+        if (resetMode) DrawBlockedStepButton(stepButtonWidth);
         ImGui.SameLine(0f, 0f);
         BeginInputField(inputWidth);
         var changed = ImGui.InputInt(label, ref value, 0, 0);
         EndInputField();
         ImGui.SameLine(0f, 0f);
-        adjustment += DrawStepButton(label, false, stepButtonWidth);
+        var reset = resetMode && DrawResetButton(label, GetResetButtonWidth(stepButtonWidth));
+        if (!resetMode) adjustment += DrawStepButton(label, false, stepButtonWidth);
+        if (reset)
+        {
+            value = defaultValue!.Value;
+            return true;
+        }
         if (adjustment == 0) return changed;
 
         value += adjustment * step;
         return true;
     }
 
-    public static bool InputLong(string label, ref long value, long step, long stepFast)
+    public static bool InputLong(string label, ref long value, long step, long stepFast, long? defaultValue = null)
     {
         var totalWidth = GetTotalWidth();
         var stepButtonWidth = GetStepButtonWidth(totalWidth);
         var inputWidth = Math.Max(MinimumInputWidth, totalWidth - (stepButtonWidth * 2f));
+        var resetMode = defaultValue.HasValue && ImGui.GetIO().KeyCtrl;
 
-        var adjustment = DrawStepButton(label, true, stepButtonWidth);
+        var adjustment = resetMode ? 0 : DrawStepButton(label, true, stepButtonWidth);
+        if (resetMode) DrawBlockedStepButton(stepButtonWidth);
         ImGui.SameLine(0f, 0f);
         BeginInputField(inputWidth);
         var changed = ImGui.InputLong(label, ref value, 0, 0);
         EndInputField();
         ImGui.SameLine(0f, 0f);
-        adjustment += DrawStepButton(label, false, stepButtonWidth);
+        var reset = resetMode && DrawResetButton(label, GetResetButtonWidth(stepButtonWidth));
+        if (!resetMode) adjustment += DrawStepButton(label, false, stepButtonWidth);
+        if (reset)
+        {
+            value = defaultValue!.Value;
+            return true;
+        }
         if (adjustment == 0) return changed;
 
         var amount = ImGui.GetIO().KeyCtrl ? stepFast : step;
@@ -54,19 +70,28 @@ internal static class BJBStepInput
         return true;
     }
 
-    public static bool InputFloat(string label, ref float value, float step, float stepFast, string format)
+    public static bool InputFloat(string label, ref float value, float step, float stepFast, string format,
+        float? defaultValue = null)
     {
         var totalWidth = GetTotalWidth();
         var stepButtonWidth = GetStepButtonWidth(totalWidth);
         var inputWidth = Math.Max(MinimumInputWidth, totalWidth - (stepButtonWidth * 2f));
+        var resetMode = defaultValue.HasValue && ImGui.GetIO().KeyCtrl;
 
-        var adjustment = DrawStepButton(label, true, stepButtonWidth);
+        var adjustment = resetMode ? 0 : DrawStepButton(label, true, stepButtonWidth);
+        if (resetMode) DrawBlockedStepButton(stepButtonWidth);
         ImGui.SameLine(0f, 0f);
         BeginInputField(inputWidth);
         var changed = ImGui.InputFloat(label, ref value, 0f, 0f, format);
         EndInputField();
         ImGui.SameLine(0f, 0f);
-        adjustment += DrawStepButton(label, false, stepButtonWidth);
+        var reset = resetMode && DrawResetButton(label, GetResetButtonWidth(stepButtonWidth));
+        if (!resetMode) adjustment += DrawStepButton(label, false, stepButtonWidth);
+        if (reset)
+        {
+            value = defaultValue!.Value;
+            return true;
+        }
         if (adjustment == 0) return changed;
 
         var amount = ImGui.GetIO().KeyCtrl ? stepFast : step;
@@ -84,6 +109,9 @@ internal static class BJBStepInput
         return Math.Max(MinimumStepButtonWidth,
             Math.Min(PreferredStepButtonWidth, (totalWidth - MinimumInputWidth) * 0.5f));
     }
+
+    private static float GetResetButtonWidth(float minimumWidth) => Math.Max(minimumWidth,
+        ImGui.CalcTextSize("RESET").X + ImGui.GetStyle().FramePadding.X * 2f);
 
     private static void BeginInputField(float width)
     {
@@ -113,6 +141,34 @@ internal static class BJBStepInput
         DrawHalf(drawList, position, size, decrement, GetButtonColor(hovered, active, style), rounding);
         DrawCenteredText(drawList, position, size, decrement ? "-" : "+");
         return clicked ? decrement ? -1 : 1 : 0;
+    }
+
+    private static void DrawBlockedStepButton(float width)
+    {
+        var style = ImGui.GetStyle();
+        var size = new Vector2(width, ImGui.GetFrameHeight());
+        var position = ImGui.GetCursorScreenPos();
+        ImGui.Dummy(size);
+
+        var color = style.Colors[(int)ImGuiCol.Button];
+        color.W *= style.DisabledAlpha;
+        var rounding = Math.Min(Math.Max(4f, style.FrameRounding), Math.Min(size.X, size.Y) * 0.5f);
+        DrawHalf(ImGui.GetWindowDrawList(), position, size, true, color, rounding);
+    }
+
+    private static bool DrawResetButton(string inputLabel, float width)
+    {
+        var style = ImGui.GetStyle();
+        var size = new Vector2(width, ImGui.GetFrameHeight());
+        var position = ImGui.GetCursorScreenPos();
+        var clicked = ImGui.InvisibleButton($"##bjb_step_reset_{inputLabel}", size);
+        var hovered = ImGui.IsItemHovered();
+        var active = ImGui.IsItemActive();
+
+        var rounding = Math.Min(Math.Max(4f, style.FrameRounding), Math.Min(size.X, size.Y) * 0.5f);
+        DrawHalf(ImGui.GetWindowDrawList(), position, size, false, GetButtonColor(hovered, active, style), rounding);
+        DrawCenteredText(ImGui.GetWindowDrawList(), position, size, "RESET");
+        return clicked;
     }
 
     private static Vector4 GetButtonColor(bool hovered, bool active, ImGuiStylePtr style) =>

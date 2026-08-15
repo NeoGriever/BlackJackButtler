@@ -44,6 +44,7 @@ public static partial class GameEngine
     private static Configuration? _pendingSplitConfig = null;
     private static List<PlayerState>? _pendingSplitPlayers = null;
     private static PlayerState? _pendingDDPlayer = null;
+    private static PlayerState? _pendingTDPlayer = null;
 
     public static async Task StartInitialDeal(List<PlayerState> players, Configuration cfg)
     {
@@ -517,6 +518,70 @@ public static partial class GameEngine
         CompanionSyncManager.SendPlayerUpdate(cfg, p);
     }
 
+    public static async Task ActionTD(PlayerState p, Configuration cfg, List<PlayerState> players)
+    {
+        if (p.CurrentHandIndex < 0 || p.CurrentHandIndex >= p.Hands.Count
+            || !CanTripleDown(p, p.Hands[p.CurrentHandIndex], cfg))
+            return;
+
+        var additionalBet = p.CurrentBet * 2;
+        if (p.Bank < additionalBet)
+        {
+            Plugin.Instance.GetMainWindow().OpenTDMoneyPopup(p, additionalBet - p.Bank);
+            _pendingTDPlayer = p;
+            return;
+        }
+
+        await ExecuteActualTD(p, cfg, players);
+    }
+
+    public static async Task ContinueTDAfterPayment(PlayerState p, Configuration cfg, List<PlayerState> players)
+    {
+        if (p == null)
+        {
+            Plugin.Log.Error("[BJB] ContinueTDAfterPayment was called with a null player!");
+            return;
+        }
+
+        try
+        {
+            if (p.CurrentHandIndex < 0 || p.CurrentHandIndex >= p.Hands.Count
+                || !CanTripleDown(p, p.Hands[p.CurrentHandIndex], cfg))
+                return;
+
+            var additionalBet = p.CurrentBet * 2;
+            if (p.Bank < additionalBet)
+            {
+                Plugin.Log.Warning($"[TD] Still not enough money for {p.Name}");
+                return;
+            }
+
+            await ExecuteActualTD(p, cfg, players);
+            _pendingTDPlayer = null;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error($"[BJB] Error in ContinueTDAfterPayment: {ex}");
+        }
+    }
+
+    private static async Task ExecuteActualTD(PlayerState p, Configuration cfg, List<PlayerState> players)
+    {
+        await ExecutePlayerAction(p, "TD", cfg, players, async () => {
+            var hand = p.Hands[p.CurrentHandIndex];
+            hand.IsTripleDown = true;
+            hand.ActionLog.Add("TD");
+            hand.Bet *= 3;
+            TargetPlayer(p);
+            SetForcedRecipient(p);
+            try { await CommandExecutor.ExecuteGroup("TD", p.DisplayName, cfg); }
+            finally { ClearForcedRecipient(); }
+            hand.IsStand = true;
+        });
+        SaveSessionIfNeeded(players);
+        CompanionSyncManager.SendPlayerUpdate(cfg, p);
+    }
+
     public static async Task ActionSplit(PlayerState p, Configuration cfg, List<PlayerState> players)
     {
         if (p.Hands.Count >= cfg.MaxHandsPerPlayer) return;
@@ -663,13 +728,27 @@ public static partial class GameEngine
         }
 
         bool isSplitHand = p.Hands.Count > 1;
-        bool canDD = cfg.EnableDoubleDown && hand.Cards.Count == 2;
-        if (isSplitHand && !cfg.AllowDoubleDownAfterSplit)
-            canDD = false;
+        bool canDD = cfg.EnableDoubleDown && hand.Cards.Count == 2
+            && (!isSplitHand || cfg.AllowDoubleDownAfterSplit);
+        bool canTD = CanTripleDown(p, hand, cfg);
 
-        if (canSplit) return "StateHSDS";
-        if (canDD)    return "StateHSD";
+        if (canSplit && canDD && canTD) return "StateHSDTS";
+        if (canSplit && canTD)          return "StateHSTS";
+        if (canDD && canTD)             return "StateHSDT";
+        if (canTD)                      return "StateHST";
+        if (canSplit)                   return "StateHSDS";
+        if (canDD)                      return "StateHSD";
         return "StateHS";
+    }
+
+    public static bool CanTripleDown(PlayerState player, HandState hand, Configuration cfg)
+    {
+        if (!cfg.EnableTripleDown || hand.Cards.Count != 2 || hand.IsDoubleDown || hand.IsTripleDown)
+            return false;
+        if (player.Hands.Count > 1 && !cfg.AllowTripleDownAfterSplit)
+            return false;
+        return !cfg.LimitTripleDownToMaxPoints
+            || player.GetBestScore(player.CurrentHandIndex) <= cfg.TripleDownMaxPoints;
     }
 
     private static bool IsPlayerFinished(PlayerState p)

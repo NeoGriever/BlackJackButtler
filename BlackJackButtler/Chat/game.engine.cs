@@ -162,6 +162,7 @@ public static partial class GameEngine
         long cost = 0;
         if (actionName == "Initial") cost = p.CurrentBet;
         if (actionName == "DD")      cost = p.CurrentBet;
+        if (actionName == "TD")      cost = p.CurrentBet * 2;
         if (actionName == "Split")   cost = p.CurrentBet;
 
         p.Bank -= cost;
@@ -181,6 +182,26 @@ public static partial class GameEngine
             BlackjackTieRule.NatBJBeatsDirty => playerNat == dealerNat ? 0 : (playerNat ? 1 : -1),
             _ => 0,
         };
+    }
+
+    private static float GetWinMultiplier(PlayerState player, HandState hand, int score, Configuration cfg)
+    {
+        if (hand.IsNaturalBlackJack) return cfg.MultiplierBlackjackWin;
+        if (hand.IsCharlie) return cfg.MultiplierCharlieWin;
+        if (score == 21) return cfg.MultiplierDirtyBlackjackWin;
+        if (hand.IsTripleDown) return cfg.MultiplierTripleDownWin;
+        if (hand.IsDoubleDown) return cfg.MultiplierDoubleDownWin;
+        if (player.Hands.Count > 1) return cfg.MultiplierSplitWin;
+        return cfg.MultiplierNormalWin;
+    }
+
+    private static long GetPushRefund(HandState hand, Configuration cfg)
+    {
+        if (hand.IsTripleDown)
+            return cfg.RefundFullTripleDownOnPush ? hand.Bet : hand.Bet / 3;
+        if (hand.IsDoubleDown)
+            return cfg.RefundFullDoubleDownOnPush ? hand.Bet : hand.Bet / 2;
+        return hand.Bet;
     }
 
     public static async Task EvaluateFinalResults(List<PlayerState> players, PlayerState dealer, Configuration cfg)
@@ -259,10 +280,7 @@ public static partial class GameEngine
                     else if (dealerBust || pScore > dealerScore || (hand.IsCharlie && cfg.CharlieInstantWin) || (pScore == 21 && dealerScore == 21 && EvaluateBJTie(hand, dealer, cfg.BlackjackTieRule) > 0))
                     {
                         winList.Add(shortName);
-                        float mult = cfg.MultiplierNormalWin;
-                        if (hand.IsNaturalBlackJack) mult = cfg.MultiplierBlackjackWin;
-                        else if (hand.IsCharlie) mult = cfg.MultiplierBlackjackWin;
-                        else if (pScore == 21) mult = cfg.MultiplierDirtyBlackjackWin;
+                        float mult = GetWinMultiplier(p, hand, pScore, cfg);
 
                         long winAmount = (long)(hand.Bet * mult);
                         hand.RoundResult = winAmount;
@@ -274,10 +292,12 @@ public static partial class GameEngine
                     else if (pScore == dealerScore)
                     {
                         pushList.Add(shortName);
-                        hand.RoundResult = 0;
+                        long refund = GetPushRefund(hand, cfg);
+                        hand.RoundResult = refund - hand.Bet;
                         long preBank = p.Bank;
-                        p.Bank += hand.Bet;
-                        RecordLeg(p, preBank, p.Bank, p.Bank - preBank);
+                        p.Bank += refund;
+                        p.LastRoundResult += hand.RoundResult;
+                        RecordLeg(p, preBank, p.Bank, refund);
                     }
                     else
                     {
@@ -335,10 +355,7 @@ public static partial class GameEngine
                     }
                     else if (dealerBust || pScore > dealerScore || (hand.IsCharlie && cfg.CharlieInstantWin) || (pScore == 21 && dealerScore == 21 && EvaluateBJTie(hand, dealer, cfg.BlackjackTieRule) > 0))
                     {
-                        float mult = cfg.MultiplierNormalWin;
-                        if (hand.IsNaturalBlackJack) mult = cfg.MultiplierBlackjackWin;
-                        else if (hand.IsCharlie) mult = cfg.MultiplierBlackjackWin;
-                        else if (pScore == 21) mult = cfg.MultiplierDirtyBlackjackWin;
+                        float mult = GetWinMultiplier(p, hand, pScore, cfg);
 
                         long winAmount = (long)(hand.Bet * mult);
                         hand.RoundResult = winAmount;
@@ -350,10 +367,12 @@ public static partial class GameEngine
                     }
                     else if (pScore == dealerScore)
                     {
-                        hand.RoundResult = 0;
+                        long refund = GetPushRefund(hand, cfg);
+                        hand.RoundResult = refund - hand.Bet;
                         long preBank = p.Bank;
-                        p.Bank += hand.Bet;
-                        RecordLeg(p, preBank, p.Bank, p.Bank - preBank);
+                        p.Bank += refund;
+                        p.LastRoundResult += hand.RoundResult;
+                        RecordLeg(p, preBank, p.Bank, refund);
                         await CommandExecutor.ExecuteGroup("ResultPlayerPush", p.DisplayName, cfg);
                     }
                     else

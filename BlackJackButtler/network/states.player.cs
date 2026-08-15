@@ -7,6 +7,11 @@ namespace BlackJackButtler;
 public class PlayerState
 {
     public bool IsDebugPlayer = false;
+    // An imaginary player owns an independent table state, but is controlled and paid through
+    // the real player recorded below.
+    public bool IsImaginaryPlayer = false;
+    public string ReferencedPlayerName = string.Empty;
+    public uint ReferencedPlayerWorldId;
     public bool IsDealer = false;
 
     public string Name = string.Empty;
@@ -39,6 +44,7 @@ public class PlayerState
     public bool HighlightHit = false;
     public bool HighlightStand = false;
     public bool HighlightDD = false;
+    public bool HighlightTD = false;
     public bool HighlightSplit = false;
     public bool HighlightPay = false;
     public bool HighlightAlias = false;
@@ -51,7 +57,9 @@ public class PlayerState
     public string DisplayName => !string.IsNullOrWhiteSpace(Alias)
         ? Alias
         : !string.IsNullOrWhiteSpace(ResolvedName) ? ResolvedName : Name;
-    public string UIID => $"{Name}_{WorldId}";
+    public string UIID => IsImaginaryPlayer
+        ? $"{Name}_{WorldId}_ghost_{ReferencedPlayerName}_{ReferencedPlayerWorldId}"
+        : $"{Name}_{WorldId}";
 
     public string GetCardsString(int handIndex)
     {
@@ -81,6 +89,7 @@ public class PlayerState
         HighlightHit = false;
         HighlightStand = false;
         HighlightDD = false;
+        HighlightTD = false;
         HighlightSplit = false;
     }
 
@@ -90,6 +99,7 @@ public class PlayerState
         HighlightHit = false;
         HighlightStand = false;
         HighlightDD = false;
+        HighlightTD = false;
         HighlightSplit = false;
         HighlightPay = false;
         HighlightAlias = false;
@@ -152,6 +162,9 @@ public class PlayerState
         return new PlayerState
         {
             IsDebugPlayer = IsDebugPlayer,
+            IsImaginaryPlayer = IsImaginaryPlayer,
+            ReferencedPlayerName = ReferencedPlayerName,
+            ReferencedPlayerWorldId = ReferencedPlayerWorldId,
             IsDealer = IsDealer,
             Name = Name,
             Alias = Alias,
@@ -183,6 +196,7 @@ public class PlayerState
             HighlightHit = HighlightHit,
             HighlightStand = HighlightStand,
             HighlightDD = HighlightDD,
+            HighlightTD = HighlightTD,
             HighlightSplit = HighlightSplit,
             HighlightPay = HighlightPay,
             HighlightAlias = HighlightAlias,
