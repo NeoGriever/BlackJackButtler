@@ -1,10 +1,18 @@
-`v1.8.4.9`
+`v1.9.0.1`
 
 # BlackJack Buttler
 
-BlackJack Buttler (BJB) is a Dalamud plugin for FFXIV that turns you into a fully automated Blackjack dealer. It tracks cards via `/dice party 13` rolls, manages player bankrolls through trade detection, sends customizable chat messages and emotes on your behalf, and can visualize the table directly in-world through Draw Logic scripts. The plugin handles the entire flow from initial deal through payout, including splits, double downs, Charlie hands, multi-hand play, nearby player queueing, and payout assistance.
+BlackJack Buttler (BJB) is a Dalamud plugin for FFXIV that turns you into a fully automated Blackjack dealer. It tracks cards via `/dice party 13` rolls, manages player bankrolls through trade detection, sends customizable chat messages and emotes on your behalf, and can visualize the table directly in-world through Draw Logic scripts. The plugin handles the entire flow from initial deal through payout, including splits, double downs, triple downs, Charlie hands, imaginary players, multi-hand play, nearby player queueing, and payout assistance.
 
 Whether you run a casual table for friends or a high-stakes venue for dozens of rounds per night, BJB removes the mental overhead of tracking points, calculating payouts, and remembering whose turn it is. Four user levels (Beginner, Advanced, Dev, Custom) progressively reveal more configuration so you can start simple and grow into full customization.
+
+### Highlights in v1.9.0.1
+
+- **Imaginary Players (Ghosts):** Add one linked ghost for a real player. It has its own hand, bet, bank, and alias while the real player supplies chat actions and dice rolls.
+- **Ghost Bank Routing:** Bank tells, transfers, and `withdraw all` / `withdraw everything` support both linked accounts without ever routing a physical tell or payout to the ghost.
+- **Triple Down:** Optional three-times-total-stake action that deals exactly two compulsory cards.
+
+Thanks to **Dissendra Blackthorn@Zodiark** for the Imaginary Player idea.
 
 ## Table of Contents
 
@@ -27,13 +35,16 @@ Whether you run a casual table for friends or a high-stakes venue for dozens of 
   - [3.3 Double Down](#33-double-down)
   - [3.4 Split](#34-split)
   - [3.5 Charlie](#35-charlie)
+  - [3.6 Triple Down](#36-triple-down)
+  - [3.7 Imaginary Players (Ghosts)](#37-imaginary-players-ghosts)
 - [4 Betting and Bank](#4-betting-and-bank)
   - [4.1 Bet Limits](#41-bet-limits)
   - [4.2 Bank Input and Trade Detection](#42-bank-input-and-trade-detection)
+  - [4.3 Ghost Bank Routing](#43-ghost-bank-routing)
 - [5 Payouts](#5-payouts)
   - [5.1 Pay Out Button](#51-pay-out-button)
-  - [5.2 Dropbox Integration](#52-dropbox-integration)
-  - [5.3 Manual Trade (Payout Helper)](#53-manual-trade-payout-helper)
+  - [5.2 Payout Management](#52-payout-management)
+  - [5.3 Payout Helper](#53-payout-helper)
   - [5.4 Bank to Tips](#54-bank-to-tips)
 - [6 Round History](#6-round-history)
   - [6.1 Timeline and Snapshots](#61-timeline-and-snapshots)
@@ -185,9 +196,9 @@ An 11-column table for all players:
 | **A** | Alias button. Opens a popup to set a short display name. The alias replaces the character name in `<t>` token replacements and in the Name column. Clear the alias by saving an empty value or matching the original name. In Version 2 Compact, this column is hidden and double-clicking the player name opens the alias dialog. |
 | **J** | Join/Leave toggle. `>` to add inactive player, `X` to deactivate. |
 | **R** | Ready-skip toggle. Counts the player as ready for the next round when inter-round detectors can run. |
-| **P** | Hold/Bench button. Toggles hold (skip next round), bench (pause mid-round), or return. |
-| **Name** | Alias if set. Otherwise the shortest unambiguous name is used: first name, full name when first names collide, or `Full Name@World` when full names also collide. Yellow when it is their turn. |
-| **Bank** | Gil balance. Editable when the Bank Input checkbox is enabled. Includes a **"T" button** that executes the `BankTell` command group for this individual player, posting their bank/bet info to party chat. Ctrl-actions can move a leaving player's bank into tips. In Version 2 Compact, Bank-to-Tip and Max Bet buttons are only shown while Shift is held. |
+| **P** | Hold/Bench button. Toggles hold (skip next round), bench (pause mid-round), or return. Hold Ctrl to reveal the adjacent **i** button, which adds that real player's one allowed Imaginary Player and joins it immediately. |
+| **Name** | Alias if set. Otherwise the shortest unambiguous name is used: first name, full name when first names collide, or `Full Name@World` when full names also collide. Yellow when it is their turn. Imaginary Player rows use a paler background. |
+| **Bank** | Gil balance. Editable when the Bank Input checkbox is enabled. Includes a **"T" button** that runs the individual `BankTell` command. Ctrl-actions can move a leaving player's bank into tips. In Version 2 Compact, Bank-to-Tip and Max Bet buttons are only shown while Shift is held. |
 | **Bet** | Current bet amount. Red `!` indicator appears when outside the configured min/max range. The effective max can come from global max bet or VIP tier. |
 | **Cards** | Visual card display with suit colors (red for Hearts/Diamonds, white for Spades/Clubs). |
 | **Points** | Calculated score. Shows "BJ" (green for natural, yellow for dirty), red strikethrough for busts, or min/max for soft hands. |
@@ -267,6 +278,18 @@ Split availability is controlled by:
 
 When **Enable Charlie** is on, a player hand that reaches the configured card count without busting becomes a Charlie hand. Charlie can be configured as an instant win and uses the blackjack-style payout multiplier in the current implementation. The `Charlie Notify` command group announces it.
 
+### 3.6 Triple Down
+
+**Triple Down** is optional and disabled by default. It raises the total stake to three times the original bet, deals exactly two additional cards, and then locks the hand. The `TD` command group announces and rolls both cards.
+
+It is available only on a two-card hand. Advanced rules can allow it after a split and can restrict it to hands at or below a configured score. Its own win multiplier and push-refund rule are configured independently from Double Down.
+
+### 3.7 Imaginary Players (Ghosts)
+
+Hold Ctrl beside a real player's Hold/Bench control and press **i** to create their linked Imaginary Player. The ghost is named `<FirstName> Ghost`, joins the table immediately, and has a separate hand, bet, bank, and alias. There can be only one ghost for each real player.
+
+The referenced real player remains the physical FFXIV player: their messages and `/dice` rolls drive the ghost's turn, and all `/tell` and payout targeting stays with that real player. A ghost with no bank is removed when it is taken out of the round; removing its referenced real player also removes the ghost.
+
 ---
 
 ## 4 Betting and Bank
@@ -289,6 +312,21 @@ Enable the **Bank Input** checkbox (top-right of the player table) to allow manu
 
 Banks are also updated automatically through trade detection. When a player trades Gil to you, regex patterns detect the trade partner, amounts, and completion (see [17.4 Default Patterns](#174-default-patterns)). The trade amount is applied to the matching player's bank automatically.
 
+### 4.3 Ghost Bank Routing
+
+When a regex-triggered **BankTell** is received for a real player with an Imaginary Player, BJB queues two tells to that real player: the real account first, then the ghost account. Each tell, including the final one, reserves a 1.1-second queue pause so it cannot overlap subsequent chat commands. The manual **T** button remains an individual-account tell.
+
+The standard **Bank Transfer** regex accepts the following commands from the referenced real player (Auto Run must be enabled):
+
+| Command | Effect |
+|---|---|
+| `transfer 25k` | Moves up to 25,000 Gil from the real player's bank to the ghost bank. |
+| `transfer -25k` | Moves up to 25,000 Gil from the ghost bank back to the real player's bank. |
+| `transfer half` / `transfer 50%` | Moves half of the real player's bank to the ghost, rounded down to 1,000 Gil. |
+| `transfer min` / `transfer max` | Tops the ghost bank up to the configured minimum or maximum bet. It never transfers Gil back. |
+
+Every transfer is capped by the sending account's available Gil, so neither account can become negative. A successful transfer automatically queues the paired BankTell information. `withdraw all` and `withdraw everything` pay both linked banks out in sequence; a partial withdrawal only uses the real player's bank.
+
 ---
 
 ## 5 Payouts
@@ -300,6 +338,8 @@ During the Payout phase, each player row shows a "Pay Out" button. Clicking it i
 ### 5.2 Payout Management
 
 Payouts are handled by BlackJack Buttler's internal **Payout Management** system. It targets and focus-targets the payout player, opens trade, enters Gil in chunks capped at 1,000,000, and continues until the player's bank reaches 0 or the payout is cancelled.
+
+For an Imaginary Player, the associated real player remains the trade recipient. This lets the ghost keep an independent bank while all physical payout interaction is correctly routed to its owner.
 
 ### 5.3 Payout Helper
 
@@ -437,6 +477,10 @@ These settings require **Advanced** user level or higher.
 | Enable Double Down | On | Enables or disables double down actions. |
 | Allow Double Down after Split | Off | Permits DD on hands created by a split. |
 | Refund DD on push | Off | On: full doubled bet is returned on push. Off: only original bet is returned. |
+| Enable Triple Down | Off | Enables the three-times-total-stake action that draws exactly two compulsory cards. |
+| Allow Triple Down after Split | Off | Permits Triple Down on hands created by a split. |
+| Limit Triple Down to points | Off | Restricts Triple Down to the configured maximum score (10 by default). |
+| Refund TD on push | On | On: returns the full Triple Down stake on push. Off: returns one third. |
 | Blackjack Tie Rule | Always Push | Other modes let player natural BJ win, dealer natural BJ win, or natural BJ beat dirty BJ. |
 | Enable Dirty Blackjack | On | Allows 21 with 3+ cards to be treated as dirty blackjack instead of normal 21 behavior. |
 | Enable Charlie | Off | Enables configured-card-count Charlie hands. |
@@ -453,6 +497,9 @@ Split hands are limited by **Max Hands** (range: 2-10). Charlie card count is co
 | Natural BJ (2 cards) | 1.50x | Payout for a natural blackjack (Ace + 10-value in 2 cards). |
 | Dirty BJ (3+ cards) | 1.00x | Payout for reaching 21 with 3+ cards. |
 | Charlie | Uses BJ multiplier | Payout used when Charlie wins. |
+| Split | 1.00x | Payout multiplier for split hands. |
+| Double Down | 1.00x | Payout multiplier for Double Down hands. |
+| Triple Down | 1.00x | Payout multiplier for Triple Down hands. |
 
 Payout formula: `bank += bet + (bet * multiplier)`.
 
@@ -554,6 +601,10 @@ The following batches are included by default:
 | Player Stand Messages | `Stand` | Messages when a player stands. |
 | Player DD Messages | `DD` | Messages when a player doubles down. |
 | Player DD Messages Stand | `DD` | Confirmation after DD card is drawn. |
+| Player TD Messages | `TD` | Announcement when a player chooses Triple Down. |
+| Player TD First Card Messages | `TD` | Announcement after the first compulsory TD card. |
+| Player TD Messages Stand | `TD` | Confirmation after the second TD card locks the hand. |
+| Player TD Forced Stand Messages | `PlayerTDForcedStand` | Confirmation when a Triple Down hand is locked by its second card. |
 | Player Split Messages | `Split` | Messages when a player splits. |
 | Player Split Draw Messages | `SplitDraw` | Messages when drawing for a split hand. |
 | Player BlackJack Messages | `Natural BlackJack Notify` | Natural blackjack announcement (party chat). |
@@ -572,9 +623,9 @@ The following batches are included by default:
 | Bust Messages | `ResultPlayerBusted` | Individual bust result. |
 | Lost Messages | `ResultPlayerLost` | Individual loss announcement. |
 | Payment Reminder | Payout flow | Tell sent when a player owes Gil for DD/Split. |
-| Bank Tell Messages | `BankTell` | Bank/bet info posted to party chat. |
+| Bank Tell Messages | `BankTell` | Bank/bet information sent in the configured tell. |
 
-All default messages support context tokens like `<t>`, `<points>`, `<cards>`, and variable references like `${HandIndex}` and `${dealerpoints}` (see [13.3 Context Tokens](#133-context-tokens) and [18 Variables](#18-variables)).
+All default messages support context tokens like `<t>`, `<n>`, `<points>`, `<cards>`, and variable references like `${HandIndex}` and `${dealerpoints}` (see [13.3 Context Tokens](#133-context-tokens) and [18 Variables](#18-variables)).
 
 ---
 
@@ -617,6 +668,7 @@ These tokens are replaced with live game data during command execution:
 | Token | Value |
 |---|---|
 | `<t>` | Target player's alias, or the shortest unambiguous first/full/world-qualified name. |
+| `<n>` | Target player's display name, including an Imaginary Player's name when applicable. |
 | `<points>` | Current hand's point total (e.g., `15` or `11/21` for soft hands). |
 | `<cards>` | Card string (e.g., `Spades A, Hearts 5 and Clubs K`). |
 | `<dealerHand>` | Dealer card string. |
@@ -633,6 +685,8 @@ These tokens are replaced with live game data during command execution:
 Context tokens also support variable syntax (`${...}`) for session variables (see [18 Variables](#18-variables)).
 
 For `/tell <t>` and `/t <t>` commands, the first `<t>` must remain the actual FFXIV target token. Use `<.>` when a tell command needs to literally preserve that first target token while still allowing later `<t>` occurrences to become the player's alias/name.
+
+The standard BankTell command is `/t <.> <n>: #{Bank Tell Messages}`. `<.>` preserves the actual physical tell target, while `<n>` identifies the account being reported; this keeps Ghost account tells routed to their referenced real player.
 
 ### 13.4 Processing Pipeline
 
@@ -653,6 +707,7 @@ See [Appendix A](#a---processing-pipeline-summary) for a visual summary.
 | `Hit` | Player Hit | Player chooses to hit. |
 | `Stand` | Player Stand | Player chooses to stand. |
 | `DD` | Player Double Down | Player chooses to double down. |
+| `TD` | Player Triple Down | Player chooses Triple Down; two compulsory cards follow. |
 | `Split` | Player Split | Player chooses to split. |
 | `SplitDraw` | *(internal)* | Drawing second card for a split hand. |
 | `Natural BlackJack Notify` | Player has Natural Blackjack | Player gets 21 with 2 cards during initial deal. |
@@ -660,6 +715,7 @@ See [Appendix A](#a---processing-pipeline-summary) for a visual summary.
 | `Charlie Notify` | Player has Charlie | Player reaches the configured Charlie card count without busting. |
 | `PlayerBust` | Player Busted | Player's hand exceeds 21. |
 | `PlayerDDForcedStand` | *(internal)* | DD hand auto-stands after card draw. |
+| `PlayerTDForcedStand` | *(internal)* | TD hand auto-stands after its second card. |
 | `DealStart` | Dealer Start | Dealer draws the opening card for a new round. |
 | `DealHit` | Dealer Hit | Dealer draws another card. |
 | `DealStand` | Dealer Stand | Dealer stops drawing. |
@@ -670,6 +726,10 @@ See [Appendix A](#a---processing-pipeline-summary) for a visual summary.
 | `ResultPlayerPush` | *(internal)* | Individual player push. |
 | `ResultPlayerBusted` | *(internal)* | Individual player bust result. |
 | `ResultPlayerLost` | *(internal)* | Individual player loss. |
+| `StateHSDTS` | *(internal)* | Prompt: Hit, Stand, DD, TD, Split available. |
+| `StateHSTS` | *(internal)* | Prompt: Hit, Stand, TD, Split available. |
+| `StateHSDT` | *(internal)* | Prompt: Hit, Stand, DD, TD available. |
+| `StateHST` | *(internal)* | Prompt: Hit, Stand, TD available. |
 | `StateHSDS` | *(internal)* | Prompt: Hit, Stand, DD, Split available. |
 | `StateHSD` | *(internal)* | Prompt: Hit, Stand, DD available. |
 | `StateHS` | *(internal)* | Prompt: Hit, Stand available. |
@@ -818,6 +878,7 @@ When mode is `Trigger`, the matched pattern executes one of these actions:
 | `WantHit` | If Auto Run is on, executes hit. If off, highlights the Hit button. | [3.1](#31-hit) |
 | `WantStand` | If Auto Run is on, executes stand. If off, highlights the Stand button. | [3.2](#32-stand) |
 | `WantDD` | If Auto Run is on, executes DD. If off, highlights the DD button. | [3.3](#33-double-down) |
+| `AutoTripleDown` | If Auto Run is on, executes Triple Down. If off, highlights the TD button. | [3.6](#36-triple-down) |
 | `WantSplit` | If Auto Run is on, executes split. If off, highlights the Split button. | [3.4](#34-split) |
 | `BankOut` | Highlights the Pay Out button for the player. | [5.1](#51-pay-out-button) |
 | `TradePartner` | Sets the trade partner name (captured from regex group 1). | [4.2](#42-bank-input-and-trade-detection) |
@@ -838,7 +899,8 @@ When mode is `Trigger`, the matched pattern executes one of these actions:
 | `HighlightDD` | Highlights the DD button (once-consistent). | |
 | `HighlightSplit` | Highlights the Split button (once-consistent). | |
 | `NextRound` | Counts as a "vote" for a new round. When all active players have voted, auto-starts (if Auto Run and 2+ players) or highlights the Start New Round button. | |
-| `BankTell` | If Auto Run is on, sends bank/bet info to party chat. If off, highlights the Tell button. | |
+| `BankTell` | If Auto Run is on, queues the player's bank tell; a linked ghost receives a second tell routed to the real player. If off, highlights the Tell button. | [4.3](#43-ghost-bank-routing) |
+| `BankTransfer` | Moves Gil between a real player and their linked ghost using the captured command parameter, then queues paired BankTells. | [4.3](#43-ghost-bank-routing) |
 | `ExecuteOwnButton` | Executes the Own Button command group named in ActionParam. | [14 Own Buttons](#14-own-buttons) |
 
 ### 17.4 Default Patterns
@@ -854,6 +916,7 @@ These regex entries are pre-configured and support both English and German game 
 | Trade: Success | `TradeCommit` | Detects trade completion. |
 | Trade: Cancel | `TradeCancel` | Detects trade cancellation. |
 | Dice: Blackjack Logic | `DiceRollValue` | Captures the rolled number from `/dice party` results. |
+| Bank Transfer | `BankTransfer` | Matches `transfer <amount|half|50%|min|max>` for linked real/ghost bank management. |
 
 ---
 
@@ -1002,8 +1065,11 @@ Command Step Text
 | [3.3 Double Down](#33-double-down) | [11.1 Gameplay Rules](#111-gameplay-rules) (controlled by Allow DD after Split) |
 | [3.4 Split](#34-split) | [11.1 Gameplay Rules](#111-gameplay-rules) (controlled by Identical Split Only, Max Hands) |
 | [3.5 Charlie](#35-charlie) | [11.1 Gameplay Rules](#111-gameplay-rules), [13.5 Built-in Command Groups](#135-built-in-command-groups) |
+| [3.6 Triple Down](#36-triple-down) | [11.1 Gameplay Rules](#111-gameplay-rules), [13.5 Built-in Command Groups](#135-built-in-command-groups) |
+| [3.7 Imaginary Players](#37-imaginary-players-ghosts) | [4.3 Ghost Bank Routing](#43-ghost-bank-routing), [5.2 Payout Management](#52-payout-management) |
 | [4.2 Bank Input](#42-bank-input-and-trade-detection) | [17.3 Trigger Actions](#173-trigger-actions) (auto-updates via Trade regex actions) |
-| [5.2 Dropbox](#52-dropbox-integration) | [11.1 Gameplay Rules](#111-gameplay-rules) (Open Dropbox setting) |
+| [4.3 Ghost Bank Routing](#43-ghost-bank-routing) | [17.3 Trigger Actions](#173-trigger-actions) (BankTell and BankTransfer) |
+| [5.2 Payout Management](#52-payout-management) | [5.3 Payout Helper](#53-payout-helper) (trade flow and progress controls) |
 | [12.4 Default Batches](#124-default-batch-list) | [13.2 Message References](#132-message-references) (consumed via `#{...}`) |
 | [13.1 Command Line Groups](#131-command-groups-and-steps) | [13.6 Command Line Groups](#136-command-line-groups) (GroupId column) |
 | [13.2 Message References](#132-message-references) | [12 Messages](#12-messages) (pulls from batch) |
