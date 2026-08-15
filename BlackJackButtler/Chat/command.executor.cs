@@ -48,7 +48,7 @@ public static class CommandExecutor
 
     private static readonly HashSet<string> StateGroupNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        "StateHSDS", "StateHSD", "StateHS",
+        "StateHSDTS", "StateHSTS", "StateHSDT", "StateHST", "StateHSDS", "StateHSD", "StateHS",
     };
 
     public static string LastStateGroupName { get; private set; } = string.Empty;
@@ -134,8 +134,10 @@ public static class CommandExecutor
 
     private static void ExpectPlayerDice(PlayerState player)
     {
-        _expectedDicePlayerName = player.Name;
-        _expectedDicePlayerWorldId = player.WorldId;
+        var physicalPlayer = PlayerIdentityManager.GetReferencedPlayer(
+            Plugin.Instance.GetMainWindow().GetPlayers(), player) ?? player;
+        _expectedDicePlayerName = physicalPlayer.Name;
+        _expectedDicePlayerWorldId = physicalPlayer.WorldId;
         _expectsPlayerDice = true;
     }
 
@@ -194,8 +196,13 @@ public static class CommandExecutor
             if (v != null) text = text.Replace($"<{varName}>", v.Value);
         }
 
+        var physicalPlayer = pState == null
+            ? null
+            : PlayerIdentityManager.GetReferencedPlayer(Plugin.Instance.GetMainWindow().GetPlayers(), pState) ?? pState;
         bool hasAlias = pState != null && !string.IsNullOrWhiteSpace(pState.Alias);
         string aliasOrT = hasAlias ? pState!.Alias! : targetName;
+        string playerName = pState?.DisplayName ?? targetName;
+        text = text.Replace("<n>", playerName);
 
         var trimmed = text.TrimStart();
         bool isTellCommand = trimmed.StartsWith("/tell ", StringComparison.OrdinalIgnoreCase)
@@ -218,9 +225,9 @@ public static class CommandExecutor
             }
             else
             {
-                string realName = pState?.Name ?? targetName;
-                var qualifiedName = pState != null
-                    ? PlayerIdentityManager.GetQualifiedName(pState)
+                string realName = physicalPlayer?.Name ?? targetName;
+                var qualifiedName = physicalPlayer != null
+                    ? PlayerIdentityManager.GetQualifiedName(physicalPlayer)
                     : realName;
                 firstReplacement = qualifiedName.Contains('@', StringComparison.Ordinal)
                     ? qualifiedName

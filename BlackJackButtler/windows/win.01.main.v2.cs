@@ -148,7 +148,8 @@ public partial class BlackJackButtlerWindow
             bool hasAutoTriggers = _config.UserRegexes.Any(r =>
                 r.Enabled && r.Mode == RegexEntryMode.Trigger &&
                 (r.Action == RegexAction.WantHit || r.Action == RegexAction.WantStand ||
-                 r.Action == RegexAction.WantDD || r.Action == RegexAction.WantSplit));
+                 r.Action == RegexAction.WantDD || r.Action == RegexAction.AutoTripleDown ||
+                 r.Action == RegexAction.WantSplit));
             if (hasAutoTriggers && _config.ShowAutoRunButton)
             {
                 ImGui.SameLine();

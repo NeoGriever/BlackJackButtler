@@ -26,9 +26,12 @@ public partial class BlackJackButtlerWindow
     };
     private static readonly string[] SettingsRulesFields = {
         "FirstDealThenPlay", "PlayerRollingForThemselves", "IdenticalSplitOnly", "AllowDoubleDownAfterSplit",
-        "EnableSplit", "EnableDoubleDown", "EnableDirtyBlackjack",
+        "AllowTripleDownAfterSplit", "LimitTripleDownToMaxPoints", "TripleDownMaxPoints",
+        "EnableSplit", "EnableDoubleDown", "EnableTripleDown", "EnableDirtyBlackjack",
         "MaxHandsPerPlayer", "MultiplierNormalWin", "MultiplierBlackjackWin",
-        "MultiplierDirtyBlackjackWin", "RefundFullDoubleDownOnPush", "BlackjackTieRule",
+        "MultiplierDirtyBlackjackWin", "MultiplierCharlieWin", "MultiplierSplitWin",
+        "MultiplierDoubleDownWin", "MultiplierTripleDownWin", "RefundFullDoubleDownOnPush",
+        "RefundFullTripleDownOnPush", "BlackjackTieRule",
         "EnableCharlie", "CharlieCardCount", "CharlieInstantWin",
         "DealerDrawsUntil", "DealerSoftRule",
     };
@@ -1168,8 +1171,8 @@ public partial class BlackJackButtlerWindow
         sb.AppendLine("━━ Player Draw  (Demo Player: 7♠ + 8♣ = 15, Dealer: 6) ━━");
         sb.AppendLine();
 
-        // Fallback-Kette: StateHSD → StateHS → StateHSDS
-        string[] playerDrawGroups = { "StateHSD", "StateHS", "StateHSDS" };
+        // Fallback-Kette: alle State-Varianten mit optionalem Triple Down.
+        string[] playerDrawGroups = { "StateHSDTS", "StateHSTS", "StateHSDT", "StateHST", "StateHSD", "StateHS", "StateHSDS" };
         string? pdGroup = playerDrawGroups.FirstOrDefault(g =>
             cmdSrc.CommandGroups.Any(cg => cg.Name.Equals(g, StringComparison.OrdinalIgnoreCase)));
 
@@ -1180,7 +1183,7 @@ public partial class BlackJackButtlerWindow
         }
         else
         {
-            sb.AppendLine("(no StateHSD/StateHS/StateHSDS group found)");
+            sb.AppendLine("(no player-state command group found)");
         }
         sb.AppendLine();
 
@@ -1369,13 +1372,22 @@ public partial class BlackJackButtlerWindow
             _config.IdenticalSplitOnly           = snap.IdenticalSplitOnly;
             _config.EnableSplit                  = snap.EnableSplit;
             _config.EnableDoubleDown             = snap.EnableDoubleDown;
+            _config.EnableTripleDown             = snap.EnableTripleDown;
             _config.EnableDirtyBlackjack         = snap.EnableDirtyBlackjack;
             _config.AllowDoubleDownAfterSplit    = snap.AllowDoubleDownAfterSplit;
+            _config.AllowTripleDownAfterSplit    = snap.AllowTripleDownAfterSplit;
+            _config.LimitTripleDownToMaxPoints   = snap.LimitTripleDownToMaxPoints;
+            _config.TripleDownMaxPoints          = snap.TripleDownMaxPoints;
             _config.MaxHandsPerPlayer            = snap.MaxHandsPerPlayer;
             _config.MultiplierNormalWin          = snap.MultiplierNormalWin;
             _config.MultiplierBlackjackWin       = snap.MultiplierBlackjackWin;
             _config.MultiplierDirtyBlackjackWin  = snap.MultiplierDirtyBlackjackWin;
+            _config.MultiplierCharlieWin         = snap.MultiplierCharlieWin;
+            _config.MultiplierSplitWin           = snap.MultiplierSplitWin;
+            _config.MultiplierDoubleDownWin      = snap.MultiplierDoubleDownWin;
+            _config.MultiplierTripleDownWin      = snap.MultiplierTripleDownWin;
             _config.RefundFullDoubleDownOnPush   = snap.RefundFullDoubleDownOnPush;
+            _config.RefundFullTripleDownOnPush   = snap.RefundFullTripleDownOnPush;
             _config.BlackjackTieRule             = snap.BlackjackTieRule;
             _config.EnableCharlie                = snap.EnableCharlie;
             _config.CharlieCardCount             = snap.CharlieCardCount;

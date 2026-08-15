@@ -41,7 +41,8 @@ public static class TradeManager
     {
         if (string.IsNullOrEmpty(_currentPartner)) return;
 
-        var p = ResolvePlayer(_currentPartner, players);
+        var p = PayoutManagement.ResolveActivePayoutLedgerPlayer(_currentPartner, players)
+            ?? ResolvePlayer(_currentPartner, players);
         if (p != null && p.IsActivePlayer)
         {
             long before = p.Bank;
@@ -104,7 +105,8 @@ public static class TradeManager
         if (!_committed && !string.IsNullOrEmpty(_currentPartner) && _buffer != 0)
         {
             var players = window.GetPlayers();
-            var p = ResolvePlayer(_currentPartner, players);
+            var p = PayoutManagement.ResolveActivePayoutLedgerPlayer(_currentPartner, players)
+                ?? ResolvePlayer(_currentPartner, players);
             if (p != null && p.IsActivePlayer)
             {
                 long before = p.Bank;

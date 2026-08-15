@@ -257,7 +257,7 @@ public partial class BlackJackButtlerWindow
             {
                 ImGui.SameLine(300f);
                 ImGui.SetNextItemWidth(200f);
-                if (BJBGui.InputInt("##charlie_card_count", ref _config.CharlieCardCount, 1))
+                if (BJBGui.InputInt("##charlie_card_count", ref _config.CharlieCardCount, 1, defaultValue: 5))
                 {
                     _config.CharlieCardCount = Math.Clamp(_config.CharlieCardCount, 3, 7);
                     _save();
@@ -276,7 +276,7 @@ public partial class BlackJackButtlerWindow
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Soft: Dealer hits on soft threshold (e.g. Ace+6 = hit).\nHard: Dealer stands on any score >= threshold.");
             ImGui.SameLine();
             ImGui.SetNextItemWidth(100f);
-            if (BJBGui.InputInt("##dealer_draws_until", ref _config.DealerDrawsUntil, 1))
+            if (BJBGui.InputInt("##dealer_draws_until", ref _config.DealerDrawsUntil, 1, defaultValue: 17))
             {
                 _config.DealerDrawsUntil = Math.Clamp(_config.DealerDrawsUntil, 3, 20);
                 _save();
@@ -305,7 +305,7 @@ public partial class BlackJackButtlerWindow
             ImGui.TextUnformatted("Max Hands per Player (Splits)");
             ImGui.SameLine(300f);
             ImGui.SetNextItemWidth(200f);
-            if (BJBGui.InputInt("##max_hands", ref _config.MaxHandsPerPlayer, 1))
+            if (BJBGui.InputInt("##max_hands", ref _config.MaxHandsPerPlayer, 1, defaultValue: 3))
             {
                 _config.MaxHandsPerPlayer = Math.Clamp(_config.MaxHandsPerPlayer, 2, 10);
                 _save();
@@ -377,7 +377,7 @@ public partial class BlackJackButtlerWindow
             ImGui.SetKeyboardFocusHere();
             _pendingSettingsFocus = null;
         }
-        if (BJBGui.InputLong("##min_bet", ref _config.MinBet, 1, 1000))
+        if (BJBGui.InputLong("##min_bet", ref _config.MinBet, 1, 1000, defaultValue: 50_000))
         {
             _config.MinBet = Math.Clamp(_config.MinBet, 1, _config.MaxBet);
             _save();
@@ -392,7 +392,7 @@ public partial class BlackJackButtlerWindow
             ImGui.SetKeyboardFocusHere();
             _pendingSettingsFocus = null;
         }
-        if (BJBGui.InputLong("##max_bet", ref _config.MaxBet, 1, 10000))
+        if (BJBGui.InputLong("##max_bet", ref _config.MaxBet, 1, 10000, defaultValue: 500_000))
         {
             _config.MaxBet = Math.Max(_config.MaxBet, _config.MinBet);
             _save();
@@ -473,16 +473,16 @@ public partial class BlackJackButtlerWindow
         if (level >= (int)UserLevel.Advanced)
         {
             ImGui.Spacing();
-            DrawMultiplierInput("Normal Win Multiplier", ref _config.MultiplierNormalWin);
+            DrawMultiplierInput("Normal Win Multiplier", ref _config.MultiplierNormalWin, 1f);
         }
 
         ImGui.Spacing();
-        DrawMultiplierInput("Natural BJ Multiplier (2 Cards)", ref _config.MultiplierBlackjackWin);
+        DrawMultiplierInput("Natural BJ Multiplier (2 Cards)", ref _config.MultiplierBlackjackWin, 1.5f);
 
         if (level >= (int)UserLevel.Advanced)
         {
             ImGui.Spacing();
-            DrawMultiplierInput("Dirty BJ Multiplier (3+ Cards)", ref _config.MultiplierDirtyBlackjackWin);
+            DrawMultiplierInput("Dirty BJ Multiplier (3+ Cards)", ref _config.MultiplierDirtyBlackjackWin, 1f);
         }
     }
 
@@ -925,12 +925,12 @@ public partial class BlackJackButtlerWindow
         }
     }
 
-    private void DrawMultiplierInput(string label, ref float value)
+    private void DrawMultiplierInput(string label, ref float value, float defaultValue)
     {
         ImGui.TextUnformatted(label);
         ImGui.SameLine(300f);
         ImGui.SetNextItemWidth(200f);
-        if (BJBGui.InputFloat($"##input_{label}", ref value, 0.25f, 0.5f, "%.2fx"))
+        if (BJBGui.InputFloat($"##input_{label}", ref value, 0.25f, 0.5f, "%.2fx", defaultValue: defaultValue))
         {
             value = Math.Clamp(value, 0.0f, 5.0f);
             _save();
@@ -950,13 +950,22 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "IdenticalSplitOnly",                     v => _config.IdenticalSplitOnly = v);
         TryApply<bool>  (j, "EnableSplit",                            v => _config.EnableSplit = v);
         TryApply<bool>  (j, "EnableDoubleDown",                       v => _config.EnableDoubleDown = v);
+        TryApply<bool>  (j, "EnableTripleDown",                       v => _config.EnableTripleDown = v);
         TryApply<bool>  (j, "EnableDirtyBlackjack",                   v => _config.EnableDirtyBlackjack = v);
         TryApply<bool>  (j, "AllowDoubleDownAfterSplit",               v => _config.AllowDoubleDownAfterSplit = v);
+        TryApply<bool>  (j, "AllowTripleDownAfterSplit",               v => _config.AllowTripleDownAfterSplit = v);
+        TryApply<bool>  (j, "LimitTripleDownToMaxPoints",              v => _config.LimitTripleDownToMaxPoints = v);
+        TryApply<int>   (j, "TripleDownMaxPoints",                     v => _config.TripleDownMaxPoints = Math.Clamp(v, 2, 21));
         TryApply<int>   (j, "MaxHandsPerPlayer",                      v => _config.MaxHandsPerPlayer = v);
         TryApply<float> (j, "MultiplierNormalWin",                    v => _config.MultiplierNormalWin = v);
         TryApply<float> (j, "MultiplierBlackjackWin",                 v => _config.MultiplierBlackjackWin = v);
         TryApply<float> (j, "MultiplierDirtyBlackjackWin",            v => _config.MultiplierDirtyBlackjackWin = v);
+        TryApply<float> (j, "MultiplierCharlieWin",                    v => _config.MultiplierCharlieWin = v);
+        TryApply<float> (j, "MultiplierSplitWin",                      v => _config.MultiplierSplitWin = v);
+        TryApply<float> (j, "MultiplierDoubleDownWin",                 v => _config.MultiplierDoubleDownWin = v);
+        TryApply<float> (j, "MultiplierTripleDownWin",                 v => _config.MultiplierTripleDownWin = v);
         TryApply<bool>  (j, "RefundFullDoubleDownOnPush",             v => _config.RefundFullDoubleDownOnPush = v);
+        TryApply<bool>  (j, "RefundFullTripleDownOnPush",             v => _config.RefundFullTripleDownOnPush = v);
         TryApply<int>   (j, "BlackjackTieRule",                       v => _config.BlackjackTieRule = (BlackjackTieRule)v);
         TryApply<bool>  (j, "EnableCharlie",                         v => _config.EnableCharlie = v);
         TryApply<int>   (j, "CharlieCardCount",                      v => _config.CharlieCardCount = v);

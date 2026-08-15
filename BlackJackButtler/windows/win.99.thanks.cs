@@ -16,6 +16,7 @@ public partial class BlackJackButtlerWindow
         "Amystra",
         "Saph",
         "Lydia",
+        "Dissendra Blackthorn",
         "Club: Calisto"
     };
 

@@ -34,6 +34,7 @@ public sealed class DrawLogicContext
     public bool IsCharlie;
     public bool IsDone;
     public bool IsDoubleDown;
+    public bool IsTripleDown;
 
     public PlayerState? SourcePlayer;
     public Configuration? Config;
@@ -201,6 +202,7 @@ public static class DrawLogicInterpreter
             ctx.IsBlackjack = hand.IsNaturalBlackJack;
             ctx.IsCharlie = hand.IsCharlie;
             ctx.IsDoubleDown = hand.IsDoubleDown;
+            ctx.IsTripleDown = hand.IsTripleDown;
         }
 
         if (isDealer)
@@ -547,6 +549,7 @@ public static class DrawLogicInterpreter
         line = line.Replace("<ischarlie>", ctx.IsCharlie ? "1" : "0");
         line = line.Replace("<isdone>", ctx.IsDone ? "1" : "0");
         line = line.Replace("<isdd>", ctx.IsDoubleDown ? "1" : "0");
+        line = line.Replace("<istd>", ctx.IsTripleDown ? "1" : "0");
 
         return line;
     }
@@ -1264,6 +1267,7 @@ public static class DrawLogicInterpreter
             IsCharlie = src.IsCharlie,
             IsDone = src.IsDone,
             IsDoubleDown = src.IsDoubleDown,
+            IsTripleDown = src.IsTripleDown,
             SourcePlayer = src.SourcePlayer,
             Config = src.Config,
             WorldName = src.WorldName,

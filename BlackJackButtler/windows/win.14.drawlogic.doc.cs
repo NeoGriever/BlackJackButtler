@@ -155,6 +155,7 @@ public partial class BlackJackButtlerWindow
         CopyRow("<ischarlie>", "Charlie (N-card auto-win)");
         CopyRow("<isdone>", "Player is done");
         CopyRow("<isdd>", "Double down active");
+        CopyRow("<istd>", "Triple down active");
 
         ImGui.Spacing();
         ImGui.TextColored(new Vector4(1f, 0.85f, 0.4f, 1f), "Hand Tokens (inside IterateHand)");

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Numerics;
@@ -17,6 +18,8 @@ namespace BlackJackButtler;
 
 public static class PayoutManagement
 {
+    private sealed record QueuedPayout(string PlayerName, uint WorldId, long Amount);
+
     private const long MaxGilPerTrade = 1_000_000;
     private const double TargetSettleSeconds = 0.45;
     private const double TradeOpenTimeoutSeconds = 8.0;
@@ -55,6 +58,10 @@ public static class PayoutManagement
 
     private static PayoutState _state = PayoutState.Idle;
     private static DateTime _stateEnteredAt = DateTime.UtcNow;
+    // The ledger player may be an imaginary player; the target remains the real player that
+    // receives the trade in the game client.
+    private static string _sourceName = string.Empty;
+    private static uint _sourceWorldId;
     private static string _targetName = string.Empty;
     private static uint _targetWorldId;
     private static long _startAmount;
@@ -71,6 +78,7 @@ public static class PayoutManagement
     private static long _bankBeforeCurrentTrade;
     private static DateTime _lastTradeActionAt = DateTime.MinValue;
     private static TradeExecutor _executor = TradeExecutor.None;
+    private static readonly Queue<QueuedPayout> QueuedPayouts = new();
 
     public static bool IsActive => _state != PayoutState.Idle;
     public static string CurrentTargetName => _targetName;
@@ -89,8 +97,12 @@ public static class PayoutManagement
         if (IsActive)
             return PayoutStartResult.AlreadyActive;
 
-        _targetName = p.Name;
-        _targetWorldId = p.WorldId;
+        var players = Plugin.Instance.GetMainWindow().GetPlayers();
+        var recipient = PlayerIdentityManager.GetReferencedPlayer(players, p) ?? p;
+        _sourceName = p.Name;
+        _sourceWorldId = p.WorldId;
+        _targetName = recipient.Name;
+        _targetWorldId = recipient.WorldId;
         _startAmount = amount;
         _remainingAmount = amount;
         _lastKnownBank = p.Bank;
@@ -106,6 +118,36 @@ public static class PayoutManagement
 
         SetState(PayoutState.Targeting,
             $"Started for {p.DisplayName}, payout={amount:N0}, bank={p.Bank:N0}, chunk={_currentChunk:N0}");
+        return PayoutStartResult.Started;
+    }
+
+    public static PayoutStartResult TryStartPayoutSequence(IEnumerable<PlayerState> players)
+    {
+        if (IsActive)
+            return PayoutStartResult.AlreadyActive;
+
+        var requests = players
+            .Where(player => player.Bank > 0)
+            .Select(player => new QueuedPayout(player.Name, player.WorldId, player.Bank))
+            .ToList();
+        if (requests.Count == 0)
+            return PayoutStartResult.InvalidAmount;
+
+        QueuedPayouts.Clear();
+        var firstRequest = requests[0];
+        var firstPlayer = Plugin.Instance.GetMainWindow().GetPlayers().FirstOrDefault(player =>
+            player.Name.Equals(firstRequest.PlayerName, StringComparison.OrdinalIgnoreCase)
+            && (firstRequest.WorldId == 0 || player.WorldId == firstRequest.WorldId));
+        if (firstPlayer == null)
+            return PayoutStartResult.InvalidAmount;
+
+        var startResult = TryStartPayout(firstPlayer, firstRequest.Amount);
+        if (startResult != PayoutStartResult.Started)
+            return startResult;
+
+        foreach (var request in requests.Skip(1))
+            QueuedPayouts.Enqueue(request);
+
         return PayoutStartResult.Started;
     }
 
@@ -156,9 +198,10 @@ public static class PayoutManagement
         }
 
         var player = GetCurrentPlayer();
-        if (player == null)
+        var recipient = GetPayoutRecipient();
+        if (player == null || recipient == null)
         {
-            Reset($"Player not found: {_targetName}");
+            Reset($"Payout player not found: {_sourceName}");
             return;
         }
 
@@ -182,7 +225,7 @@ public static class PayoutManagement
         switch (_state)
         {
             case PayoutState.Targeting:
-                TargetPayoutPlayer(player);
+                TargetPayoutPlayer(recipient);
                 SetState(PayoutState.OpeningTrade, "Target/focus target set");
                 break;
 
@@ -190,7 +233,7 @@ public static class PayoutManagement
                 if (StateElapsed < TargetSettleSeconds) return;
                 if (!IsPayoutTargetSelected())
                 {
-                    TargetPayoutPlayer(player);
+                    TargetPayoutPlayer(recipient);
                     return;
                 }
 
@@ -204,7 +247,7 @@ public static class PayoutManagement
                 _bankBeforeCurrentTrade = player.Bank;
                 _currentTradeAutoConfirm = false;
 
-                if (TryStartDropboxPayout(player, (int)_currentChunk))
+                if (TryStartDropboxPayout(recipient, (int)_currentChunk))
                 {
                     _executor = TradeExecutor.Dropbox;
                     _sentTradeCommand = true;
@@ -365,7 +408,12 @@ public static class PayoutManagement
         if (IsActive)
             Plugin.Instance.GetMainWindow().AddDebugLog($"[PayoutManagement] {reason}");
 
+        var startNextQueuedPayout = reason.Equals("Payout complete", StringComparison.OrdinalIgnoreCase)
+            && QueuedPayouts.Count > 0;
+
         _state = PayoutState.Idle;
+        _sourceName = string.Empty;
+        _sourceWorldId = 0;
         _targetName = string.Empty;
         _targetWorldId = 0;
         _startAmount = 0;
@@ -381,6 +429,15 @@ public static class PayoutManagement
         _lastTradeActionAt = DateTime.MinValue;
         _executor = TradeExecutor.None;
         _stateEnteredAt = DateTime.UtcNow;
+
+        if (startNextQueuedPayout)
+        {
+            StartNextQueuedPayout();
+        }
+        else if (!reason.Equals("Payout complete", StringComparison.OrdinalIgnoreCase))
+        {
+            QueuedPayouts.Clear();
+        }
     }
 
     public static void NotifyTradeCancelled()
@@ -400,9 +457,62 @@ public static class PayoutManagement
 
     private static PlayerState? GetCurrentPlayer()
     {
-        return Plugin.Instance.GetMainWindow().GetPlayers().FirstOrDefault(x =>
+        return GetPayoutSource(Plugin.Instance.GetMainWindow().GetPlayers());
+    }
+
+    private static void StartNextQueuedPayout()
+    {
+        var players = Plugin.Instance.GetMainWindow().GetPlayers();
+        while (QueuedPayouts.TryDequeue(out var request))
+        {
+            var player = players.FirstOrDefault(candidate =>
+                candidate.Name.Equals(request.PlayerName, StringComparison.OrdinalIgnoreCase)
+                && (request.WorldId == 0 || candidate.WorldId == request.WorldId));
+            if (player == null || player.Bank <= 0)
+            {
+                Plugin.Instance.GetMainWindow().AddDebugLog(
+                    $"[PayoutManagement] Skipped queued payout for {request.PlayerName}: player missing or bank empty");
+                continue;
+            }
+
+            var amount = Math.Min(request.Amount, player.Bank);
+            if (TryStartPayout(player, amount) == PayoutStartResult.Started)
+                return;
+
+            Plugin.Instance.GetMainWindow().AddDebugLog(
+                $"[PayoutManagement] Skipped queued payout for {player.DisplayName}: could not start payout");
+        }
+    }
+
+    private static PlayerState? GetPayoutSource(IEnumerable<PlayerState> players)
+    {
+        return players.FirstOrDefault(x =>
+            x.Name.Equals(_sourceName, StringComparison.OrdinalIgnoreCase)
+            && (_sourceWorldId == 0 || x.WorldId == _sourceWorldId));
+    }
+
+    private static PlayerState? GetPayoutRecipient()
+    {
+        return GetPayoutRecipient(Plugin.Instance.GetMainWindow().GetPlayers());
+    }
+
+    private static PlayerState? GetPayoutRecipient(IEnumerable<PlayerState> players)
+    {
+        return players.FirstOrDefault(x =>
             x.Name.Equals(_targetName, StringComparison.OrdinalIgnoreCase)
             && (_targetWorldId == 0 || x.WorldId == _targetWorldId));
+    }
+
+    public static PlayerState? ResolveActivePayoutLedgerPlayer(string partnerName, List<PlayerState> players)
+    {
+        if (!IsActive || string.IsNullOrWhiteSpace(partnerName))
+            return null;
+
+        var recipient = GetPayoutRecipient(players);
+        var detectedPartner = TradeManager.ResolvePlayer(partnerName, players);
+        return recipient != null && ReferenceEquals(detectedPartner, recipient)
+            ? GetPayoutSource(players)
+            : null;
     }
 
     private static void RetryOrResetAfterUnexpectedTradeClose(PlayerState player)

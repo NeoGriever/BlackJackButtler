@@ -19,7 +19,11 @@ internal static class BJBGui
         public string Text = string.Empty;
     }
 
-    private static readonly Dictionary<string, LongInputState> LongInputStates = new();
+    // Labels may intentionally repeat inside ImGui.PushID scopes (for example,
+    // every row in an editable table has an "##amount" field).  Keep the
+    // transient editor state under ImGui's fully scoped item ID so opening one
+    // field cannot turn another field into an editor or commit into it.
+    private static readonly Dictionary<uint, LongInputState> LongInputStates = new();
 
     public static bool MatchesFilter(string filter, params string?[] haystacks)
     {
@@ -133,18 +137,18 @@ internal static class BJBGui
         return r;
     }
 
-    public static bool InputInt(string label, ref int v, int step)
+    public static bool InputInt(string label, ref int v, int step, int? defaultValue = null)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
-        var r = BJBStepInput.InputInt(label, ref v, step);
+        var r = BJBStepInput.InputInt(label, ref v, step, defaultValue);
         ImGui.PopStyleColor();
         return r;
     }
 
-    public static bool InputLong(string label, ref long v, long step, long step_fast)
+    public static bool InputLong(string label, ref long v, long step, long step_fast, long? defaultValue = null)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
-        var r = BJBStepInput.InputLong(label, ref v, step, step_fast);
+        var r = BJBStepInput.InputLong(label, ref v, step, step_fast, defaultValue);
         ImGui.PopStyleColor();
         return r;
     }
@@ -159,10 +163,11 @@ internal static class BJBGui
 
     public static bool InputLongFormatted(string label, ref long value, Vector4? textColor = null)
     {
-        if (!LongInputStates.TryGetValue(label, out var state))
+        var stateKey = ImGui.GetID(label);
+        if (!LongInputStates.TryGetValue(stateKey, out var state))
         {
             state = new LongInputState();
-            LongInputStates[label] = state;
+            LongInputStates[stateKey] = state;
         }
 
         ImGui.PushFont(UiBuilder.MonoFont);
@@ -233,10 +238,11 @@ internal static class BJBGui
     }
 
 
-    public static bool InputFloat(string label, ref float v, float step, float step_fast, string format)
+    public static bool InputFloat(string label, ref float v, float step, float step_fast, string format,
+        float? defaultValue = null)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
-        var r = BJBStepInput.InputFloat(label, ref v, step, step_fast, format);
+        var r = BJBStepInput.InputFloat(label, ref v, step, step_fast, format, defaultValue);
         ImGui.PopStyleColor();
         return r;
     }

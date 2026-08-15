@@ -115,7 +115,7 @@ public partial class BlackJackButtlerWindow
             if (GameEngine.CurrentPhase != GamePhase.InitialDeal)
                 GameEngine.CurrentPhase = GamePhase.PlayersTurn;
 
-            GameEngine.TargetPlayer(player.Name);
+            GameEngine.TargetPlayer(player);
         }
 
         _save();

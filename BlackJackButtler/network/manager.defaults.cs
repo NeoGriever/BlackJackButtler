@@ -38,7 +38,10 @@ public static class DefaultsManager
             { "Name": "Dice: Blackjack Logic", "Patterns": [
                 "Würfeln! .*?\\) (\\d+)\\s*$",
                 "Random! .*?\\) (\\d+)\\s*$"
-            ], "Action": "DiceRollValue" }
+            ], "Action": "DiceRollValue" },
+            { "Name": "Bank Transfer", "Patterns": [
+                "^transfer\\s+(-?(?:(?:\\d[\\d.,]*\\s*[km]?)|half|50%|min|max))\\s*$"
+            ], "Action": "BankTransfer" }
         ],
         "Commands": {
             "Initial": [
@@ -75,6 +78,18 @@ public static class DefaultsManager
                 { "Text": "/bstance motion", "Delay": 4.5 },
                 { "Text": "/dice party 13", "Delay": 1.3 },
                 { "Text": "/p #{Player DD Messages Stand}", "Delay": 1.3 },
+                { "Text": "/p #{Dividor}", "Delay": 0.8 }
+            ],
+            "TD": [
+                { "Text": "/ft", "Delay": 0.5 },
+                { "Text": "/p #{Player TD Messages}", "Delay": 1.2 },
+                { "Text": "/wow", "Delay": 2.0 },
+                { "Text": "/bstance motion", "Delay": 4.5 },
+                { "Text": "/dice party 13", "Delay": 1.3 },
+                { "Text": "/p #{Player TD First Card Messages}", "Delay": 1.0 },
+                { "Text": "/bstance motion", "Delay": 4.5 },
+                { "Text": "/dice party 13", "Delay": 1.3 },
+                { "Text": "/p #{Player TD Messages Stand}", "Delay": 1.3 },
                 { "Text": "/p #{Dividor}", "Delay": 0.8 }
             ],
             "Split": [
@@ -150,6 +165,26 @@ public static class DefaultsManager
             "ResultPlayerLost": [
                 { "Text": "/p #{Lost Messages}", "Delay": 1.9 }
             ],
+            "StateHSDTS": [
+                { "Text": "/ft", "Delay": 0.5, "Enabled": true },
+                { "Text": "/p #{Dividor}", "Delay": 1.0, "Enabled": false },
+                { "Text": "/p #{Player State Messages HSDTS} <se.7>", "Delay": 0.5 }
+            ],
+            "StateHSTS": [
+                { "Text": "/ft", "Delay": 0.5, "Enabled": true },
+                { "Text": "/p #{Dividor}", "Delay": 1.0, "Enabled": false },
+                { "Text": "/p #{Player State Messages HSTS} <se.7>", "Delay": 0.5 }
+            ],
+            "StateHSDT": [
+                { "Text": "/ft", "Delay": 0.5, "Enabled": true },
+                { "Text": "/p #{Dividor}", "Delay": 1.0, "Enabled": false },
+                { "Text": "/p #{Player State Messages HSDT} <se.7>", "Delay": 0.5 }
+            ],
+            "StateHST": [
+                { "Text": "/ft", "Delay": 0.5, "Enabled": true },
+                { "Text": "/p #{Dividor}", "Delay": 1.0, "Enabled": false },
+                { "Text": "/p #{Player State Messages HST} <se.7>", "Delay": 0.5 }
+            ],
             "StateHSDS": [
                 { "Text": "/ft", "Delay": 0.5, "Enabled": true },
                 { "Text": "/p #{Dividor}", "Delay": 1.0, "Enabled": false },
@@ -170,14 +205,18 @@ public static class DefaultsManager
                 { "Text": "/p #{Player DD Forced Stand Messages}", "Delay": 1.2 },
                 { "Text": "/p #{Dividor}", "Delay": 1.0 }
             ],
+            "PlayerTDForcedStand": [
+                { "Text": "/ft", "Delay": 0.5 },
+                { "Text": "/p #{Player TD Forced Stand Messages}", "Delay": 1.2 },
+                { "Text": "/p #{Dividor}", "Delay": 1.0 }
+            ],
             "ResultSmall": [
                 { "Text": "/p #{Dividor}", "Delay": 0.9 },
                 { "Text": "/p #{Match Results}", "Delay": 1.8 },
                 { "Text": "/p #{Dividor} <se.15>", "Delay": 0.5 }
             ],
             "BankTell": [
-                { "Text": "/ft", "Delay": 0.5 },
-                { "Text": "/tell #{Bank Tell Messages}", "Delay": 0.5 }
+                { "Text": "/t <.> <n>: #{Bank Tell Messages}", "Delay": 0.5 }
             ]
         },
         "Messages": {
@@ -228,6 +267,22 @@ public static class DefaultsManager
                 "\ue070 ${HandIndex}<t> - You have splittable <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Double Down] or [Split]? \ue070"
             ],
 
+            "Player State Messages HSDTS": [
+                "\ue070 ${HandIndex}<t> - You have splittable <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Double Down], [Triple Down] or [Split]? \ue070"
+            ],
+
+            "Player State Messages HSTS": [
+                "\ue070 ${HandIndex}<t> - You have splittable <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Triple Down] or [Split]? \ue070"
+            ],
+
+            "Player State Messages HSDT": [
+                "\ue070 ${HandIndex}<t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Double Down] or [Triple Down]? \ue070"
+            ],
+
+            "Player State Messages HST": [
+                "\ue070 ${HandIndex}<t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand] or [Triple Down]? \ue070"
+            ],
+
             "Player State Messages HSD": [
                 "\ue070 ${HandIndex}<t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand] or [Double Down]? \ue070"
             ],
@@ -238,6 +293,10 @@ public static class DefaultsManager
 
             "Player DD Forced Stand Messages": [
                 "\ue070 ${HandIndex}Now you have <points> with ${playerCards}. Since it was a Double Down, this hand is now locked. \ue070"
+            ],
+
+            "Player TD Forced Stand Messages": [
+                "\ue070 ${HandIndex}Now you have <points> with ${playerCards}. Since it was a Triple Down, this hand is now locked. \ue070"
             ],
 
             "Player Draw Messages": [
@@ -264,6 +323,20 @@ public static class DefaultsManager
             "Player DD Messages Stand": [
                 "\ue070 ${HandIndex}<t> drew the DD card. Hand is now locked at <points>. \ue070",
                 "\ue070 ${HandIndex}Double Down complete. <t> stands automatically at <points>. \ue070"
+            ],
+
+            "Player TD Messages": [
+                "\ue070 ${HandIndex}<t> is going all in with a TRIPLE DOWN! Two cards are coming. \ue070",
+                "\ue070 ${HandIndex}Triple Down for <t>! The hand gets exactly two more cards. \ue070"
+            ],
+
+            "Player TD First Card Messages": [
+                "\ue070 ${HandIndex}The first Triple Down card is out. One mandatory card remains. \ue070"
+            ],
+
+            "Player TD Messages Stand": [
+                "\ue070 ${HandIndex}<t> drew both TD cards. Hand is now locked at <points>. \ue070",
+                "\ue070 ${HandIndex}Triple Down complete. <t> stands automatically at <points>. \ue070"
             ],
 
             "Player Split Messages": [
@@ -480,7 +553,7 @@ public static class DefaultsManager
             ],
 
             "Bank Tell Messages": [
-                "<t> - Bank: ${bankamount} | Bet: ${betamount}"
+                "${bankamount} Gil is on your Bank. You're currently playing with ${betamount} Gil"
             ]
         }
     }

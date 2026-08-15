@@ -15,17 +15,22 @@ public partial class BlackJackButtlerWindow
     private long _ddPopupMissingAmount = 0;
     private long _ddPopupInitialBank = 0;
     private DateTime _ddPopupOpenTime = DateTime.MinValue;
+    private bool _ddPopupIsTripleDown = false;
 
-    public void OpenDDMoneyPopup(PlayerState player, long missingAmount)
+    public void OpenDDMoneyPopup(PlayerState player, long missingAmount, bool isTripleDown = false)
     {
         _ddPopupPlayer = player;
         _ddPopupMissingAmount = missingAmount;
         _ddPopupInitialBank = player.Bank;
         _ddPopupOpenTime = DateTime.Now;
+        _ddPopupIsTripleDown = isTripleDown;
         _showDDMoneyPopup = true;
 
-        AddDebugLog($"[DoubleDown] Waiting for {player.DisplayName} to provide {missingAmount:N0} Gil", false);
+        AddDebugLog($"[{(isTripleDown ? "TripleDown" : "DoubleDown")}] Waiting for {player.DisplayName} to provide {missingAmount:N0} Gil", false);
     }
+
+    public void OpenTDMoneyPopup(PlayerState player, long missingAmount)
+        => OpenDDMoneyPopup(player, missingAmount, isTripleDown: true);
 
     public void CloseDDMoneyPopup()
     {
@@ -33,6 +38,7 @@ public partial class BlackJackButtlerWindow
         _ddPopupPlayer = null;
         _ddPopupMissingAmount = 0;
         _ddPopupInitialBank = 0;
+        _ddPopupIsTripleDown = false;
     }
 
     private void DrawDDMoneyPopup()
@@ -42,15 +48,16 @@ public partial class BlackJackButtlerWindow
 
         long bankIncrease = _ddPopupPlayer.Bank - _ddPopupInitialBank;
         bool hasEnoughMoney = bankIncrease >= _ddPopupMissingAmount;
+        string actionLabel = _ddPopupIsTripleDown ? "Triple Down" : "Double Down";
 
         ImGui.SetNextWindowSize(new Vector2(420, 0), ImGuiCond.Always);
         ImGui.SetNextWindowPos(ImGui.GetMainViewport().GetCenter(), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
 
-        if (ImGui.Begin("Double Down Payment Required###bjb_dd_popup", ref _showDDMoneyPopup, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize))
+        if (ImGui.Begin($"{actionLabel} Payment Required###bjb_dd_popup", ref _showDDMoneyPopup, ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoSavedSettings | ImGuiWindowFlags.AlwaysAutoResize))
         {
             ImGui.PushFont(ImGui.GetFont());
             ImGui.SetWindowFontScale(1.3f);
-            ImGui.TextColored(new Vector4(1.0f, 0.5f, 0.0f, 1.0f), "Insufficient Funds for Double Down");
+            ImGui.TextColored(new Vector4(1.0f, 0.5f, 0.0f, 1.0f), $"Insufficient Funds for {actionLabel}");
             ImGui.SetWindowFontScale(1.0f);
             ImGui.PopFont();
 
@@ -73,7 +80,7 @@ public partial class BlackJackButtlerWindow
             ImGui.PushFont(UiBuilder.IconFont);
             if (BJBGui.Button($"{FontAwesomeIcon.CommentDots.ToIconString()}##tell_dd"))
             {
-                SendPaymentTell(_ddPopupPlayer, (_ddPopupMissingAmount - bankIncrease), "Double Down");
+                SendPaymentTell(_ddPopupPlayer, (_ddPopupMissingAmount - bankIncrease), actionLabel);
             }
             ImGui.PopFont();
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Send /tell to player");
@@ -119,23 +126,27 @@ public partial class BlackJackButtlerWindow
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.6f, 0.2f, 1.0f));
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.3f, 0.8f, 0.3f, 1.0f));
 
-            if (BJBGui.Button("Continue Double Down", new Vector2(-1, 40)))
+            if (BJBGui.Button($"Continue {actionLabel}", new Vector2(-1, 40)))
             {
                 var playerToProcess = _ddPopupPlayer;
                 var currentConfig = _config;
                 var currentPlayers = _players;
+                var isTripleDown = _ddPopupIsTripleDown;
 
-                AddDebugLog($"[DoubleDown] {playerToProcess?.DisplayName} payment verified. Processing...");
+                AddDebugLog($"[{(isTripleDown ? "TripleDown" : "DoubleDown")}] {playerToProcess?.DisplayName} payment verified. Processing...");
                 CloseDDMoneyPopup();
 
                 if (playerToProcess != null)
                 {
                     GameActionQueueManager.Enqueue(
-                        $"ContinueDD:{playerToProcess.Name}",
+                        $"Continue{(isTripleDown ? "TD" : "DD")}:{playerToProcess.Name}",
                         async () =>
                         {
                             await Task.Delay(50);
-                            await GameEngine.ContinueDDAfterPayment(playerToProcess, currentConfig, currentPlayers);
+                            if (isTripleDown)
+                                await GameEngine.ContinueTDAfterPayment(playerToProcess, currentConfig, currentPlayers);
+                            else
+                                await GameEngine.ContinueDDAfterPayment(playerToProcess, currentConfig, currentPlayers);
                         },
                         $"PlayerAction:{playerToProcess.Name}");
                 }
@@ -149,9 +160,9 @@ public partial class BlackJackButtlerWindow
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.8f, 0.2f, 0.2f, 1.0f));
             ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1.0f, 0.3f, 0.3f, 1.0f));
 
-            if (BJBGui.Button("Cancel Double Down", new Vector2(-1, 40)))
+            if (BJBGui.Button($"Cancel {actionLabel}", new Vector2(-1, 40)))
             {
-                AddDebugLog($"[DD] Cancelled for {_ddPopupPlayer.DisplayName} - insufficient funds", false);
+                AddDebugLog($"[{(_ddPopupIsTripleDown ? "TD" : "DD")}] Cancelled for {_ddPopupPlayer.DisplayName} - insufficient funds", false);
                 CloseDDMoneyPopup();
             }
 

@@ -169,11 +169,13 @@ public static class RegexEngine
         return action is RegexAction.WantHit
             or RegexAction.WantStand
             or RegexAction.WantDD
+            or RegexAction.AutoTripleDown
             or RegexAction.WantSplit
             or RegexAction.NextRound
             or RegexAction.SetBet
             or RegexAction.BankTell
-            or RegexAction.Withdraw;
+            or RegexAction.Withdraw
+            or RegexAction.BankTransfer;
     }
 
     private static bool IsMessageReactionEnabled(Configuration cfg)
@@ -181,7 +183,10 @@ public static class RegexEngine
 
     private static void ExecuteAction(UserRegexEntry entry, string matchedPattern, ParsedChatMessage msg, string cleanMessage, List<PlayerState> players, PlayerState dealer, Configuration cfg)
     {
-        var p = FindPlayerForMessage(players, msg);
+        var sourcePlayer = FindPlayerForMessage(players, msg);
+        var p = sourcePlayer == null
+            ? null
+            : PlayerIdentityManager.ResolveMessageActionPlayer(players, sourcePlayer);
 
         var options = entry.CaseSensitive ? RRX.RegexOptions.None : RRX.RegexOptions.IgnoreCase;
         var match = RRX.Regex.Match(cleanMessage, matchedPattern, options);
@@ -237,7 +242,7 @@ public static class RegexEngine
             case RegexAction.WantHit:
                 if (!cfg.EnableAutomation || !cfg.AutoRun)
                 {
-                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightTD && !p.HighlightSplit)
                         p.HighlightHit = true;
                     break;
                 }
@@ -247,7 +252,7 @@ public static class RegexEngine
                 {
                     var hand = p.Hands[p.CurrentHandIndex];
                     var (min, _) = p.CalculatePoints(p.CurrentHandIndex);
-                    if (min < 21 && !hand.IsDoubleDown && !hand.IsStand)
+                    if (min < 21 && !hand.IsDoubleDown && !hand.IsTripleDown && !hand.IsStand)
                     {
                         GameLog.PushSnapshot(players, dealer, GameEngine.CurrentPhase, $"RegexHit:{p.Name}");
                         Plugin.Instance.RunAutoAction(
@@ -263,7 +268,7 @@ public static class RegexEngine
             case RegexAction.WantStand:
                 if (!cfg.EnableAutomation || !cfg.AutoRun)
                 {
-                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightTD && !p.HighlightSplit)
                         p.HighlightStand = true;
                     break;
                 }
@@ -288,7 +293,7 @@ public static class RegexEngine
             case RegexAction.WantDD:
                 if (!cfg.EnableAutomation || !cfg.AutoRun)
                 {
-                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightTD && !p.HighlightSplit)
                         p.HighlightDD = true;
                     break;
                 }
@@ -298,7 +303,7 @@ public static class RegexEngine
                 {
                     var hand = p.Hands[p.CurrentHandIndex];
                     var (min, _) = p.CalculatePoints(p.CurrentHandIndex);
-                    if (min < 21 && !hand.IsDoubleDown && !hand.IsStand
+                    if (min < 21 && !hand.IsDoubleDown && !hand.IsTripleDown && !hand.IsStand
                         && hand.Cards.Count == 2
                         && cfg.EnableDoubleDown
                         && !(p.Hands.Count > 1 && !cfg.AllowDoubleDownAfterSplit))
@@ -314,10 +319,37 @@ public static class RegexEngine
                 }
                 break;
 
+            case RegexAction.AutoTripleDown:
+                if (!cfg.EnableAutomation || !cfg.AutoRun)
+                {
+                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightTD && !p.HighlightSplit)
+                        p.HighlightTD = true;
+                    break;
+                }
+                if (p != null && p.IsCurrentTurn && !CommandExecutor.IsRunning
+                    && GameEngine.CurrentPhase == GamePhase.PlayersTurn
+                    && p.HasInitialHandDealt && p.Hands.Count > 0)
+                {
+                    var hand = p.Hands[p.CurrentHandIndex];
+                    var (min, _) = p.CalculatePoints(p.CurrentHandIndex);
+                    if (min < 21 && !hand.IsDoubleDown && !hand.IsTripleDown && !hand.IsStand
+                        && GameEngine.CanTripleDown(p, hand, cfg))
+                    {
+                        GameLog.PushSnapshot(players, dealer, GameEngine.CurrentPhase, $"RegexTD:{p.Name}");
+                        Plugin.Instance.RunAutoAction(
+                            "RegexTD",
+                            () => GameEngine.ActionTD(p, cfg, players),
+                            () => cfg.EnableAutomation && cfg.AutoRun
+                                && p.IsCurrentTurn && GameEngine.CurrentPhase == GamePhase.PlayersTurn,
+                            $"PlayerAction:{p.Name}");
+                    }
+                }
+                break;
+
             case RegexAction.WantSplit:
                 if (!cfg.EnableAutomation || !cfg.AutoRun)
                 {
-                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                    if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightTD && !p.HighlightSplit)
                         p.HighlightSplit = true;
                     break;
                 }
@@ -327,7 +359,7 @@ public static class RegexEngine
                 {
                     var hand = p.Hands[p.CurrentHandIndex];
                     var (min, _) = p.CalculatePoints(p.CurrentHandIndex);
-                    if (min < 21 && !hand.IsDoubleDown && !hand.IsStand
+                    if (min < 21 && !hand.IsDoubleDown && !hand.IsTripleDown && !hand.IsStand
                         && cfg.EnableSplit
                         && hand.Cards.Count == 2 && p.Hands.Count < cfg.MaxHandsPerPlayer)
                     {
@@ -358,17 +390,36 @@ public static class RegexEngine
                 break;
 
             case RegexAction.Withdraw:
-                if (p == null || !match.Success || match.Groups.Count < 2)
+                var withdrawPlayer = sourcePlayer ?? p;
+                if (withdrawPlayer == null || !match.Success || match.Groups.Count < 2)
                     break;
 
-                if (!PayoutManagement.TryParseWithdrawAmount(match.Groups[1].Value, p.Bank, out var withdrawAmount))
+                var withdrawToken = match.Groups[1].Value;
+                if (withdrawToken.Trim().Equals("all", StringComparison.OrdinalIgnoreCase)
+                    || withdrawToken.Trim().Equals("everything", StringComparison.OrdinalIgnoreCase))
+                {
+                    var withdrawPlayers = new List<PlayerState> { withdrawPlayer };
+                    var imaginaryPlayer = PlayerIdentityManager.GetImaginaryPlayer(players, withdrawPlayer);
+                    if (imaginaryPlayer != null)
+                        withdrawPlayers.Add(imaginaryPlayer);
+
+                    if (PayoutManagement.TryStartPayoutSequence(withdrawPlayers)
+                        == PayoutManagement.PayoutStartResult.InvalidAmount)
+                    {
+                        ChatCommandRouter.Send("/p You don't have anything on your bank!", cfg,
+                            $"RegexWithdrawInsufficient:{withdrawPlayer.Name}");
+                    }
+                    break;
+                }
+
+                if (!PayoutManagement.TryParseWithdrawAmount(withdrawToken, withdrawPlayer.Bank, out var withdrawAmount))
                     break;
 
-                if (PayoutManagement.TryStartPayout(p, withdrawAmount)
+                if (PayoutManagement.TryStartPayout(withdrawPlayer, withdrawAmount)
                     == PayoutManagement.PayoutStartResult.InsufficientFunds)
                 {
                     ChatCommandRouter.Send("/p You don't have that much on your bank!", cfg,
-                        $"RegexWithdrawInsufficient:{p.Name}");
+                        $"RegexWithdrawInsufficient:{withdrawPlayer.Name}");
                 }
                 break;
 
@@ -392,19 +443,19 @@ public static class RegexEngine
 
             // Once-consistent highlights — only set if none in group is active
             case RegexAction.HighlightHit:
-                if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightTD && !p.HighlightSplit)
                     p.HighlightHit = true;
                 break;
             case RegexAction.HighlightStand:
-                if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightTD && !p.HighlightSplit)
                     p.HighlightStand = true;
                 break;
             case RegexAction.HighlightDD:
-                if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightTD && !p.HighlightSplit)
                     p.HighlightDD = true;
                 break;
             case RegexAction.HighlightSplit:
-                if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightSplit)
+                if (p != null && !p.HighlightHit && !p.HighlightStand && !p.HighlightDD && !p.HighlightTD && !p.HighlightSplit)
                     p.HighlightSplit = true;
                 break;
 
@@ -476,7 +527,7 @@ public static class RegexEngine
                     {
                         if (capturedP != null)
                         {
-                            GameEngine.TargetPlayer(capturedP.Name);
+                            GameEngine.TargetPlayer(capturedP);
                             VariableManager.SetPlayerVariables(capturedP);
                         }
                         await CommandExecutor.ExecuteGroup(groupName, targetName, cfg);
@@ -489,6 +540,7 @@ public static class RegexEngine
             case RegexAction.BankTell:
             {
                 var btWindow = Plugin.Instance.GetMainWindow();
+                var bankTellPlayer = sourcePlayer ?? p;
 
                 if (!GameEngine.CanAcceptInterRoundDetectors())
                 {
@@ -496,29 +548,45 @@ public static class RegexEngine
                     break;
                 }
 
-                if (p == null)
+                if (bankTellPlayer == null)
                 {
                     btWindow.AddDebugLog($"[RegexEngine] BankTell blocked: player not found for '{msg.Name}'");
                     break;
                 }
 
-                if (!p.IsActivePlayer || p.IsOnHold || p.IsOnBench || p.JoinedMidRound)
+                if (!bankTellPlayer.IsActivePlayer || bankTellPlayer.IsOnHold || bankTellPlayer.IsOnBench || bankTellPlayer.JoinedMidRound)
                 {
-                    btWindow.AddDebugLog($"[RegexEngine] BankTell blocked: {p.DisplayName} not active");
+                    btWindow.AddDebugLog($"[RegexEngine] BankTell blocked: {bankTellPlayer.DisplayName} not active");
                     break;
                 }
 
                 if (!cfg.EnableAutomation || !cfg.AutoRun)
                 {
-                    p.HighlightTell = true;
-                    btWindow.AddDebugLog($"[RegexEngine] BankTell highlight set for {p.DisplayName} (AutoRun off)");
+                    bankTellPlayer.HighlightTell = true;
+                    btWindow.AddDebugLog($"[RegexEngine] BankTell highlight set for {bankTellPlayer.DisplayName} (AutoRun off)");
                     break;
                 }
 
-                btWindow.AddDebugLog($"[RegexEngine] BankTell executing for {p.DisplayName}");
-                p.HighlightTell = false;
-                var capturedPlayer = p;
-                BankTellQueueManager.Enqueue(capturedPlayer, cfg, "RegexBankTell");
+                btWindow.AddDebugLog($"[RegexEngine] BankTell executing for {bankTellPlayer.DisplayName}");
+                bankTellPlayer.HighlightTell = false;
+                BankTellQueueManager.EnqueueWithImaginaryPlayer(bankTellPlayer, cfg, "RegexBankTell");
+                break;
+            }
+
+            case RegexAction.BankTransfer:
+            {
+                if (sourcePlayer == null || !match.Success || match.Groups.Count < 2)
+                    break;
+
+                if (!ImaginaryPlayerBankManager.TryTransferToImaginaryPlayer(
+                        sourcePlayer, match.Groups[1].Value, cfg, out var transferResult))
+                {
+                    Plugin.Instance.GetMainWindow().AddDebugLog($"[RegexEngine] BankTransfer skipped: {transferResult}");
+                    break;
+                }
+
+                Plugin.Instance.GetMainWindow().AddDebugLog($"[RegexEngine] BankTransfer completed: {transferResult}");
+                BankTellQueueManager.EnqueueWithImaginaryPlayer(sourcePlayer, cfg, "RegexBankTransfer");
                 break;
             }
 
