@@ -202,6 +202,8 @@ public partial class BlackJackButtlerWindow
             ImGui.TextUnformatted("Seconds");
         });
 
+        DrawAutoContinueMinimumPlayersSelector("v3_auto_continue_min_players");
+
         ImGui.Spacing();
         DrawCommandSelector("Command after Bet-Change", ref _config.AutoBetPostCommandName);
         DrawCommandSelector("Command on insufficient Bank", ref _config.InsufficientBetCommandName);

@@ -4,12 +4,12 @@
     "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
     "Description": "/bjb - opens the blackjack buttler tool",
     "InternalName": "BlackJackButtler",
-    "AssemblyVersion": "1.9.0.1",
+    "AssemblyVersion": "1.9.0.2",
     "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "TestingDalamudApiLevel": 15,
     "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/BlackJackButtler/images/icon.png",
     "Tags": ["BlackJack", "Helper", "Chat"],
-    "Changelog": "Version 1.9.0.1\n\n- Added Imaginary Players (Ghosts): a linked player with an independent hand, bet, bank, and alias, controlled by the real player.\n- Added Ghost Bank Routing with paired BankTells, transfer commands, and sequential all/everything withdrawals.\n- Thanks to Dissendra Blackthorn@Zodiark for the Imaginary Player idea.\n\nSee changelog.md or the in-game Changelog dialog for complete details."
+    "Changelog": "Version 1.9.0.2\n\n- Announced the planned retirement of Classic and Version 2 views in favor of Version 3.\n- Restored Auto Continue's minimum-player setting with migration from the previous 2-player option.\n\nSee changelog.md or the in-game Changelog dialog for complete details."
 }

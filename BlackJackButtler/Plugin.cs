@@ -74,6 +74,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly NearbyPopoutWindow nearbyPopoutWindow;
     private readonly UpdatePopupWindow updatePopupWindow;
     private readonly ImportantNoticeWindow importantNoticeWindow;
+    private readonly Version3MigrationWindow version3MigrationWindow;
     private readonly BlacklistBannerWindow blacklistBannerWindow;
     private VariablesPopupWindow variablesPopupWindow = null!;
     private DateTime _lastSync = DateTime.MinValue;
@@ -195,6 +196,16 @@ public sealed class Plugin : IDalamudPlugin
         if (Configuration.EnsureLayout3Migrations())
             Configuration.Save();
 
+        if (Configuration.EnsureAutoContinueMinimumPlayersMigration())
+            Configuration.Save();
+
+        // Declining the migration only suppresses the banner for the current plugin session.
+        if (Configuration.MainViewVersion != 3 && Configuration.Version3MigrationNoticeOpened)
+        {
+            Configuration.Version3MigrationNoticeOpened = false;
+            Configuration.Save();
+        }
+
         if (!Configuration.EnableAllianceSupport)
         {
             Configuration.EnableAllianceSupport = true;
@@ -284,6 +295,10 @@ public sealed class Plugin : IDalamudPlugin
 
         importantNoticeWindow = new ImportantNoticeWindow(Configuration, () => Configuration.Save());
         windowSystem.AddWindow(importantNoticeWindow);
+
+        version3MigrationWindow = new Version3MigrationWindow(Configuration, () => Configuration.Save());
+        windowSystem.AddWindow(version3MigrationWindow);
+        mainWindow.SetVersion3MigrationWindow(version3MigrationWindow);
 
         blacklistBannerWindow = new BlacklistBannerWindow();
         windowSystem.AddWindow(blacklistBannerWindow);
@@ -575,7 +590,7 @@ public sealed class Plugin : IDalamudPlugin
                     _autoContinueWaiting = false;
                     var players = mainWindow.GetPlayers();
                     var activePlayers = players.Where(p => p.IsActivePlayer && !p.IsOnHold).ToList();
-                    if (activePlayers.Count == 0)
+                    if (activePlayers.Count < Configuration.AutoContinueMinimumPlayers)
                         return;
 
                     var underfunded = activePlayers.Where(GameEngine.IsPlayerUnableToCoverBet).ToList();
@@ -590,7 +605,10 @@ public sealed class Plugin : IDalamudPlugin
                     RunAutoAction(
                         "AutoContinue",
                         () => GameEngine.StartInitialDeal(players, Configuration),
-                        () => Configuration.AutoContinue && GameEngine.CanAcceptInterRoundDetectors(),
+                        () => Configuration.AutoContinue
+                              && GameEngine.CanAcceptInterRoundDetectors()
+                              && mainWindow.GetPlayers().Count(p => p.IsActivePlayer && !p.IsOnHold)
+                                  >= Configuration.AutoContinueMinimumPlayers,
                         "RoundStart");
                 }
             }

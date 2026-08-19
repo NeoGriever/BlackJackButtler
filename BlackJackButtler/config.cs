@@ -130,6 +130,10 @@ public sealed class Configuration : IPluginConfiguration
     public List<ShortResultRule> ShortResultRules = new();
     public bool ShortResultRulesInitialized = false;
     public bool AutostartRoundOnlyOnMultiplePlayers = true;
+    // Replaces the legacy two-player Auto-Continue choice with an explicit threshold.
+    // The legacy value is retained because it still belongs to Player Ready Start.
+    public int AutoContinueMinimumPlayers = 1;
+    public bool AutoContinueMinimumPlayersMigrated = false;
     public bool EnableAntiDouble = false;
     public Vector4 HighlightColor = new Vector4(1.0f, 1.0f, 0.0f, 1.0f);
     public Vector4 HighlightTextColor = new Vector4(0f, 0f, 0f, 1f);
@@ -167,6 +171,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool MainViewV2SuperCompact = false;
 
     public bool ImportantNoticeAcknowledged = false;
+    public bool Version3MigrationNoticeOpened = false;
 
     public string BlacklistDetectedAt = "";
     public bool BlacklistActive = false;
@@ -301,6 +306,23 @@ public sealed class Configuration : IPluginConfiguration
         }
 
         ShortResultRulesInitialized = true;
+        return true;
+    }
+
+    public bool EnsureAutoContinueMinimumPlayersMigration()
+    {
+        if (AutoContinueMinimumPlayersMigrated)
+        {
+            var clamped = Math.Clamp(AutoContinueMinimumPlayers, 1, 4);
+            if (clamped == AutoContinueMinimumPlayers)
+                return false;
+
+            AutoContinueMinimumPlayers = clamped;
+            return true;
+        }
+
+        AutoContinueMinimumPlayers = AutostartRoundOnlyOnMultiplePlayers ? 2 : 1;
+        AutoContinueMinimumPlayersMigrated = true;
         return true;
     }
 
