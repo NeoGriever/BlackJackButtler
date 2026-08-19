@@ -165,34 +165,7 @@ public partial class BlackJackButtlerWindow
         DrawSharedAutomationTimingControls("v2");
 
         ImGui.Spacing();
-        ImGui.TextUnformatted("Player Ready Start");
-        bool requireMultipleParticipants = _config.AutostartRoundOnlyOnMultiplePlayers;
-        if (requireMultipleParticipants)
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1f, 0.5f, 0f, 1f));
-        if (BJBGui.SmallButton("Only at 2 or more participants##v2_ready_start_multiple",
-                requireMultipleParticipants ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor)
-            && !requireMultipleParticipants)
-        {
-            _config.AutostartRoundOnlyOnMultiplePlayers = true;
-            _save();
-        }
-        if (requireMultipleParticipants)
-            ImGui.PopStyleColor();
-
-        ImGui.SameLine();
-        if (!requireMultipleParticipants)
-            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1f, 0.5f, 0f, 1f));
-        if (BJBGui.SmallButton("Every time##v2_ready_start_every_time",
-                !requireMultipleParticipants ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor)
-            && requireMultipleParticipants)
-        {
-            _config.AutostartRoundOnlyOnMultiplePlayers = false;
-            _save();
-        }
-        if (!requireMultipleParticipants)
-            ImGui.PopStyleColor();
-        if (ImGui.IsItemHovered())
-            ImGui.SetTooltip("Counts active participants only; the dealer is excluded.\nThis does not affect the Auto-Continue timer.");
+        DrawAutoContinueMinimumPlayersSelector("v2_auto_continue_min_players");
 
     }
 
@@ -931,6 +904,61 @@ public partial class BlackJackButtlerWindow
             }
             if (active) ImGui.PopStyleColor();
         }
+    }
+
+    private void DrawAutoContinueMinimumPlayersSelector(string id)
+    {
+        ImGui.TextUnformatted("Minimum players for auto continue:");
+        ImGui.SameLine();
+
+        const float width = 48f;
+        const float height = 27f;
+        const float rounding = 5f;
+        var labels = new[] { "1+", "2+", "3+", "4+" };
+        var drawList = ImGui.GetWindowDrawList();
+
+        for (var index = 0; index < labels.Length; index++)
+        {
+            if (index > 0) ImGui.SameLine(0f, 0f);
+
+            var position = ImGui.GetCursorScreenPos();
+            var selected = _config.AutoContinueMinimumPlayers == index + 1;
+            var hovered = false;
+            if (ImGui.InvisibleButton($"##{id}_{index}", new Vector2(width, height)))
+            {
+                _config.AutoContinueMinimumPlayers = index + 1;
+                _save();
+            }
+            hovered = ImGui.IsItemHovered();
+
+            var color = selected
+                ? new Vector4(1f, 0.5f, 0f, 1f)
+                : ImGui.GetStyle().Colors[(int)(hovered ? ImGuiCol.ButtonHovered : ImGuiCol.Button)];
+            var colorU32 = ImGui.GetColorU32(color);
+            var maximum = position + new Vector2(width, height);
+
+            if (index == 0 || index == labels.Length - 1)
+            {
+                drawList.AddRectFilled(position, maximum, colorU32, rounding);
+                if (index == 0)
+                    drawList.AddRectFilled(position + new Vector2(rounding, 0f), maximum, colorU32);
+                else
+                    drawList.AddRectFilled(position, maximum - new Vector2(rounding, 0f), colorU32);
+            }
+            else
+            {
+                drawList.AddRectFilled(position, maximum, colorU32);
+            }
+
+            var textSize = ImGui.CalcTextSize(labels[index]);
+            drawList.AddText(
+                position + new Vector2((width - textSize.X) / 2f, (height - textSize.Y) / 2f),
+                ImGui.GetColorU32(selected ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor),
+                labels[index]);
+        }
+
+        if (ImGui.IsItemHovered())
+            ImGui.SetTooltip("Counts active, non-paused players only. The dealer is excluded.");
     }
 
     private void MultiplierInput(string label, ref float value, float defaultValue, string id)

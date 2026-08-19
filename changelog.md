@@ -1,4 +1,9 @@
-# BlackJack Buttler – Version 1.9.0.1
+# BlackJack Buttler – Version 1.9.0.2
+
+## Configuration Changes
+
+- Announced the planned retirement of the Classic and Version 2 views in favor of Version 3. Users can now switch to Version 3 directly from the in-game notice.
+- Restored Auto Continue's minimum-player setting as a shared `1+ | 2+ | 3+ | 4+` choice in Version 2 and Version 3. Existing 2-player settings migrate automatically.
 
 ## Fixes
 

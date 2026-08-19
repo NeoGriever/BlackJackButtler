@@ -1049,6 +1049,7 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "NearbyAlwaysShowCircle",                v => _config.NearbyAlwaysShowCircle = v);
         TryApply<bool>  (j, "AutoContinue",                          v => _config.AutoContinue = v);
         TryApply<float> (j, "AutoContinueDelay",                     v => _config.AutoContinueDelay = v);
+        TryApply<int>   (j, "AutoContinueMinimumPlayers",            v => _config.AutoContinueMinimumPlayers = Math.Clamp(v, 1, 4));
         TryApply<Vector4>(j, "AutoContinueBarColor",                  v => _config.AutoContinueBarColor = v);
         TryApply<float> (j, "AutoContinueBarHeight",                  v => _config.AutoContinueBarHeight = v);
         TryApply<bool>  (j, "AutoContinueBarShowText",                v => _config.AutoContinueBarShowText = v);
@@ -1068,6 +1069,16 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "UtcSummerTime",                             v => _config.UtcSummerTime = v);
         TryApply<bool>  (j, "UtcOffsetConfigured",                       v => _config.UtcOffsetConfigured = v);
         TryApply<bool>  (j, "BetLimitEntriesMigrated",                   v => _config.BetLimitEntriesMigrated = v);
+
+        if (j.ContainsKey("AutoContinueMinimumPlayers"))
+        {
+            _config.AutoContinueMinimumPlayersMigrated = true;
+        }
+        else if (j.TryGetValue("AutostartRoundOnlyOnMultiplePlayers", out var legacyMinimumToken))
+        {
+            _config.AutoContinueMinimumPlayers = legacyMinimumToken.ToObject<bool>() ? 2 : 1;
+            _config.AutoContinueMinimumPlayersMigrated = true;
+        }
     }
 
     private void DoFullReplace() {

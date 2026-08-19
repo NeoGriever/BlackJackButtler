@@ -85,8 +85,10 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private bool _notepadLoaded = false;
     private readonly NotepadWindow _notepadWindow;
     private VariablesPopupWindow? _variablesPopupWindow;
+    private Version3MigrationWindow? _version3MigrationWindow;
 
     public void SetVariablesPopupWindow(VariablesPopupWindow w) => _variablesPopupWindow = w;
+    public void SetVersion3MigrationWindow(Version3MigrationWindow w) => _version3MigrationWindow = w;
     public void ToggleVariablesPopup()
     {
         if (_variablesPopupWindow == null) return;
@@ -232,6 +234,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
 
         _lastWindowPos = ImGui.GetWindowPos();
         _lastWindowSize = ImGui.GetWindowSize();
+
+        DrawVersion3MigrationBanner();
 
         if (_showRestoreSessionButton)
         {
@@ -434,6 +438,26 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
         DrawVarRefPanel();
         DrawDrawLogicDocPanel();
         ExecuteDrawLogic();
+    }
+
+    private void DrawVersion3MigrationBanner()
+    {
+        if (_config.MainViewVersion == 3 || _config.Version3MigrationNoticeOpened || _version3MigrationWindow == null)
+            return;
+
+        var width = Math.Max(ImGui.GetContentRegionAvail().X, 1f);
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.12f, 0.43f, 0.78f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.18f, 0.52f, 0.9f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.08f, 0.32f, 0.62f, 1f));
+        ImGui.PushStyleColor(ImGuiCol.Text, Vector4.One);
+        if (ImGui.Button("Important change for the configuration##version3_migration_notice", new Vector2(width, 30f)))
+        {
+            _config.Version3MigrationNoticeOpened = true;
+            _save();
+            _version3MigrationWindow.IsOpen = true;
+        }
+        ImGui.PopStyleColor(4);
+        ImGui.Spacing();
     }
 
     private void RestoreSessionFromFile()

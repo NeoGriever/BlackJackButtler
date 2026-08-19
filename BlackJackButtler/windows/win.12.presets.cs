@@ -22,7 +22,7 @@ public partial class BlackJackButtlerWindow
     private static readonly string[] SettingsAutomationFields = {
         "EnableAutomation", "ShowAutoDealerDrawButton", "ShowAutoPlayerHandButton",
         "ShowAutoContinueButton", "ShowAutoRunButton",
-        "AutoInitialDeal", "AutoDealerDraw", "AutoRun", "AutoActivateTradingPlayers", "AutoContinue", "AutoContinueDelay",
+        "AutoInitialDeal", "AutoDealerDraw", "AutoRun", "AutoActivateTradingPlayers", "AutoContinue", "AutoContinueDelay", "AutoContinueMinimumPlayers",
     };
     private static readonly string[] SettingsRulesFields = {
         "FirstDealThenPlay", "PlayerRollingForThemselves", "IdenticalSplitOnly", "AllowDoubleDownAfterSplit",
@@ -1363,6 +1363,9 @@ public partial class BlackJackButtlerWindow
             _config.AutoActivateTradingPlayers   = snap.AutoActivateTradingPlayers;
             _config.AutoContinue                 = snap.AutoContinue;
             _config.AutoContinueDelay            = snap.AutoContinueDelay;
+            _config.AutoContinueMinimumPlayers   = snap.AutoContinueMinimumPlayersMigrated
+                ? Math.Clamp(snap.AutoContinueMinimumPlayers, 1, 4)
+                : (snap.AutostartRoundOnlyOnMultiplePlayers ? 2 : 1);
         }
 
         if (preset.ApplySettingsRules)
