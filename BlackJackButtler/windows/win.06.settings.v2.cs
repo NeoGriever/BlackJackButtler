@@ -30,7 +30,7 @@ public partial class BlackJackButtlerWindow
     private static readonly string[] SettingsV2Tabs =
     {
         "General", "Automation", "Rules", "Betting", "Time & Delay",
-        "Nearby Players", "Visual", "Alliance", "Preset Setup", "System"
+        "Nearby Players", "Visual", "System"
     };
 
     private void DrawSettingsPageV2(int level)
@@ -44,9 +44,7 @@ public partial class BlackJackButtlerWindow
             DrawSettingsV2Tab(4, "Time & Delay", DrawSettingsV2TimeDelay);
             DrawSettingsV2Tab(5, "Nearby Players", DrawSettingsV2Nearby);
             DrawSettingsV2Tab(6, "Visual", DrawSettingsV2Visual);
-            DrawSettingsV2Tab(7, "Alliance", DrawSettingsAllianceBody);
-            DrawSettingsV2Tab(8, "Preset Setup", DrawSettingsPresetSetupBody);
-            DrawSettingsV2Tab(9, "System", () => DrawSettingsV2System(level));
+            DrawSettingsV2Tab(7, "System", () => DrawSettingsV2System(level));
             ImGui.EndTabBar();
         }
 
@@ -78,16 +76,16 @@ public partial class BlackJackButtlerWindow
     private void DrawSettingsV2General(int level)
     {
         ImGui.TextUnformatted("User-Level");
-        DrawEnumButtons("user_level_v2", ref level, new[] { "Beginner", "Advanced", "Dev", "Custom" }, idx =>
+        DrawEnumButtons("user_level_v2", ref level, new[] { "Beginner", "Advanced", "Profi", "Custom" }, idx =>
         {
             _config.CurrentLevel = (UserLevel)idx;
             _save();
-        });
+        }, separateBeforeIndex: 3);
 
         ImGui.Spacing();
         ImGui.TextUnformatted("Main View");
         int mainView = _config.MainViewVersion switch { 2 => 1, 3 => 2, _ => 0 };
-        DrawEnumButtons("main_view_v2", ref mainView, new[] { "Classic", "Version 2", "Version 3" }, idx =>
+        DrawEnumButtons("main_view_v2", ref mainView, new[] { "Classic", "Compacted", "Modern" }, idx =>
         {
             _config.MainViewVersion = idx + 1;
             _save();
@@ -122,7 +120,7 @@ public partial class BlackJackButtlerWindow
         {
             _config.GilVisual = (GilVisualMode)idx;
             _save();
-        });
+        }, joined: false);
         ImGui.PopFont();
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("How Gil amounts are displayed in all Gil input fields.");
@@ -174,11 +172,11 @@ public partial class BlackJackButtlerWindow
         Header("Dealing Behavior");
         Indent(() =>
         {
-        DrawV3RuleActionButton("First Deal, then play", "v2_first_deal", ref _config.FirstDealThenPlay);
-        DrawV3RuleActionButton("Player self-rolling", "v2_self_rolling", ref _config.PlayerRollingForThemselves);
+        DrawDealingOrderSelector("v2_dealing_order");
+        DrawV3OnOff("Player Self Rolling", "v2_self_rolling", ref _config.PlayerRollingForThemselves);
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Players roll their own required cards with /dice 13, /dice alliance 13, or the native /random command.\nDealer rolls are unchanged.");
-        DrawV3RuleActionButton("Hide card suits", "v2_hide_suits", ref _config.HideCardSuits);
+        DrawV3OnOff("Hide Card Suits", "v2_hide_suits", ref _config.HideCardSuits);
         });
 
         Header("Dealer Rules");
@@ -209,9 +207,9 @@ public partial class BlackJackButtlerWindow
         Indent(() =>
         {
         int tie = (int)_config.BlackjackTieRule;
-        ImGui.TextUnformatted("BlackJack Tie Rule:");
+        ImGui.TextUnformatted("BlackJack Priority");
         ImGui.SameLine(260f);
-        DrawEnumButtons("bj_tie_v2", ref tie, new[] { "Push", "Player NatBJ wins", "Dealer NatBJ wins", "NatBJ beats Dirty BJ" }, idx =>
+        DrawEnumButtons("bj_tie_v2", ref tie, new[] { "Push", "Player", "Dealer", "Regular" }, idx =>
         {
             _config.BlackjackTieRule = (BlackjackTieRule)idx;
             _save();
@@ -569,11 +567,36 @@ public partial class BlackJackButtlerWindow
                 if (ImGui.Checkbox("##active", ref entry.Active)) _betDraftDirty = true;
 
                 ImGui.TableNextColumn();
-                int kind = entry.Kind == BetLimitEntryKind.MinBet ? 0 : 1;
-                if (BJBGui.Combo("##kind", ref kind, "Min-Bet\0VIP\0"))
+                if (entry.Kind == BetLimitEntryKind.MinBet)
                 {
-                    entry.Kind = kind == 0 ? BetLimitEntryKind.MinBet : BetLimitEntryKind.Vip;
-                    _betDraftDirty = true;
+                    ImGui.TextDisabled("Minimum");
+                }
+                else
+                {
+                    var normal = entry.Kind == BetLimitEntryKind.Normal;
+                    var previousVipLevel = entry.VipLevel;
+                    if (BJBOnOffSwitch.Draw("kind", ref normal, "NRM", "VIP", 42f))
+                    {
+                        if (normal)
+                        {
+                            var previousDefault = GetDefaultVipName(previousVipLevel);
+                            entry.Kind = BetLimitEntryKind.Normal;
+                            entry.VipLevel = 0;
+                            if (string.IsNullOrWhiteSpace(entry.Name)
+                                || entry.Name.Equals("VIP", StringComparison.OrdinalIgnoreCase)
+                                || entry.Name.Equals(previousDefault, StringComparison.OrdinalIgnoreCase))
+                                entry.Name = "Max";
+                        }
+                        else
+                        {
+                            entry.Kind = BetLimitEntryKind.Vip;
+                            entry.VipLevel = GetNextVipLevel(_betDraftEntries);
+                            if (string.IsNullOrWhiteSpace(entry.Name)
+                                || entry.Name.Equals("Max", StringComparison.OrdinalIgnoreCase))
+                                entry.Name = GetDefaultVipName(entry.VipLevel);
+                        }
+                        _betDraftDirty = true;
+                    }
                 }
 
                 ImGui.TableNextColumn();
@@ -611,9 +634,8 @@ public partial class BlackJackButtlerWindow
             ImGui.EndTable();
         }
 
-        if (BJBGui.SmallButton("+ Add VIP")) AddBetDraft(new BetLimitEntry { Kind = BetLimitEntryKind.Vip, VipLevel = 0, Name = GetDefaultVipName(0), Amount = _config.MaxBet });
-        ImGui.SameLine();
-        if (BJBGui.SmallButton("+ Add Min-Bet")) AddBetDraft(new BetLimitEntry { Kind = BetLimitEntryKind.MinBet, Amount = _config.MinBet });
+        if (BJBGui.SmallButton("+ Add Entry"))
+            AddBetDraft(CreateNextBetLimitEntry(_betDraftEntries!));
 
         Header("Auto-Bet Detection");
         Indent(() =>
@@ -636,15 +658,12 @@ public partial class BlackJackButtlerWindow
 
     private void DrawSettingsV2Nearby()
     {
-        if (_config.MainViewVersion == 3)
-            DrawV3OnOff("Enabled", "v3_nearby_enabled", ref _config.ShowNearbyPlayers);
-        else
-            CheckSave("Enable Nearby Players Feature", ref _config.ShowNearbyPlayers);
+        DrawV3OnOff("Enabled", "nearby_enabled", ref _config.ShowNearbyPlayers);
         IntInputSave("Columns##nearby_columns", ref _config.NearbyColumns, 1, 5, 1, 2);
         if (_config.MainViewVersion != 3)
         {
-            CheckSave("Always show distance circle", ref _config.NearbyAlwaysShowCircle);
-            DrawCommandSelector("Nearby ? Command", ref _config.NearbyQuestionCommandName);
+            DrawV3OnOff("Always show distance circle", "nearby_always_show", ref _config.NearbyAlwaysShowCircle);
+            DrawPartyNearbyJCommandSelector(260f);
         }
 
         Header("Sound");
@@ -669,14 +688,14 @@ public partial class BlackJackButtlerWindow
         Header("Poput-Bar");
         Indent(() =>
         {
-        CheckSave("Lock Position", ref _config.ButtonBarLocked);
+        DrawV3OnOff("Lock Position", "visual_button_bar_locked", ref _config.ButtonBarLocked);
         int layout = (int)_config.ButtonBarLayout;
         DrawEnumButtons("bar_layout_v2", ref layout, new[] { "Horizontal", "Vertical" }, idx =>
         {
             _config.ButtonBarLayout = (ButtonBarLayout)idx;
             _save();
         });
-        CheckSave("Fixed width buttons", ref _config.ButtonBarFixedWidth);
+        DrawV3OnOff("Fixed width buttons", "visual_button_bar_fixed_width", ref _config.ButtonBarFixedWidth);
         FloatInputSave("Fixed width##v2_bar_width", ref _config.ButtonBarFixedWidthValue, 50f, 600f, 200f);
         ColorRgbInputs("Background##v2_bar_bg", ref _config.ButtonBarBackgroundColor, new Vector4(0.1f, 0.1f, 0.1f, 1f));
         });
@@ -718,12 +737,14 @@ public partial class BlackJackButtlerWindow
 
     private void DrawSettingsV2System(int level)
     {
-        CheckSave("Disable Update Popup", ref _config.DisableUpdatePopup);
+        DrawV3OnOff("Disable Update Popup", "system_disable_update_popup", ref _config.DisableUpdatePopup);
         if (BJBGui.Button("Open Changelog"))
             Plugin.Instance.OpenChangelog();
-        CheckSave("Hide Thanks page", ref _config.HideThanksPage);
+        DrawV3OnOff("Hide Thanks page", "system_hide_thanks", ref _config.HideThanksPage);
         var allowZeroBet = GameEngine.AllowZeroBetForSession;
-        if (ImGui.Checkbox("Allow 0 bet", ref allowZeroBet))
+        ImGui.TextUnformatted("Allow 0 bet");
+        ImGui.SameLine(260f);
+        if (BJBOnOffSwitch.Draw("system_allow_zero_bet", ref allowZeroBet))
             GameEngine.AllowZeroBetForSession = allowZeroBet;
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Session-only setting. Resets to disabled when the plugin reloads.");
@@ -748,23 +769,20 @@ public partial class BlackJackButtlerWindow
         // if (BJBGui.Button("Reset default config file")) DefaultsMigration.ResetSnapshotFile();
 
         ImGui.Spacing();
-        ImGui.TextUnformatted("Wait-Range expanded:");
-        int waitRange = _config.UnlockWaitTimer ? 1 : 0;
-        DrawEnumButtons("wait_range_v2", ref waitRange, new[] { "Default", "Expanded" }, idx =>
-        {
-            _config.UnlockWaitTimer = idx == 1;
-            _save();
-        });
+        DrawV3OnOff("Wait Range Expanded", "system_wait_range_expanded", ref _config.UnlockWaitTimer);
 
-        if (_config.HashedStats)
+        ImGui.TextUnformatted("Hashed Stats");
+        ImGui.SameLine(260f);
+        var hashedStats = _config.HashedStats;
+        if (BJBOnOffSwitch.Draw("system_hashed_stats", ref hashedStats))
         {
-            bool hashed = _config.HashedStats;
-            if (ImGui.Checkbox("Hashed Stats", ref hashed))
+            if (!hashedStats)
                 _openHashedStatsConfirm = true;
-        }
-        else
-        {
-            CheckSave("Hashed Stats", ref _config.HashedStats);
+            else
+            {
+                _config.HashedStats = true;
+                _save();
+            }
         }
 
         ImGui.Spacing();
@@ -889,20 +907,70 @@ public partial class BlackJackButtlerWindow
         }
     }
 
-    private void DrawEnumButtons(string id, ref int value, string[] labels, Action<int> onChanged)
+    private void DrawEnumButtons(string id, ref int value, string[] labels, Action<int> onChanged,
+        int separateBeforeIndex = -1, bool joined = true)
     {
+        if (!joined)
+        {
+            for (var index = 0; index < labels.Length; index++)
+            {
+                if (index > 0) ImGui.SameLine();
+                var active = value == index;
+                if (active) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1f, 0.5f, 0f, 1f));
+                if (BJBGui.Button($"{labels[index]}##{id}_{index}",
+                        active ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor))
+                {
+                    value = index;
+                    onChanged(index);
+                }
+                if (active) ImGui.PopStyleColor();
+            }
+            return;
+        }
+
+        var style = ImGui.GetStyle();
+        var height = ImGui.GetFrameHeight();
+        var rounding = Math.Min(Math.Max(4f, style.FrameRounding), height * 0.5f);
+        var drawList = ImGui.GetWindowDrawList();
+
         for (int i = 0; i < labels.Length; i++)
         {
-            if (i > 0) ImGui.SameLine();
-            bool active = value == i;
-            if (active) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1f, 0.5f, 0f, 1f));
-            if (BJBGui.Button($"{labels[i]}##{id}_{i}",
-                    active ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor))
+            var startsGroup = i == 0 || i == separateBeforeIndex;
+            var endsGroup = i == labels.Length - 1 || i == separateBeforeIndex - 1;
+            if (i > 0) ImGui.SameLine(0f, startsGroup ? style.ItemSpacing.X : 0f);
+
+            var textSize = ImGui.CalcTextSize(labels[i]);
+            var size = new Vector2(textSize.X + style.FramePadding.X * 2f, height);
+            var position = ImGui.GetCursorScreenPos();
+            var clicked = ImGui.InvisibleButton($"##{id}_{i}", size);
+            var hovered = ImGui.IsItemHovered();
+            var held = ImGui.IsItemActive();
+            var active = value == i;
+            var color = active
+                ? held
+                    ? new Vector4(0.9f, 0.4f, 0f, 1f)
+                    : hovered
+                        ? new Vector4(1f, 0.6f, 0.1f, 1f)
+                        : new Vector4(1f, 0.5f, 0f, 1f)
+                : style.Colors[(int)(held ? ImGuiCol.ButtonActive : hovered ? ImGuiCol.ButtonHovered : ImGuiCol.Button)];
+            var maximum = position + size;
+
+            drawList.AddRectFilled(position, maximum, ImGui.GetColorU32(color),
+                startsGroup || endsGroup ? rounding : 0f);
+            if (startsGroup && !endsGroup)
+                drawList.AddRectFilled(new Vector2(maximum.X - rounding, position.Y), maximum, ImGui.GetColorU32(color));
+            else if (!startsGroup && endsGroup)
+                drawList.AddRectFilled(position, new Vector2(position.X + rounding, maximum.Y), ImGui.GetColorU32(color));
+
+            var textPosition = position + (size - textSize) * 0.5f;
+            drawList.AddText(textPosition,
+                ImGui.GetColorU32(active ? BJBGui.OrangeHighlightTextColor : BJBGui.ButtonTextColor), labels[i]);
+
+            if (clicked && value != i)
             {
                 value = i;
                 onChanged(i);
             }
-            if (active) ImGui.PopStyleColor();
         }
     }
 
@@ -1140,7 +1208,7 @@ public partial class BlackJackButtlerWindow
     private void EnsureBetDraft()
     {
         if (_betDraftEntries != null) return;
-        _config.EnsureBetLimitEntriesMigration();
+        if (_config.EnsureBetLimitEntriesMigration()) _save();
         var source = _config.BetLimitEntries.Count > 0
             ? _config.BetLimitEntries
             : BuildBetEntriesFromLegacy();
@@ -1214,7 +1282,10 @@ public partial class BlackJackButtlerWindow
 
     private void DrawCommandSelector(string label, ref string value)
     {
-        ImGui.TextUnformatted(label);
+        ImGui.PushID(label);
+        var idSeparator = label.IndexOf("##", StringComparison.Ordinal);
+        var visibleLabel = idSeparator < 0 ? label : label[..idSeparator];
+        ImGui.TextUnformatted(visibleLabel);
         ImGui.SameLine(260f);
         var commands = _config.CommandGroups.Select(g => "Commands/" + g.Name)
             .Concat(_config.CustomCommandGroups.Select(g => "Custom Buttons/" + g.Name))
@@ -1233,6 +1304,7 @@ public partial class BlackJackButtlerWindow
             value = selected == 0 ? string.Empty : commands[selected - 1].Split('/').Last();
             _save();
         }
+        ImGui.PopID();
     }
 
     private void DrawSoundFileListV2()
@@ -1244,10 +1316,7 @@ public partial class BlackJackButtlerWindow
     {
         if (_config.EnsureNearbyAlertSoundEntriesMigration()) _save();
 
-        if (_config.MainViewVersion == 3)
-            DrawV3OnOff("Player entering area sound trigger", $"{id}_sound_enabled", ref _config.NearbyAlertEnabled);
-        else if (ImGui.Checkbox("Player entering area sound trigger", ref _config.NearbyAlertEnabled))
-            _save();
+        DrawV3OnOff("Player entering area sound trigger", $"{id}_sound_enabled", ref _config.NearbyAlertEnabled);
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip("Play a sound when a new player enters your nearby area.");
 

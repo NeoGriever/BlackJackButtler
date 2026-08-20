@@ -64,9 +64,6 @@ public partial class BlackJackButtlerWindow
 
             DrawSettingsTab_Sound(level);
 
-            DrawSettingsTab_Alliance();
-            DrawSettingsTab_PresetSetup();
-
             if (level >= (int)UserLevel.Advanced)
                 DrawSettingsTab_System(level);
 
@@ -123,11 +120,11 @@ public partial class BlackJackButtlerWindow
             ImGui.Spacing();
             ImGui.TextUnformatted("User Level");
             ImGui.SameLine(300f);
-            ImGui.SetNextItemWidth(200f);
-            if (BJBGui.Combo("##user_level", ref level, "Beginner\0Advanced\0Dev\0Custom\0")) {
+            DrawEnumButtons("user_level_v1", ref level, new[] { "Beginner", "Advanced", "Profi", "Custom" }, idx =>
+            {
                 _config.CurrentLevel = (UserLevel)level;
                 _save();
-            }
+            }, separateBeforeIndex: 3);
             if (_config.CurrentLevel == UserLevel.Custom)
             {
                 ImGui.SameLine();
@@ -145,26 +142,24 @@ public partial class BlackJackButtlerWindow
             ImGui.Spacing();
             ImGui.TextUnformatted("Main View");
             ImGui.SameLine(300f);
-            ImGui.SetNextItemWidth(200f);
             int mainViewIdx = _config.MainViewVersion switch { 2 => 1, 3 => 2, _ => 0 };
-            if (BJBGui.Combo("##main_view_version", ref mainViewIdx, "Classic\0Version 2\0Version 3\0"))
+            DrawEnumButtons("main_view_v1", ref mainViewIdx, new[] { "Classic", "Compacted", "Modern" }, idx =>
             {
                 _config.MainViewVersion = mainViewIdx + 1;
                 _save();
-            }
+            });
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Classic keeps the current main page layout.\nVersion 2 uses the reorganized main page.\nVersion 3 uses the new settings layout.");
 
             ImGui.Spacing();
             ImGui.TextUnformatted("Menu Style");
             ImGui.SameLine(300f);
-            ImGui.SetNextItemWidth(200f);
             int menuModeIdx = (int)_config.MenuStyle;
-            if (BJBGui.Combo("##menu_style", ref menuModeIdx, "Sidebar\0Burger Menu\0Top Tabs (experimental)\0"))
+            DrawEnumButtons("menu_style_v1", ref menuModeIdx, new[] { "Sidebar", "Burger", "Tabs" }, idx =>
             {
                 _config.MenuStyle = (MenuStyleMode)menuModeIdx;
                 _save();
-            }
+            });
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Sidebar: left navigation column.\nBurger Menu: compact top button with a popup.\nTop Tabs: page tabs across the top.");
 
@@ -182,7 +177,7 @@ public partial class BlackJackButtlerWindow
                 ImGui.SetTooltip("How Gil amounts are displayed in all Gil input fields.");
 
             ImGui.Spacing();
-            if (ImGui.Checkbox("Show Nearby Players", ref _config.ShowNearbyPlayers)) _save();
+            DrawV3OnOff("Show Nearby Players", "v1_nearby_enabled", ref _config.ShowNearbyPlayers, 300f);
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Show a list of nearby players below the player table.");
             if (_config.ShowNearbyPlayers)
@@ -196,11 +191,11 @@ public partial class BlackJackButtlerWindow
                     _save();
                 }
 
-                if (ImGui.Checkbox("Always show distance circle", ref _config.NearbyAlwaysShowCircle)) _save();
+                DrawV3OnOff("Always show distance circle", "v1_nearby_always_show", ref _config.NearbyAlwaysShowCircle, 300f);
                 if (ImGui.IsItemHovered())
-                    ImGui.SetTooltip("Show the distance circle permanently when Group Detector is active.\nOtherwise only visible when hovering the distance slider.");
+                    ImGui.SetTooltip("Show the configured Nearby range permanently.\nOtherwise it is only visible while hovering the distance slider.");
 
-                DrawCommandSelector("Nearby ? Command", ref _config.NearbyQuestionCommandName);
+                DrawPartyNearbyJCommandSelector(300f);
             }
 
             ImGui.EndTabItem();
@@ -221,11 +216,10 @@ public partial class BlackJackButtlerWindow
             ImGui.Separator();
 
             ImGui.Spacing();
-            DrawV3RuleActionButton("First Deal, then play", "v1_first_deal", ref _config.FirstDealThenPlay);
-            if (ImGui.IsItemHovered()) ImGui.SetTooltip("Active: First deal every player their hands.\nInactive: Deal hand and direct play per player.");
+            DrawDealingOrderSelector("v1_dealing_order", 300f);
 
             ImGui.Spacing();
-            DrawV3RuleActionButton("Player self-rolling", "v1_self_rolling", ref _config.PlayerRollingForThemselves);
+            DrawV3OnOff("Player Self Rolling", "v1_self_rolling", ref _config.PlayerRollingForThemselves, 300f);
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Players roll their own required cards with a 13-sided dice. Dealer rolls are unchanged.");
 
             ImGui.Spacing();
@@ -242,12 +236,13 @@ public partial class BlackJackButtlerWindow
 
             ImGui.Spacing();
             int bjTieRule = (int)_config.BlackjackTieRule;
-            ImGui.SetNextItemWidth(250f);
-            if (BJBGui.Combo("BJ Tie Rule##bj_tie_rule", ref bjTieRule, "Always Push\0Player NatBJ Wins\0Dealer NatBJ Wins\0NatBJ Beats Dirty\0"))
+            ImGui.TextUnformatted("BlackJack Priority");
+            ImGui.SameLine(300f);
+            DrawEnumButtons("bj_priority_v1", ref bjTieRule, new[] { "Push", "Player", "Dealer", "Regular" }, idx =>
             {
                 _config.BlackjackTieRule = (BlackjackTieRule)bjTieRule;
                 _save();
-            }
+            });
             if (ImGui.IsItemHovered()) ImGui.SetTooltip("Determines the outcome when both player and dealer have 21:\n- Always Push: Any 21 tie is a push.\n- Player NatBJ Wins: Player's Natural BJ wins the tie.\n- Dealer NatBJ Wins: Dealer's Natural BJ wins the tie.\n- NatBJ Beats Dirty: Natural BJ beats Dirty 21, same type pushes.");
 
             ImGui.Spacing();
@@ -512,7 +507,7 @@ public partial class BlackJackButtlerWindow
             }
 
             ImGui.Spacing();
-            DrawV3RuleActionButton("Hide card suits", "v1_hide_suits", ref _config.HideCardSuits);
+            DrawV3OnOff("Hide Card Suits", "v1_hide_suits", ref _config.HideCardSuits, 300f);
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Hide suit icons from card display.\nCards show only their value (A, 2-10, J, Q, K).");
 
@@ -688,11 +683,11 @@ public partial class BlackJackButtlerWindow
 
             ImGui.TextUnformatted("Transparent Background");
             ImGui.SameLine(300f);
-            if (ImGui.Checkbox("##bar_nobg", ref _config.ButtonBarNoBackground)) _save();
+            if (BJBOnOffSwitch.Draw("v1_visual_bar_no_background", ref _config.ButtonBarNoBackground)) _save();
 
             ImGui.TextUnformatted("Lock Position");
             ImGui.SameLine(300f);
-            if (ImGui.Checkbox("##bar_lock", ref _config.ButtonBarLocked)) _save();
+            if (BJBOnOffSwitch.Draw("v1_visual_bar_lock", ref _config.ButtonBarLocked)) _save();
 
             ImGui.EndTabItem();
         }
@@ -755,12 +750,14 @@ public partial class BlackJackButtlerWindow
         {
             ImGui.Spacing();
 
-            if (ImGui.Checkbox("Disable update popup", ref _config.DisableUpdatePopup)) _save();
+            DrawV3OnOff("Disable Update Popup", "v1_system_disable_update_popup", ref _config.DisableUpdatePopup);
             if (BJBGui.Button("Open Changelog"))
                 Plugin.Instance.OpenChangelog();
-            if (ImGui.Checkbox("Hide Thanks page", ref _config.HideThanksPage)) _save();
+            DrawV3OnOff("Hide Thanks page", "v1_system_hide_thanks", ref _config.HideThanksPage);
             var allowZeroBet = GameEngine.AllowZeroBetForSession;
-            if (ImGui.Checkbox("Allow 0 bet", ref allowZeroBet))
+            ImGui.TextUnformatted("Allow 0 bet");
+            ImGui.SameLine(300f);
+            if (BJBOnOffSwitch.Draw("v1_system_allow_zero_bet", ref allowZeroBet))
                 GameEngine.AllowZeroBetForSession = allowZeroBet;
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Session-only setting. Resets to disabled when the plugin reloads.");
@@ -830,11 +827,11 @@ public partial class BlackJackButtlerWindow
             {
                 ImGui.Spacing();
                 ImGui.Spacing();
-                ImGui.TextUnformatted("Wait Timer");
+                ImGui.TextUnformatted("Wait Range Expanded");
                 ImGui.Separator();
 
                 bool unlockWait = _config.UnlockWaitTimer;
-                if (ImGui.Checkbox("Unlock wait timer##dev_unlock_wait", ref unlockWait))
+                if (BJBOnOffSwitch.Draw("v1_system_wait_range_expanded", ref unlockWait))
                 {
                     _config.UnlockWaitTimer = unlockWait;
                     if (!unlockWait)
@@ -857,7 +854,7 @@ public partial class BlackJackButtlerWindow
                 {
                     if (!keysDown) ImGui.BeginDisabled();
                     bool hashedVal = _config.HashedStats;
-                    if (ImGui.Checkbox("Hashed Stats##dev_hashed_stats", ref hashedVal))
+                    if (BJBOnOffSwitch.Draw("v1_system_hashed_stats", ref hashedVal))
                     {
                         _config.HashedStats = true;
                         _openHashedStatsConfirm = true;
@@ -872,7 +869,7 @@ public partial class BlackJackButtlerWindow
                 else
                 {
                     bool hashedVal = _config.HashedStats;
-                    if (ImGui.Checkbox("Hashed Stats##dev_hashed_stats", ref hashedVal))
+                    if (BJBOnOffSwitch.Draw("v1_system_hashed_stats", ref hashedVal))
                     {
                         _config.HashedStats = true;
                         _save();
@@ -1008,6 +1005,7 @@ public partial class BlackJackButtlerWindow
         TryApply<bool>  (j, "ShowNearbyPlayers",                      v => _config.ShowNearbyPlayers = v);
         TryApply<bool>  (j, "NearbySticky",                           v => _config.NearbySticky = v);
         TryApply<int>   (j, "NearbyColumns",                          v => _config.NearbyColumns = v);
+        TryApply<PartyNearbyJCommandMode>(j, "PartyNearbyJCommand",   v => _config.PartyNearbyJCommand = v);
         TryApply<string>(j, "NearbyQuestionCommandName",              v => _config.NearbyQuestionCommandName = v);
         TryApply<bool>  (j, "NoAutoDequeue",                          v => _config.NoAutoDequeue = v);
         TryApply<bool>  (j, "NearbyShowFootNumbers",                  v => _config.NearbyShowFootNumbers = v);

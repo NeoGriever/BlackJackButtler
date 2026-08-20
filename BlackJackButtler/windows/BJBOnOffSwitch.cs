@@ -16,20 +16,23 @@ internal static class BJBOnOffSwitch
     private static readonly Vector4 SelectedActive = new(0.9f, 0.4f, 0f, 1f);
 
     public static bool Draw(string id, ref bool value, float halfWidth = 54f)
+        => Draw(id, ref value, "On", "Off", halfWidth);
+
+    public static bool Draw(string id, ref bool value, string trueLabel, string falseLabel, float halfWidth = 54f)
     {
         var selected = value;
         var style = ImGui.GetStyle();
         var size = new Vector2(Math.Max(1f, halfWidth), ImGui.GetFrameHeight());
 
         var onPosition = ImGui.GetCursorScreenPos();
-        var selectOn = ImGui.InvisibleButton($"On##{id}", size);
+        var selectOn = ImGui.InvisibleButton($"##{id}_true", size);
         var onHovered = ImGui.IsItemHovered();
         var onActive = ImGui.IsItemActive();
 
         // Zero spacing joins the halves. No border is drawn along this inner edge.
         ImGui.SameLine(0f, 0f);
         var offPosition = ImGui.GetCursorScreenPos();
-        var selectOff = ImGui.InvisibleButton($"Off##{id}", size);
+        var selectOff = ImGui.InvisibleButton($"##{id}_false", size);
         var offHovered = ImGui.IsItemHovered();
         var offActive = ImGui.IsItemActive();
 
@@ -37,8 +40,8 @@ internal static class BJBOnOffSwitch
         var rounding = Math.Min(Math.Max(4f, style.FrameRounding), Math.Min(size.X, size.Y) * 0.5f);
         DrawHalf(drawList, onPosition, size, true, GetColor(selected, onHovered, onActive, style), rounding);
         DrawHalf(drawList, offPosition, size, false, GetColor(!selected, offHovered, offActive, style), rounding);
-        DrawCenteredText(drawList, onPosition, size, "On", selected);
-        DrawCenteredText(drawList, offPosition, size, "Off", !selected);
+        DrawCenteredText(drawList, onPosition, size, trueLabel, selected);
+        DrawCenteredText(drawList, offPosition, size, falseLabel, !selected);
 
         var next = selectOn ? true : selectOff ? false : selected;
         if (next == selected) return false;

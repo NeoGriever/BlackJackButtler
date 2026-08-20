@@ -101,9 +101,7 @@ public partial class BlackJackButtlerWindow
         DrawSettingsV3Tab(4, "Time & Delay", DrawSettingsV3TimeDelay);
         DrawSettingsV3Tab(5, "Nearby Players", DrawSettingsV3Nearby);
         DrawSettingsV3Tab(6, "Visual", DrawSettingsV2Visual);
-        DrawSettingsV3Tab(7, "Alliance", DrawSettingsAllianceBody);
-        DrawSettingsV3Tab(8, "Preset Setup", DrawSettingsPresetSetupBody);
-        DrawSettingsV3Tab(9, "System", () => DrawSettingsV2System(level));
+        DrawSettingsV3Tab(7, "System", () => DrawSettingsV2System(level));
 
         ImGui.EndTabBar();
     }
@@ -122,16 +120,16 @@ public partial class BlackJackButtlerWindow
     private void DrawSettingsV3General(int level)
     {
         ImGui.TextUnformatted("User Level");
-        DrawEnumButtons("user_level_v3", ref level, new[] { "Beginner", "Advanced", "Dev", "Custom" }, idx =>
+        DrawEnumButtons("user_level_v3", ref level, new[] { "Beginner", "Advanced", "Profi", "Custom" }, idx =>
         {
             _config.CurrentLevel = (UserLevel)idx;
             _save();
-        });
+        }, separateBeforeIndex: 3);
 
         ImGui.Spacing();
         ImGui.TextUnformatted("Main View");
         var mainView = 2;
-        DrawEnumButtons("main_view_v3", ref mainView, new[] { "Classic", "Version 2", "Version 3" }, idx =>
+        DrawEnumButtons("main_view_v3", ref mainView, new[] { "Classic", "Compacted", "Modern" }, idx =>
         {
             _config.MainViewVersion = idx + 1;
             _save();
@@ -154,7 +152,7 @@ public partial class BlackJackButtlerWindow
         {
             _config.GilVisual = (GilVisualMode)idx;
             _save();
-        });
+        }, joined: false);
         ImGui.PopFont();
     }
 
@@ -169,7 +167,7 @@ public partial class BlackJackButtlerWindow
             Plugin.Instance.ResetAutoActionState(cancelCurrentGroup: !enabled);
         }, drawAfter: () =>
         {
-            if (BJBGui.Button("Insert regular Regex entries"))
+            if (BJBGui.Button("Create standard Automation Regex Entries"))
                 InsertRegularGameplayRegexEntries();
         });
 
@@ -307,11 +305,11 @@ public partial class BlackJackButtlerWindow
         Header("Dealing Behavior");
         Indent(() =>
         {
-            DrawV3RuleActionButton("First Deal, then play", "first_deal", ref _config.FirstDealThenPlay);
-            DrawV3RuleActionButton("Player self-rolling", "self_rolling", ref _config.PlayerRollingForThemselves);
+            DrawDealingOrderSelector("v3_dealing_order");
+            DrawV3OnOff("Player Self Rolling", "self_rolling", ref _config.PlayerRollingForThemselves);
             if (ImGui.IsItemHovered())
                 ImGui.SetTooltip("Players roll their own required cards with /dice 13, /dice alliance 13, or the native /random command.\nDealer rolls are unchanged.");
-            DrawV3RuleActionButton("Hide card suits", "hide_suits", ref _config.HideCardSuits);
+            DrawV3OnOff("Hide Card Suits", "hide_suits", ref _config.HideCardSuits);
         });
 
         Header("Dealer Rules");
@@ -339,9 +337,9 @@ public partial class BlackJackButtlerWindow
             Indent(() =>
             {
                 var tie = (int)_config.BlackjackTieRule;
-                ImGui.TextUnformatted("BlackJack Tie Rule");
+                ImGui.TextUnformatted("BlackJack Priority");
                 ImGui.SameLine(260f);
-                DrawEnumButtons("bj_tie_v3", ref tie, new[] { "Push", "Player Nat BJ wins", "Dealer Nat BJ wins", "NatBJ > DirtyBJ" }, idx =>
+                DrawEnumButtons("bj_tie_v3", ref tie, new[] { "Push", "Player", "Dealer", "Regular" }, idx =>
                 {
                     _config.BlackjackTieRule = (BlackjackTieRule)idx;
                     _save();
@@ -408,6 +406,8 @@ public partial class BlackJackButtlerWindow
     {
         ImGui.TextUnformatted("Allow TD only with");
         ImGui.SameLine(260f);
+        if (BJBOnOffSwitch.Draw("v3_triple_down_point_limit", ref _config.LimitTripleDownToMaxPoints)) _save();
+        ImGui.SameLine();
         ImGui.SetNextItemWidth(90f);
         if (BJBGui.InputInt("##v3_triple_down_max_points", ref _config.TripleDownMaxPoints, 1, defaultValue: 10))
         {
@@ -416,14 +416,24 @@ public partial class BlackJackButtlerWindow
         }
         ImGui.SameLine();
         ImGui.TextUnformatted("Points or less");
-        ImGui.SameLine();
-        if (BJBOnOffSwitch.Draw("v3_triple_down_point_limit", ref _config.LimitTripleDownToMaxPoints)) _save();
     }
 
-    private void DrawV3OnOff(string label, string id, ref bool value)
+    private void DrawDealingOrderSelector(string id, float labelColumn = 260f)
+    {
+        ImGui.TextUnformatted("Dealing order");
+        ImGui.SameLine(labelColumn);
+        var individual = !_config.FirstDealThenPlay;
+        if (BJBOnOffSwitch.Draw(id, ref individual, "Individual", "Party", 68f))
+        {
+            _config.FirstDealThenPlay = !individual;
+            _save();
+        }
+    }
+
+    private void DrawV3OnOff(string label, string id, ref bool value, float labelColumn = 260f)
     {
         ImGui.TextUnformatted(label);
-        ImGui.SameLine(260f);
+        ImGui.SameLine(labelColumn);
         if (BJBOnOffSwitch.Draw($"v3_{id}", ref value)) _save();
     }
 
@@ -486,35 +496,37 @@ public partial class BlackJackButtlerWindow
                 if (BJBOnOffSwitch.Draw("active", ref entry.Active, 48f)) CommitV3BetEntries();
 
                 ImGui.TableNextColumn();
-                var kind = entry.Kind switch
+                if (entry.Kind == BetLimitEntryKind.MinBet)
                 {
-                    BetLimitEntryKind.MinBet => 0,
-                    BetLimitEntryKind.Normal => 1,
-                    _ => 2,
-                };
-                if (entry.Kind == BetLimitEntryKind.MinBet) ImGui.BeginDisabled();
-                // Grow from the original ImGui control width, rather than from
-                // the table column width, so the visual gain is exactly 36 px.
-                var kindComboWidth = ImGui.CalcItemWidth() + 36f;
-                ImGui.SetNextItemWidth(kindComboWidth);
-                if (BJBGui.Combo("##kind", ref kind, "Minimum\0Normal\0VIP\0", kindComboWidth))
-                {
-                    entry.Kind = kind switch
-                    {
-                        0 => BetLimitEntryKind.MinBet,
-                        1 => BetLimitEntryKind.Normal,
-                        _ => BetLimitEntryKind.Vip,
-                    };
-                    if (entry.Kind != BetLimitEntryKind.Vip) entry.VipLevel = 0;
-                    entry.Name = entry.Kind switch
-                    {
-                        BetLimitEntryKind.MinBet => "Min",
-                        BetLimitEntryKind.Normal => "Max",
-                        _ => string.IsNullOrWhiteSpace(entry.Name) ? "VIP" : entry.Name,
-                    };
-                    CommitV3BetEntries();
+                    ImGui.TextDisabled("Minimum");
                 }
-                if (entry.Kind == BetLimitEntryKind.MinBet) ImGui.EndDisabled();
+                else
+                {
+                    var normal = entry.Kind == BetLimitEntryKind.Normal;
+                    var previousVipLevel = entry.VipLevel;
+                    if (BJBOnOffSwitch.Draw("kind", ref normal, "NRM", "VIP", 42f))
+                    {
+                        if (normal)
+                        {
+                            var previousDefault = GetDefaultVipName(previousVipLevel);
+                            entry.Kind = BetLimitEntryKind.Normal;
+                            entry.VipLevel = 0;
+                            if (string.IsNullOrWhiteSpace(entry.Name)
+                                || entry.Name.Equals("VIP", StringComparison.OrdinalIgnoreCase)
+                                || entry.Name.Equals(previousDefault, StringComparison.OrdinalIgnoreCase))
+                                entry.Name = "Max";
+                        }
+                        else
+                        {
+                            entry.Kind = BetLimitEntryKind.Vip;
+                            entry.VipLevel = GetNextVipLevel(_config.BetLimitEntries);
+                            if (string.IsNullOrWhiteSpace(entry.Name)
+                                || entry.Name.Equals("Max", StringComparison.OrdinalIgnoreCase))
+                                entry.Name = GetDefaultVipName(entry.VipLevel);
+                        }
+                        CommitV3BetEntries();
+                    }
+                }
 
                 ImGui.TableNextColumn();
                 if (entry.Kind != BetLimitEntryKind.Vip)
@@ -569,19 +581,7 @@ public partial class BlackJackButtlerWindow
 
         if (BJBGui.Button("Add Entry##v3_add_bet_entry"))
         {
-            var nextVipLevel = Math.Max(1, _config.BetLimitEntries
-                .Where(entry => entry.Kind == BetLimitEntryKind.Vip)
-                .Select(entry => entry.VipLevel)
-                .DefaultIfEmpty(0)
-                .Max() + 1);
-            _config.BetLimitEntries.Add(new BetLimitEntry
-            {
-                Active = false,
-                Kind = BetLimitEntryKind.Vip,
-                VipLevel = nextVipLevel,
-                Name = "VIP",
-                Amount = _config.MaxBet,
-            });
+            _config.BetLimitEntries.Add(CreateNextBetLimitEntry(_config.BetLimitEntries));
             CommitV3BetEntries();
         }
 
@@ -663,6 +663,7 @@ public partial class BlackJackButtlerWindow
 
     private void CommitV3BetEntries()
     {
+        _config.EnsureBetLimitEntriesMigration();
         var minimum = _config.BetLimitEntries.FirstOrDefault(entry => entry.Kind == BetLimitEntryKind.MinBet);
         if (minimum == null)
         {
@@ -695,6 +696,47 @@ public partial class BlackJackButtlerWindow
         _betDraftEntries = null;
         _save();
     }
+
+    private BetLimitEntry CreateNextBetLimitEntry(IReadOnlyCollection<BetLimitEntry> entries)
+    {
+        if (entries.Count == 0)
+        {
+            return new BetLimitEntry
+            {
+                Active = true,
+                Kind = BetLimitEntryKind.MinBet,
+                Name = "Min",
+                Amount = _config.MinBet,
+            };
+        }
+
+        if (entries.Count == 1)
+        {
+            return new BetLimitEntry
+            {
+                Active = false,
+                Kind = BetLimitEntryKind.Normal,
+                Name = "Max",
+                Amount = _config.MaxBet,
+            };
+        }
+
+        var nextVipLevel = GetNextVipLevel(entries);
+        return new BetLimitEntry
+        {
+            Active = false,
+            Kind = BetLimitEntryKind.Vip,
+            VipLevel = nextVipLevel,
+            Name = GetDefaultVipName(nextVipLevel),
+            Amount = _config.MaxBet,
+        };
+    }
+
+    private static int GetNextVipLevel(IEnumerable<BetLimitEntry> entries) => Math.Max(1, entries
+        .Where(entry => entry.Kind == BetLimitEntryKind.Vip)
+        .Select(entry => entry.VipLevel)
+        .DefaultIfEmpty(0)
+        .Max() + 1);
 
     private string GetNextV3BettingPresetName()
     {
@@ -731,7 +773,8 @@ public partial class BlackJackButtlerWindow
         ImGui.Spacing();
 
         var filter = _v3TimeZoneFilter.Trim();
-        if (ImGui.BeginChild("##v3_timezone_list", new Vector2(0, 270f), true))
+        if (ImGui.BeginChild("##v3_timezone_list", new Vector2(0, 270f), true,
+                ImGuiWindowFlags.HorizontalScrollbar))
         {
             var lastOffset = int.MinValue;
             foreach (var option in TimeZoneOptions.Where(option => string.IsNullOrWhiteSpace(filter)
@@ -746,6 +789,7 @@ public partial class BlackJackButtlerWindow
                         ImGui.Spacing();
                     }
                     ImGui.TextDisabled(FormatUtcOffset(option.OffsetMinutes));
+                    ImGui.SameLine();
                     lastOffset = option.OffsetMinutes;
                 }
 
@@ -762,8 +806,7 @@ public partial class BlackJackButtlerWindow
                 }
 
                 if (selected) ImGui.PopStyleColor();
-                if (ImGui.GetContentRegionAvail().X > ImGui.CalcTextSize(option.Name).X + 30f)
-                    ImGui.SameLine();
+                ImGui.SameLine();
             }
         }
         ImGui.EndChild();

@@ -13,81 +13,8 @@ public partial class BlackJackButtlerWindow
     private void DrawRegexPage()
     {
         ImGui.TextUnformatted("Regular Expressions");
-        ImGui.SameLine();
-
-        var allow = _config.AllowEditingStandardRegex;
-        if (ImGui.Checkbox("Allow editing standard", ref allow))
-        {
-            if (allow && !_config.AllowEditingStandardRegex)
-            {
-                _showRegexWarningPopup = true;
-                ImGui.OpenPopup("bjb.regex.warning");
-            }
-            else if (!allow && _config.AllowEditingStandardRegex)
-            {
-                _config.AllowEditingStandardRegex = false;
-                _save();
-            }
-        }
-
-        ImGui.SameLine();
-        var io = ImGui.GetIO();
-        bool keysDown = io.KeyCtrl && io.KeyShift;
-
-        if (!keysDown) ImGui.BeginDisabled();
-        if (keysDown) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
-
-        if (BJBGui.Button("Hard Reset Trade-Regex##regex_hard_reset"))
-        {
-            _openRegexResetPopup = true;
-            ImGui.OpenPopup("bjb.regex.hardreset.confirm");
-        }
-
-        if (keysDown) ImGui.PopStyleColor();
-        if (!keysDown)
-        {
-            ImGui.EndDisabled();
-            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                ImGui.SetTooltip("Hold CTRL + SHIFT to unlock this reset button.");
-        }
-
-        if (ImGui.BeginPopupModal("bjb.regex.hardreset.confirm", ref _openRegexResetPopup, ImGuiWindowFlags.AlwaysAutoResize))
-        {
-            ImGui.TextColored(new Vector4(1, 0, 0, 1), "WARNING: HARD RESET REGEX");
-            ImGui.TextUnformatted("This will delete all standard trade-related regex entries and recreate them from defaults.");
-            ImGui.TextUnformatted("Your custom manually created regex entries will not be affected.");
-            ImGui.Spacing();
-
-            if (BJBGui.Button("Yes", new Vector2(180, 0)))
-            {
-                _config.ForceResetStandardRegexes();
-                _save();
-                _openRegexResetPopup = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.SameLine();
-            if (BJBGui.Button("Cancel", new Vector2(120, 0)))
-            {
-                _openRegexResetPopup = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.EndPopup();
-        }
-
-        DrawRegexWarningPopup();
-
         ImGui.Separator();
-
-        if (BJBGui.Button("+ Add Custom Regex Entry"))
-        {
-            _config.UserRegexes.Add(new UserRegexEntry { Name = "New User Regex" });
-            _save();
-        }
-
-        ImGui.SameLine();
-        BJBGui.DrawFilterBar("regex", ref _filterRegex, "Search regex name or pattern...");
-
-        ImGui.Spacing();
+        var io = ImGui.GetIO();
 
         var standardIndices = _config.UserRegexes
             .Select((entry, index) => (entry, index))
@@ -102,8 +29,13 @@ public partial class BlackJackButtlerWindow
 
         if (ImGui.BeginTabBar("##regex_entry_tabs"))
         {
-            if (ImGui.BeginTabItem("Standard Regex Entries"))
+            if (ImGui.BeginTabItem("Standard"))
             {
+                BJBGui.DrawFilterBar("regex_standard", ref _filterRegex, "Search regex name or pattern...");
+                ImGui.SameLine();
+                DrawRegexHardResetButton(io.KeyCtrl && io.KeyShift);
+                DrawAllowEditingStandardRegex();
+                ImGui.Spacing();
                 foreach (var index in standardIndices)
                 {
                     if (DrawRegexEntry(index, true, -1, customIndices))
@@ -112,8 +44,16 @@ public partial class BlackJackButtlerWindow
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("Custom Regex Entries"))
+            if (ImGui.BeginTabItem("Custom"))
             {
+                BJBGui.DrawFilterBar("regex_custom", ref _filterRegex, "Search regex name or pattern...");
+                ImGui.SameLine();
+                if (BJBGui.Button("+ Add Custom Regex Entry"))
+                {
+                    _config.UserRegexes.Add(new UserRegexEntry { Name = "New User Regex" });
+                    _save();
+                }
+                ImGui.Spacing();
                 if (customIndices.Count == 0)
                 {
                     ImGui.TextDisabled("No custom regex entries.");
@@ -132,6 +72,73 @@ public partial class BlackJackButtlerWindow
 
             ImGui.EndTabBar();
         }
+
+        DrawRegexHardResetPopup();
+        DrawRegexWarningPopup();
+    }
+
+    private void DrawAllowEditingStandardRegex()
+    {
+        var allow = _config.AllowEditingStandardRegex;
+        if (!ImGui.Checkbox("Allow editing standard", ref allow)) return;
+
+        if (allow && !_config.AllowEditingStandardRegex)
+        {
+            _showRegexWarningPopup = true;
+            ImGui.OpenPopup("bjb.regex.warning");
+        }
+        else if (!allow && _config.AllowEditingStandardRegex)
+        {
+            _config.AllowEditingStandardRegex = false;
+            _save();
+        }
+    }
+
+    private void DrawRegexHardResetButton(bool unlocked)
+    {
+        if (!unlocked) ImGui.BeginDisabled();
+        if (unlocked) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
+
+        if (BJBGui.Button("Hard Reset Trade-Regex##regex_hard_reset"))
+        {
+            _openRegexResetPopup = true;
+            ImGui.OpenPopup("bjb.regex.hardreset.confirm");
+        }
+
+        if (unlocked) ImGui.PopStyleColor();
+        if (!unlocked)
+        {
+            ImGui.EndDisabled();
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                ImGui.SetTooltip("Hold CTRL + SHIFT to unlock this reset button.");
+        }
+    }
+
+    private void DrawRegexHardResetPopup()
+    {
+        if (!ImGui.BeginPopupModal("bjb.regex.hardreset.confirm", ref _openRegexResetPopup,
+                ImGuiWindowFlags.AlwaysAutoResize))
+            return;
+
+        ImGui.TextColored(new Vector4(1, 0, 0, 1), "WARNING: HARD RESET REGEX");
+        ImGui.TextUnformatted("This will delete all standard trade-related regex entries and recreate them from defaults.");
+        ImGui.TextUnformatted("Your custom manually created regex entries will not be affected.");
+        ImGui.Spacing();
+
+        if (BJBGui.Button("Yes", new Vector2(180, 0)))
+        {
+            _config.ForceResetStandardRegexes();
+            _save();
+            _openRegexResetPopup = false;
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.SameLine();
+        if (BJBGui.Button("Cancel", new Vector2(120, 0)))
+        {
+            _openRegexResetPopup = false;
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.EndPopup();
     }
 
     private bool DrawRegexEntry(int i, bool isStd, int customOrderIndex, System.Collections.Generic.List<int> customIndices)

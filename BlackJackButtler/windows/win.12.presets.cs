@@ -46,7 +46,7 @@ public partial class BlackJackButtlerWindow
     };
     private static readonly string[] SettingsNearbyPlayersFields = {
         "NearbyAlertEnabled", "NearbyAlertSoundFiles", "NearbyAlertSoundEntries", "NearbyAlertSoundEntriesMigrated", "NearbyAlertVolume", "NearbyAlertCooldown",
-        "NearbyAlertSoundMode", "NearbyAlwaysShowCircle", "NearbyQuestionCommandName",
+        "NearbyAlertSoundMode", "NearbyAlwaysShowCircle", "PartyNearbyJCommand", "NearbyQuestionCommandName",
         "NearbyShowFootNumbers", "NearbyOffsetX", "NearbyOffsetZ", "NearbyShape",
         "NearbyRectangleAspectRatio", "NearbyRectangleRotation", "NearbyUseFixedPosition",
         "NearbyFixedCenterX", "NearbyFixedCenterY", "NearbyFixedCenterZ", "NearbyFixedCenterCaptured",
@@ -113,6 +113,7 @@ public partial class BlackJackButtlerWindow
     private void DrawPresetsPage()
     {
         _presetNavHoverPage = null;
+        EnsureDefaultPresetDefinitions();
 
         // Migration-Trigger
         if (_config.Presets.Count > 0 && !_config.PresetsMigrated && !_presetMigrationPending)
@@ -233,6 +234,14 @@ public partial class BlackJackButtlerWindow
         {
             ImGui.SameLine();
             if (ImGui.Button("Export All")) ExportAllPresets();
+        }
+        if (!HasAllDefaultPresets())
+        {
+            ImGui.SameLine();
+            ImGui.TextDisabled("|");
+            ImGui.SameLine();
+            if (ImGui.Button("Create Default Presets"))
+                CreateMissingDefaultPresets();
         }
 
         ImGui.Spacing();
@@ -1429,6 +1438,7 @@ public partial class BlackJackButtlerWindow
             _config.NearbyAlertCooldown         = snap.NearbyAlertCooldown;
             _config.NearbyAlertSoundMode        = snap.NearbyAlertSoundMode;
             _config.NearbyAlwaysShowCircle      = snap.NearbyAlwaysShowCircle;
+            _config.PartyNearbyJCommand         = snap.PartyNearbyJCommand;
             _config.NearbyQuestionCommandName   = snap.NearbyQuestionCommandName;
             _config.NearbyShowFootNumbers       = snap.NearbyShowFootNumbers;
             _config.NearbyOffsetX               = snap.NearbyOffsetX;
