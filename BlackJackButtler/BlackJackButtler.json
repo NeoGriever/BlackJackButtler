@@ -4,12 +4,12 @@
     "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
     "Description": "/bjb - opens the blackjack buttler tool",
     "InternalName": "BlackJackButtler",
-    "AssemblyVersion": "1.9.0.2",
+    "AssemblyVersion": "1.9.0.3",
     "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "TestingDalamudApiLevel": 15,
     "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/BlackJackButtler/images/icon.png",
     "Tags": ["BlackJack", "Helper", "Chat"],
-    "Changelog": "Version 1.9.0.2\n\n- Announced the planned retirement of Classic and Version 2 views in favor of Version 3.\n- Restored Auto Continue's minimum-player setting with migration from the previous 2-player option.\n\nSee changelog.md or the in-game Changelog dialog for complete details."
+    "Changelog": "Version 1.9.0.3\n\n- Fixed persistent Nearby range rendering, including off-screen rectangle edges.\n- Reworked Betting entry types and repaired duplicate Minimum entries.\n- Consolidated Rules, General, Visual, System, Alliance, Preset, Time Zone, and Sound controls.\n\nSee changelog.md or the in-game Changelog dialog for complete details."
 }

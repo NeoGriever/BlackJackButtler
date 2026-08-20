@@ -47,7 +47,11 @@ public partial class BlackJackButtlerWindow
         if (ImGui.IsItemHovered())
             ImGui.SetTooltip(_nearbyListVisible ? "Click to hide nearby players" : "Click to show nearby players");
         DrawNearbySettingsWindow();
-        if (!_nearbyListVisible) return;
+        if (!_nearbyListVisible)
+        {
+            DrawDistanceCircle();
+            return;
+        }
         ImGui.SameLine();
 
         var allianceMode = GroupContextManager.IsAllianceMode(_config);
@@ -62,9 +66,12 @@ public partial class BlackJackButtlerWindow
         ImGui.TextColored(NearbyColorWorld, "(click name to /tell)");
         if (!version2)
         {
-            ImGui.SameLine(ImGui.GetContentRegionAvail().X - 50f);
-            if (ImGui.Checkbox("Sticky", ref _config.NearbySticky)) _save();
+            ImGui.SameLine();
+            ImGui.TextUnformatted("Sticky");
+            ImGui.SameLine();
+            if (BJBOnOffSwitch.Draw("nearby_sticky", ref _config.NearbySticky, 34f)) _save();
 
+            ImGui.SameLine();
             if (BJBGui.SmallButton("CFG##nearby_settings"))
                 _showNearbySettingsWindow = true;
             if (ImGui.IsItemHovered())
@@ -168,8 +175,10 @@ public partial class BlackJackButtlerWindow
 
                 ImGui.PushID($"nearby_{i}");
 
+                var drewJoinButton = false;
                 if (isQueued)
                 {
+                    drewJoinButton = true;
                     var entry = JoinQueueManager.Queue.FirstOrDefault(e => e.FullKey == p.FullKey);
                     if (entry?.OutOfRangeSince != null)
                     {
@@ -194,6 +203,7 @@ public partial class BlackJackButtlerWindow
                 {
                     if (allianceMode)
                     {
+                        drewJoinButton = true;
                         var canRun = !string.IsNullOrWhiteSpace(_config.AllianceNearbyCommandName)
                             && !GameActionQueueManager.IsBusy;
                         if (!canRun) ImGui.BeginDisabled();
@@ -202,11 +212,12 @@ public partial class BlackJackButtlerWindow
                         if (!canRun) ImGui.EndDisabled();
                         if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                             ImGui.SetTooltip(string.IsNullOrWhiteSpace(_config.AllianceNearbyCommandName)
-                                ? "Select an Alliance Nearby J Command under Settings > Alliance"
+                                ? "Select an Alliance Nearby J Command in the Nearby Players CFG window"
                                 : $"Run {_config.AllianceNearbyCommandName} for {p.FullKey}");
                     }
-                    else
+                    else if (_config.PartyNearbyJCommand == PartyNearbyJCommandMode.PartyInvite)
                     {
+                        drewJoinButton = true;
                         if (partyFull) ImGui.BeginDisabled();
                         if (BJBGui.SmallButton($"J##nearby_join_{i}"))
                             JoinQueueManager.Enqueue(p.Name, p.World);
@@ -214,24 +225,13 @@ public partial class BlackJackButtlerWindow
                     }
                 }
 
-                ImGui.SameLine(0, 4);
+                if (drewJoinButton)
+                    ImGui.SameLine(0, 4);
 
                 if (version2)
                 {
                     ImGui.TextColored(new Vector4(1f, 0.85f, 0.25f, 1f), $"{NearbyNumberManager.GetNumber(p.FullKey),2}");
                     if (ImGui.IsItemHovered()) ImGui.SetTooltip("Stable nearby number");
-                    ImGui.SameLine(0, 4);
-                }
-
-                if (version2 && !string.IsNullOrWhiteSpace(_config.NearbyQuestionCommandName))
-                {
-                    bool canRunQuestion = !GameActionQueueManager.IsBusy && !CommandExecutor.IsRunning;
-                    if (!canRunQuestion) ImGui.BeginDisabled();
-                    if (BJBGui.SmallButton($"?##nearby_question_{i}"))
-                        ExecuteNearbyQuestionCommand(p);
-                    if (!canRunQuestion) ImGui.EndDisabled();
-                    if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-                        ImGui.SetTooltip($"Run {_config.NearbyQuestionCommandName} for {p.FullKey}");
                     ImGui.SameLine(0, 4);
                 }
 
@@ -295,13 +295,6 @@ public partial class BlackJackButtlerWindow
         DrawDistanceCircle();
     }
 
-    private void ExecuteNearbyQuestionCommand(NearbyPlayerInfo p)
-    {
-        if (string.IsNullOrWhiteSpace(_config.NearbyQuestionCommandName)) return;
-
-        ExecuteNearbyCommand(p, _config.NearbyQuestionCommandName, "NearbyQuestion");
-    }
-
     private void ExecuteNearbyCommand(NearbyPlayerInfo p, string commandName, string context)
     {
         if (string.IsNullOrWhiteSpace(commandName)) return;
@@ -333,7 +326,7 @@ public partial class BlackJackButtlerWindow
 
     private void DrawDistanceCircle()
     {
-        if (!_distSliderHovered && !(_config.NearbyAlwaysShowCircle && IsRecognitionActive)) return;
+        if (!_distSliderHovered && !_config.NearbyAlwaysShowCircle) return;
         var local = Plugin.ObjectTable.LocalPlayer;
         if (local == null) return;
 
@@ -413,15 +406,13 @@ public partial class BlackJackButtlerWindow
             new Vector2(-halfX,  halfZ),
         };
 
-        var screenPoints = new Vector2[4];
-        var visible = new bool[4];
+        var worldCorners = new Vector3[4];
         for (int i = 0; i < localCorners.Length; i++)
         {
             var c = localCorners[i];
             var x = c.X * cos - c.Y * sin;
             var z = c.X * sin + c.Y * cos;
-            var world = new Vector3(area.Center.X + x, area.Center.Y, area.Center.Z + z);
-            visible[i] = Plugin.GameGui.WorldToScreen(world, out screenPoints[i]);
+            worldCorners[i] = new Vector3(area.Center.X + x, area.Center.Y, area.Center.Z + z);
         }
 
         var drawList = ImGui.GetBackgroundDrawList();
@@ -429,8 +420,41 @@ public partial class BlackJackButtlerWindow
         for (int i = 0; i < 4; i++)
         {
             int j = (i + 1) % 4;
-            if (visible[i] && visible[j])
-                drawList.AddLine(screenPoints[i], screenPoints[j], color, 2f);
+            DrawClippedWorldSegment(drawList, worldCorners[i], worldCorners[j], color);
+        }
+    }
+
+    private static void DrawClippedWorldSegment(ImDrawListPtr drawList, Vector3 start, Vector3 end, uint color)
+    {
+        // Rectangle edges can cross the viewport even when both corners are off-screen.
+        // Sampling exposes visible spans; transition points are refined at the edge.
+        var sampleCount = Math.Clamp((int)MathF.Ceiling(Vector3.Distance(start, end) / 2f), 16, 256);
+        var previousWorld = start;
+        var previousVisible = Plugin.GameGui.WorldToScreen(previousWorld, out var previousScreen);
+
+        for (var sample = 1; sample <= sampleCount; sample++)
+        {
+            var currentWorld = Vector3.Lerp(start, end, sample / (float)sampleCount);
+            var currentVisible = Plugin.GameGui.WorldToScreen(currentWorld, out var currentScreen);
+
+            if (previousVisible && currentVisible)
+            {
+                drawList.AddLine(previousScreen, currentScreen, color, 2f);
+            }
+            else if (previousVisible)
+            {
+                var edge = FindEdgePoint(previousWorld, currentWorld);
+                if (edge.HasValue) drawList.AddLine(previousScreen, edge.Value, color, 2f);
+            }
+            else if (currentVisible)
+            {
+                var edge = FindEdgePoint(currentWorld, previousWorld);
+                if (edge.HasValue) drawList.AddLine(edge.Value, currentScreen, color, 2f);
+            }
+
+            previousWorld = currentWorld;
+            previousScreen = currentScreen;
+            previousVisible = currentVisible;
         }
     }
 
@@ -479,20 +503,18 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.Separator();
-        if (ImGui.Checkbox("Foot numbers", ref _config.NearbyShowFootNumbers)) _save();
-        if (_config.MainViewVersion == 3)
-        {
-            DrawV3OnOff("Always show range circle", "nearby_always_show_circle", ref _config.NearbyAlwaysShowCircle);
-            DrawCommandSelector("Nearby Player Custom Command Button", ref _config.NearbyQuestionCommandName);
-        }
+        DrawNearbyOnOff("Foot Numbers", "nearby_foot_numbers", ref _config.NearbyShowFootNumbers);
+        DrawNearbyOnOff("Always Show Range", "nearby_always_show_circle", ref _config.NearbyAlwaysShowCircle);
+        DrawPartyNearbyJCommandSelector();
+        DrawCommandSelector("Alliance Nearby J Command", ref _config.AllianceNearbyCommandName);
 
         ImGui.Separator();
-        ImGui.TextUnformatted("Area");
-        int shape = (int)_config.NearbyShape;
-        ImGui.SetNextItemWidth(180f);
-        if (BJBGui.Combo("Shape##nearby_shape", ref shape, "Circle\0Rectangle\0"))
+        ImGui.TextUnformatted("Area Shape");
+        ImGui.SameLine(160f);
+        var circle = _config.NearbyShape == NearbyShapeMode.Circle;
+        if (BJBOnOffSwitch.Draw("nearby_shape", ref circle, "Circle", "Rect", 52f))
         {
-            _config.NearbyShape = (NearbyShapeMode)shape;
+            _config.NearbyShape = circle ? NearbyShapeMode.Circle : NearbyShapeMode.Rectangle;
             _save();
             NearbyPlayersManager.InvalidateCache();
         }
@@ -534,8 +556,10 @@ public partial class BlackJackButtlerWindow
         }
 
         ImGui.Separator();
+        ImGui.TextUnformatted("Fixed World Position");
+        ImGui.SameLine(160f);
         bool fixedPosition = _config.NearbyUseFixedPosition;
-        if (ImGui.Checkbox("Fixed world position", ref fixedPosition))
+        if (BJBOnOffSwitch.Draw("nearby_fixed_position", ref fixedPosition, 38f))
         {
             _config.NearbyUseFixedPosition = fixedPosition;
             if (fixedPosition)
@@ -587,17 +611,22 @@ public partial class BlackJackButtlerWindow
 
     private void DrawNearbyAutoActSettings()
     {
-        ImGui.TextUnformatted("Auto-Acting");
-        if (ImGui.Checkbox("Enable Auto-Acting", ref _config.NearbyAutoActEnabled)) _save();
+        ImGui.TextUnformatted("Auto Act");
+        ImGui.SameLine(160f);
+        if (BJBOnOffSwitch.Draw("nearby_auto_act", ref _config.NearbyAutoActEnabled, 38f)) _save();
+        ImGui.SameLine();
+        DrawNearbyAutoActCommandSelector();
 
-        DrawCommandSelector("Command##nearby_autoact_command", ref _config.NearbyAutoActCommandName);
-
-        ImGui.SetNextItemWidth(150f);
-        if (BJBGui.DragFloat("Timeout (minutes)##nearby_autoact_timeout", ref _config.NearbyAutoActTimeoutMinutes, 1f, 1f, 1440f, "%.0f"))
+        ImGui.TextUnformatted("Timeout");
+        ImGui.SameLine(160f);
+        ImGui.SetNextItemWidth(120f);
+        if (BJBGui.DragFloat("##nearby_autoact_timeout", ref _config.NearbyAutoActTimeoutMinutes, 1f, 1f, 1440f, "%.0f"))
         {
             _config.NearbyAutoActTimeoutMinutes = MathF.Round(Math.Clamp(_config.NearbyAutoActTimeoutMinutes, 1f, 1440f));
             _save();
         }
+        ImGui.SameLine();
+        ImGui.TextUnformatted("Minutes");
         ImGui.SameLine();
         if (BJBGui.SmallButton("Reset##nearby_autoact_timeout_reset"))
         {
@@ -610,6 +639,49 @@ public partial class BlackJackButtlerWindow
         if (BJBGui.SmallButton("Edit##nearby_autoact_ignore_edit"))
             _showNearbyIgnoreWindow = true;
         ImGui.TextDisabled($"{_config.NearbyAutoActIgnoreList.Count} entries");
+    }
+
+    private void DrawNearbyOnOff(string label, string id, ref bool value)
+    {
+        ImGui.TextUnformatted(label);
+        ImGui.SameLine(160f);
+        if (BJBOnOffSwitch.Draw(id, ref value, 38f)) _save();
+    }
+
+    private void DrawPartyNearbyJCommandSelector(float labelColumn = 160f)
+    {
+        ImGui.TextUnformatted("Party Nearby J Command");
+        ImGui.SameLine(labelColumn);
+        var selected = (int)_config.PartyNearbyJCommand;
+        ImGui.SetNextItemWidth(Math.Max(120f, ImGui.GetContentRegionAvail().X));
+        if (!BJBGui.Combo("##party_nearby_j_command", ref selected, "None\0Party Invite\0")) return;
+        _config.PartyNearbyJCommand = (PartyNearbyJCommandMode)selected;
+        if (_config.PartyNearbyJCommand == PartyNearbyJCommandMode.None)
+            JoinQueueManager.Clear();
+        _save();
+    }
+
+    private void DrawNearbyAutoActCommandSelector()
+    {
+        var commands = _config.CommandGroups.Select(group => "Commands/" + group.Name)
+            .Concat(_config.CustomCommandGroups.Select(group => "Custom Buttons/" + group.Name))
+            .Append("Actions/Payout")
+            .ToArray();
+        var labels = new[] { "None" }.Concat(commands).ToArray();
+        var selected = 0;
+        for (var i = 0; i < commands.Length; i++)
+        {
+            var raw = commands[i].Split('/').Last();
+            if (raw.Equals(_config.NearbyAutoActCommandName, StringComparison.OrdinalIgnoreCase))
+                selected = i + 1;
+        }
+
+        ImGui.SetNextItemWidth(Math.Max(110f, ImGui.GetContentRegionAvail().X));
+        if (!BJBGui.Combo("##nearby_autoact_command", ref selected, labels, labels.Length)) return;
+        _config.NearbyAutoActCommandName = selected == 0
+            ? string.Empty
+            : commands[selected - 1].Split('/').Last();
+        _save();
     }
 
     private void DrawNearbyIgnoreWindow()

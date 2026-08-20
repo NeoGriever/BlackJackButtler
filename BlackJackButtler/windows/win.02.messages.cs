@@ -26,69 +26,24 @@ public partial class BlackJackButtlerWindow
         if (BJBGui.SmallButton("?##varref_msg")) _showVarRefPanel = !_showVarRefPanel;
         ImGui.Separator();
 
-        BJBGui.DrawFilterBar("messages", ref _filterMessages, "Search batch name or message...");
-
         var io = ImGui.GetIO();
-        bool keysDown = io.KeyCtrl && io.KeyShift;
-
-        if (!keysDown) ImGui.BeginDisabled();
-        if (keysDown) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
-
-        if (BJBGui.Button("Restore default messages (Hard reset)##hard_reset"))
-        {
-            _openForceDefaultsPopup = true;
-            ImGui.OpenPopup("bjb.restore.confirm");
-        }
-
-        if (keysDown) ImGui.PopStyleColor();
-        if (!keysDown)
-        {
-            ImGui.EndDisabled();
-            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
-            ImGui.SetTooltip("Hold CTRL + SHIFT to unlock this button.");
-        }
-
-        if (ImGui.BeginPopupModal("bjb.restore.confirm", ref _openForceDefaultsPopup, ImGuiWindowFlags.AlwaysAutoResize))
-        {
-            ImGui.TextColored(new Vector4(1, 0, 0, 1), "WARNING: HARD RESET");
-            ImGui.TextUnformatted("This will delete all standard messages and commands and recreate them.");
-            ImGui.TextUnformatted("Choose which defaults pack to restore:");
-            ImGui.Spacing();
-
-            if (BJBGui.Button("Use New Defaults (recommended)", new Vector2(260, 0)))
-            {
-                DefaultsMigration.SeedAllDefaultsFromV2(_config);
-                _save();
-                _openForceDefaultsPopup = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.SameLine();
-            if (BJBGui.Button("Use Old Defaults", new Vector2(160, 0)))
-            {
-                DefaultsMigration.SeedAllDefaults(_config);
-                _save();
-                _openForceDefaultsPopup = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.SameLine();
-            if (BJBGui.Button("Cancel", new Vector2(120, 0)))
-            {
-                _openForceDefaultsPopup = false;
-                ImGui.CloseCurrentPopup();
-            }
-            ImGui.EndPopup();
-        }
 
         if (ImGui.BeginTabBar("##message_batch_tabs"))
         {
-            if (ImGui.BeginTabItem("Standard Message Batches"))
+            if (ImGui.BeginTabItem("Standard"))
             {
+                BJBGui.DrawFilterBar("messages_standard", ref _filterMessages, "Search batch name or message...");
+                ImGui.SameLine();
+                DrawRestoreDefaultMessagesButton(io.KeyCtrl && io.KeyShift);
+                ImGui.Spacing();
                 DrawMessageBatches(standard: true, io.KeyCtrl);
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("Custom Message Batches"))
+            if (ImGui.BeginTabItem("Custom"))
             {
+                BJBGui.DrawFilterBar("messages_custom", ref _filterMessages, "Search batch name or message...");
+                ImGui.SameLine();
                 if (BJBGui.Button("+ New Batch"))
                 {
                     _config.MessageBatches.Add(new MessageBatch());
@@ -102,9 +57,66 @@ public partial class BlackJackButtlerWindow
             ImGui.EndTabBar();
         }
 
+        DrawRestoreDefaultMessagesPopup();
+
         if (_messageTextBackPopupOpen && _messageTextBackBatch != null)
             ImGui.OpenPopup("bjb_message_text_unsaved");
         DrawMessageTextBackPopup();
+    }
+
+    private void DrawRestoreDefaultMessagesButton(bool unlocked)
+    {
+        if (!unlocked) ImGui.BeginDisabled();
+        if (unlocked) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
+
+        if (BJBGui.Button("Restore default messages (Hard reset)##hard_reset"))
+        {
+            _openForceDefaultsPopup = true;
+            ImGui.OpenPopup("bjb.restore.confirm");
+        }
+
+        if (unlocked) ImGui.PopStyleColor();
+        if (!unlocked)
+        {
+            ImGui.EndDisabled();
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                ImGui.SetTooltip("Hold CTRL + SHIFT to unlock this button.");
+        }
+    }
+
+    private void DrawRestoreDefaultMessagesPopup()
+    {
+        if (!ImGui.BeginPopupModal("bjb.restore.confirm", ref _openForceDefaultsPopup,
+                ImGuiWindowFlags.AlwaysAutoResize))
+            return;
+
+        ImGui.TextColored(new Vector4(1, 0, 0, 1), "WARNING: HARD RESET");
+        ImGui.TextUnformatted("This will delete all standard messages and commands and recreate them.");
+        ImGui.TextUnformatted("Choose which defaults pack to restore:");
+        ImGui.Spacing();
+
+        if (BJBGui.Button("Use New Defaults (recommended)", new Vector2(260, 0)))
+        {
+            DefaultsMigration.SeedAllDefaultsFromV2(_config);
+            _save();
+            _openForceDefaultsPopup = false;
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.SameLine();
+        if (BJBGui.Button("Use Old Defaults", new Vector2(160, 0)))
+        {
+            DefaultsMigration.SeedAllDefaults(_config);
+            _save();
+            _openForceDefaultsPopup = false;
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.SameLine();
+        if (BJBGui.Button("Cancel", new Vector2(120, 0)))
+        {
+            _openForceDefaultsPopup = false;
+            ImGui.CloseCurrentPopup();
+        }
+        ImGui.EndPopup();
     }
 
     private void DrawMessageBatches(bool standard, bool ctrlHeld)

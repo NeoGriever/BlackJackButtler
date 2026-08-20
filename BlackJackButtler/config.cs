@@ -10,6 +10,7 @@ public enum UserLevel { Beginner, Advanced, Dev, Custom }
 public enum BlackjackTieRule { AlwaysPush, PlayerNatBJWins, DealerNatBJWins, NatBJBeatsDirty }
 public enum NearbyAlertSoundMode { Iterative, Random, FirstOnly }
 public enum NearbyShapeMode { Circle, Rectangle }
+public enum PartyNearbyJCommandMode { None, PartyInvite }
 public enum ButtonBarLayout { Horizontal, Vertical }
 // Keep the original numeric values for MinBet/Vip so existing JSON remains valid.
 public enum BetLimitEntryKind { MinBet, Vip, Normal }
@@ -188,6 +189,8 @@ public sealed class Configuration : IPluginConfiguration
     public int NearbyColumns = 2;
     public bool NoAutoDequeue = false;
     public bool NearbyAlwaysShowCircle = false;
+    public PartyNearbyJCommandMode PartyNearbyJCommand = PartyNearbyJCommandMode.PartyInvite;
+    // Legacy compatibility only. The additional Nearby custom-command button was removed.
     public string NearbyQuestionCommandName = string.Empty;
     public bool NearbyShowFootNumbers = true;
     public float NearbyOffsetX = 0f;
@@ -491,24 +494,9 @@ public sealed class Configuration : IPluginConfiguration
 
     public bool EnsureBetLimitEntriesMigration()
     {
-        if (BetLimitEntriesMigrated)
-        {
-            var repaired = false;
-            foreach (var entry in BetLimitEntries.Where(entry => entry.Kind == BetLimitEntryKind.Vip && entry.VipLevel == 0))
-            {
-                entry.Kind = BetLimitEntryKind.Normal;
-                entry.Name = string.IsNullOrWhiteSpace(entry.Name) || entry.Name == "VIP" ? "Max" : entry.Name;
-                repaired = true;
-            }
-            if (!BetLimitEntries.Any(entry => entry.Kind == BetLimitEntryKind.MinBet))
-            {
-                BetLimitEntries.Insert(0, new BetLimitEntry { Active = true, Kind = BetLimitEntryKind.MinBet, Name = "Min", Amount = MinBet });
-                repaired = true;
-            }
-            return repaired;
-        }
+        var changed = false;
 
-        if (BetLimitEntries.Count == 0)
+        if (!BetLimitEntriesMigrated && BetLimitEntries.Count == 0)
         {
             BetLimitEntries.Add(new BetLimitEntry { Active = true, Kind = BetLimitEntryKind.MinBet, Name = "Min", Amount = MinBet });
             BetLimitEntries.Add(new BetLimitEntry { Active = true, Kind = BetLimitEntryKind.Normal, Name = "Max", Amount = MaxBet });
@@ -533,8 +521,9 @@ public sealed class Configuration : IPluginConfiguration
                     });
                 }
             }
+            changed = true;
         }
-        else
+        else if (!BetLimitEntriesMigrated)
         {
             foreach (var entry in BetLimitEntries)
             {
@@ -556,13 +545,81 @@ public sealed class Configuration : IPluginConfiguration
                     if (string.IsNullOrWhiteSpace(entry.Name)) entry.Name = "Max";
                 }
             }
+            changed = true;
         }
 
-        if (!BetLimitEntries.Any(entry => entry.Kind == BetLimitEntryKind.MinBet))
-            BetLimitEntries.Insert(0, new BetLimitEntry { Active = true, Kind = BetLimitEntryKind.MinBet, Name = "Min", Amount = MinBet });
+        if (!BetLimitEntriesMigrated)
+        {
+            BetLimitEntriesMigrated = true;
+            changed = true;
+        }
 
-        BetLimitEntriesMigrated = true;
-        return true;
+        return NormalizeBetLimitEntries() || changed;
+    }
+
+    private bool NormalizeBetLimitEntries()
+    {
+        var changed = false;
+        if (BetLimitEntries.Count == 0)
+        {
+            BetLimitEntries.Add(new BetLimitEntry
+            {
+                Active = true,
+                Kind = BetLimitEntryKind.MinBet,
+                Name = "Min",
+                Amount = MinBet,
+            });
+            return true;
+        }
+
+        var minimumIndex = BetLimitEntries.FindIndex(entry => entry.Kind == BetLimitEntryKind.MinBet);
+        if (minimumIndex < 0)
+        {
+            var first = BetLimitEntries[0];
+            first.Kind = BetLimitEntryKind.MinBet;
+            first.VipLevel = 0;
+            first.Name = "Min";
+            minimumIndex = 0;
+            changed = true;
+        }
+
+        for (var index = 0; index < BetLimitEntries.Count; index++)
+        {
+            var entry = BetLimitEntries[index];
+            if (index == minimumIndex)
+            {
+                if (entry.VipLevel != 0) { entry.VipLevel = 0; changed = true; }
+                if (string.IsNullOrWhiteSpace(entry.Name)) { entry.Name = "Min"; changed = true; }
+                continue;
+            }
+
+            if (entry.Kind == BetLimitEntryKind.MinBet
+                || (entry.Kind == BetLimitEntryKind.Vip && entry.VipLevel <= 0))
+            {
+                entry.Kind = BetLimitEntryKind.Normal;
+                entry.VipLevel = 0;
+                if (string.IsNullOrWhiteSpace(entry.Name)
+                    || entry.Name.Equals("Min", StringComparison.OrdinalIgnoreCase)
+                    || entry.Name.Equals("VIP", StringComparison.OrdinalIgnoreCase))
+                    entry.Name = "Max";
+                changed = true;
+            }
+            else if (entry.Kind == BetLimitEntryKind.Normal && entry.VipLevel != 0)
+            {
+                entry.VipLevel = 0;
+                changed = true;
+            }
+        }
+
+        if (minimumIndex > 0)
+        {
+            var minimum = BetLimitEntries[minimumIndex];
+            BetLimitEntries.RemoveAt(minimumIndex);
+            BetLimitEntries.Insert(0, minimum);
+            changed = true;
+        }
+
+        return changed;
     }
 
     public bool EnsureCustomButtonEntriesMigration()
