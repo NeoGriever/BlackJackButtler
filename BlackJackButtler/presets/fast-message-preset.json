@@ -1,0 +1,4458 @@
+[
+  {
+    "Name": "Fast Message Preset",
+    "PresetId": "1897c135717a4cf58924552b350b4a11",
+    "CreatedAt": "2026-08-24T22:07:02.7633141Z",
+    "UpdatedAt": "2026-08-24T22:07:02.7633141Z",
+    "ApplyRegexes": true,
+    "ApplyMessagesDefault": true,
+    "ApplyMessagesCustom": true,
+    "ApplyStandardCommands": true,
+    "ApplyOwnButtons": true,
+    "ApplySettingsGeneral": false,
+    "ApplySettingsAutomation": false,
+    "ApplySettingsRules": false,
+    "ApplySettingsBetting": false,
+    "ApplySettingsTimeDelay": false,
+    "ApplySettingsMessageSettings": false,
+    "ApplySettingsNearbyPlayers": false,
+    "ApplySettingsVisual": false,
+    "ApplySettingsSystem": false,
+    "ApplyDrawLogic": false,
+    "Snapshot": {
+      "HideStandardBatches": false,
+      "AllowEditingStandardRegex": true,
+      "FirstDealThenPlay": true,
+      "PlayerRollingForThemselves": false,
+      "PlayerSelfRollPreferences": {},
+      "IdenticalSplitOnly": true,
+      "EnableSplit": true,
+      "EnableDoubleDown": true,
+      "EnableTripleDown": false,
+      "EnableDirtyBlackjack": true,
+      "AllowDoubleDownAfterSplit": true,
+      "AllowTripleDownAfterSplit": false,
+      "LimitTripleDownToMaxPoints": false,
+      "TripleDownMaxPoints": 10,
+      "MaxHandsPerPlayer": 3,
+      "MultiplierNormalWin": 1.0,
+      "MultiplierBlackjackWin": 1.5,
+      "MultiplierDirtyBlackjackWin": 1.0,
+      "MultiplierCharlieWin": 1.5,
+      "MultiplierSplitWin": 1.0,
+      "MultiplierDoubleDownWin": 1.0,
+      "MultiplierTripleDownWin": 1.0,
+      "RefundFullDoubleDownOnPush": true,
+      "RefundFullTripleDownOnPush": true,
+      "BlackjackTieRule": 3,
+      "EnableCharlie": true,
+      "CharlieCardCount": 5,
+      "CharlieInstantWin": true,
+      "EnableBankInput": true,
+      "AutoBetPostCommandName": "BankTell",
+      "InsufficientBetCommandName": "BankTell",
+      "CommandSpeedMultiplier": 0.90000004,
+      "UnlockWaitTimer": true,
+      "DelaySecondSnapping": true,
+      "RecallUnlockSeconds": 10.0,
+      "EnableCompanionSync": false,
+      "CompanionServerAddress": "http://127.0.0.1:8000",
+      "CompanionTimeoutMs": 200,
+      "EnableAllianceSupport": true,
+      "AllianceNearbyCommandName": "",
+      "CommandGroups": [
+        {
+          "Id": "",
+          "Name": "Initial",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Player Deal Hand}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/bstance motion",
+              "Delay": 1.9,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/dice party 13",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/dice party 13",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ Your hand, <t>:",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │    (<points>) <cards>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 3.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {
+            "1": {
+              "Mode": 2,
+              "IterativeIndex": 0
+            },
+            "2": {
+              "Mode": 2,
+              "IterativeIndex": 0
+            },
+            "3": {
+              "Mode": 2,
+              "IterativeIndex": 0
+            },
+            "4": {
+              "Mode": 2,
+              "IterativeIndex": 0
+            }
+          },
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "Hit",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/bstance motion",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p │ Your Hand:",
+              "Delay": 0.4,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p │    (<points>) <cards>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p ├───────",
+              "Delay": 0.3,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Player Draw Messages}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/dice party 13",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ Your Hand now:",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │    (<points>) <cards>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "Stand",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/yes motion",
+              "Delay": 0.55,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p │ Your Hand:",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p │    (<points>) <cards>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p ├───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Hand Reaction Messages}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 2.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "DD",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p │ Your Hand:",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p │    (<points>) <cards>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p ├───────",
+              "Delay": 0.3,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Player DD Messages}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/bstance motion",
+              "Delay": 3.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/dice party 13",
+              "Delay": 1.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ Your Hand now:",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │    (<points>) <cards>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "Split",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/wow motion",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p │ Your Hand:",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p │    (<points>) <cards>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p ├───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Player Split Messages}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/dice party 13",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "Natural BlackJack Notify",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ THATS A   FOR <t>! CONGRATULATIONS!",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/cheer motion",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/shout   FOR <t> - CONGRATS!",
+              "Delay": 5.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "Dirty BlackJack Notify",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Player Dirty BlackJack Messages} <se.7>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/cheer motion",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/shout A  FOR <t> - CONGRATS!",
+              "Delay": 5.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "PlayerBust",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Player Busts Messages} <se.11>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/upset motion",
+              "Delay": 1.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "DealStart",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/bstance motion",
+              "Delay": 0.5,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/bstance motion",
+              "Delay": 0.5,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/bstance motion",
+              "Delay": 0.5,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ┌─────── <se.1>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Dealer Draw Messages}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/dice party 13",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ My Hand:",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │    (${dealerpoints}) ${dealerHand}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 3.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {
+            "1": {
+              "Mode": 0,
+              "IterativeIndex": 0
+            },
+            "2": {
+              "Mode": 2,
+              "IterativeIndex": 0
+            }
+          },
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "DealHit",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/think motion",
+              "Delay": 0.5,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/me motion",
+              "Delay": 0.5,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/flex motion",
+              "Delay": 0.5,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Dealer Hit Messages}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/dice party 13",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ My Hand:",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │    (${dealerpoints}) ${dealerHand}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 3.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {
+            "1": {
+              "Mode": 0,
+              "IterativeIndex": 0
+            },
+            "2": {
+              "Mode": 2,
+              "IterativeIndex": 0
+            }
+          },
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "DealStand",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Dealer Stands Messages}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 3.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "DealerBJ",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Dealer Blackjack Messages} <se.7>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/stagger motion",
+              "Delay": 3.0,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/clutchhead motion",
+              "Delay": 3.0,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {
+            "1": {
+              "Mode": 0,
+              "IterativeIndex": 0
+            }
+          },
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "DealerBust",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Dealer Busts Messages} <se.11>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/disappointed motion",
+              "Delay": 3.0,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/shocked motion",
+              "Delay": 3.0,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/facepalm motion",
+              "Delay": 3.0,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {
+            "1": {
+              "Mode": 0,
+              "IterativeIndex": 0
+            }
+          },
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "ResultPlayerWin",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p #{Win Messages}",
+              "Delay": 1.9,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "ResultPlayerPush",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p #{Push Messages}",
+              "Delay": 1.9,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "ResultPlayerBusted",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p #{Bust Messages}",
+              "Delay": 1.9,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "ResultPlayerLost",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p #{Lost Messages}",
+              "Delay": 1.9,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "StateHSDS",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p New step...",
+              "Delay": 0.05,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": true,
+              "CommandRefName": "Player State Info"
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ [Hit]  [Stand]  [Double Down]  [Split]",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.05,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "StateHSD",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": true,
+              "CommandRefName": "Player State Info"
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ [Hit]  [Stand]  [Double Down]",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.05,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "StateHS",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": true,
+              "CommandRefName": "Player State Info"
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ [Hit]  [Stand]",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.05,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "PlayerDDForcedStand",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Player DD Forced Stand Messages}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 4.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "ResultSmall",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌─────── ",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Match Results}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ├───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ Dealer Score: ${dealerpoints}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ <results>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └─────── <se.15>",
+              "Delay": 2.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "BankTell",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/t <.> #{Bank Tell Messages}",
+              "Delay": 1.3,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "SplitDraw",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/think motion",
+              "Delay": 0.15,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/me motion",
+              "Delay": 0.15,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/flex motion",
+              "Delay": 0.15,
+              "GroupId": 1,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ┌─────── ",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Player Split Draw Messages}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/dice party 13",
+              "Delay": 1.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {
+            "1": {
+              "Mode": 0,
+              "IterativeIndex": 0
+            }
+          },
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "Charlie Notify",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌─────── ",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Player Charlie Messages} <se.7>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/wow motion",
+              "Delay": 3.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "TD",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/ft",
+              "Delay": 0.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p #{Player TD Messages}",
+              "Delay": 1.2,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/wow",
+              "Delay": 2.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/bstance motion",
+              "Delay": 4.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/dice party 13",
+              "Delay": 1.3,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p #{Player TD First Card Messages}",
+              "Delay": 1.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/bstance motion",
+              "Delay": 4.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/dice party 13",
+              "Delay": 1.3,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p #{Player TD Messages Stand}",
+              "Delay": 1.3,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p #{Dividor}",
+              "Delay": 0.8,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "StateHSDTS",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p New step...",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": true,
+              "CommandRefName": "Player State Info"
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ [Hit]  [Stand]  [Double Down]  [Triple Down]  [Split]",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.05,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "StateHSTS",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/ft",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": true,
+              "CommandRefName": "Player State Info"
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ [Hit]  [Stand]  [Triple Down]  [Split]",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.05,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "StateHSDT",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/ft",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": true,
+              "CommandRefName": "Player State Info"
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ [Hit]  [Stand]  [Double Down]  [Triple Down]",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.05,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "StateHST",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/ft",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": true,
+              "CommandRefName": "Player State Info"
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ [Hit]  [Stand]  [Triple Down]",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.05,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "",
+          "Name": "PlayerTDForcedStand",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ #{Player TD Forced Stand Messages}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 4.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        }
+      ],
+      "CustomCommandGroups": [
+        {
+          "Id": "11894097eee24e6ebc9bc1be8f59d8fb",
+          "Name": "Shout",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/yell #{Venue Shout}",
+              "Delay": 0.5,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "707ad4750e9a4eb99e1b688f36f3f2e7",
+          "Name": "Betrange",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ Welcome to my table of doom.",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ I'm your Dealing Vali tonight.",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ ",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ Bet-Range: <betrange>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ Banking? YES",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p │ ",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ You can trade me your bank/bet.",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": false,
+              "Text": "/p │ And then just tell me, how much you want to bet.",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.01,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "cc7073b82c9d4a01a4c0ddda0401f421",
+          "Name": "Ask for join",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/tell <.> #{Invitations}",
+              "Delay": 1.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": true,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "b0c519ac1d1b4269a5b4149bdca8c18f",
+          "Name": "Rules",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 1.0,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ What is BlackJack?",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ Look here:",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ i.snipboard.io/Gbmr7U.jpg",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.01,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "5a61fd7e4c3548b9bff330c230784511",
+          "Name": "System",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ This table reacts to specific messages.",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ Decisions for them are final.",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ├───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ \"hit\", \"stand\", \"split\", \"double down\"",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │     Will call the specific option, if available.",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ \"ready\"",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │     Make you ready for the next round.",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ \"bank\"",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │     Get your bank and bet as /tell",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ \"bet <amount>\" (like \"bet 300k\" or \"bet 1.5m\")",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │     Will update your bet and tells you the change",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ \"withdraw <amount>\" (like \"withdraw 300k\" or \"withdraw 1.5m\")",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │     Will payout this amount from your bank. You can't payout more than you have ;)",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p └───────",
+              "Delay": 0.01,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        },
+        {
+          "Id": "29bfdd8d80a042bfa910b6334c47d07a",
+          "Name": "Player State Info",
+          "Commands": [
+            {
+              "Enabled": true,
+              "Text": "/p ┌───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ <t> Your cards ${HandIndex}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ├───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ Cards: ${playerCards}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ Points: <points>",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p │ Dealer: ${dealerpoints}",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            },
+            {
+              "Enabled": true,
+              "Text": "/p ├───────",
+              "Delay": 0.15,
+              "GroupId": 0,
+              "NonDoubled": false,
+              "FixedDelay": false,
+              "IsCommandRef": false,
+              "CommandRefName": ""
+            }
+          ],
+          "LineGroups": {},
+          "IsActive": true,
+          "IsVisible": true,
+          "ButtonLabel": "",
+          "UseCustomButtonColor": false,
+          "UseCustomTextColor": false,
+          "CustomButtonColor": {
+            "X": 0.26,
+            "Y": 0.26,
+            "Z": 0.26,
+            "W": 1.0
+          },
+          "CustomTextColor": {
+            "X": 1.0,
+            "Y": 1.0,
+            "Z": 1.0,
+            "W": 1.0
+          },
+          "UseCustomPadding": false,
+          "CustomPaddingH": 4.0,
+          "CustomPaddingV": 2.0,
+          "UseCustomFontScale": false,
+          "CustomFontScale": 1.0,
+          "UseCustomFont": false,
+          "CustomUseMono": false
+        }
+      ],
+      "CustomButtonEntries": [
+        {
+          "IsBreak": false,
+          "IsVisible": true,
+          "GroupId": "11894097eee24e6ebc9bc1be8f59d8fb",
+          "LegacyGroupName": ""
+        },
+        {
+          "IsBreak": false,
+          "IsVisible": true,
+          "GroupId": "707ad4750e9a4eb99e1b688f36f3f2e7",
+          "LegacyGroupName": ""
+        },
+        {
+          "IsBreak": false,
+          "IsVisible": true,
+          "GroupId": "cc7073b82c9d4a01a4c0ddda0401f421",
+          "LegacyGroupName": ""
+        },
+        {
+          "IsBreak": false,
+          "IsVisible": true,
+          "GroupId": "5a61fd7e4c3548b9bff330c230784511",
+          "LegacyGroupName": ""
+        },
+        {
+          "IsBreak": false,
+          "IsVisible": true,
+          "GroupId": "b0c519ac1d1b4269a5b4149bdca8c18f",
+          "LegacyGroupName": ""
+        },
+        {
+          "IsBreak": false,
+          "IsVisible": true,
+          "GroupId": "29bfdd8d80a042bfa910b6334c47d07a",
+          "LegacyGroupName": ""
+        }
+      ],
+      "CustomButtonEntriesMigrated": true,
+      "CustomButtonOrder": [
+        "Shout",
+        "Betrange",
+        "Ask for join",
+        "System",
+        "Rules",
+        "Player State Info"
+      ],
+      "MessageBatches": [
+        {
+          "Name": "Dividor",
+          "IsExpanded": true,
+          "Messages": [],
+          "ADFlags": [],
+          "Mode": 2,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Match Results",
+          "IsExpanded": true,
+          "Messages": [
+            "Results:",
+            "This round is over. The battlefield looks like this:",
+            "After this round, we have the results:",
+            "Round complete. Here's how everyone fared:",
+            "The dust settles - time to count the chips:",
+            "Cards are down, wallets are open. Results:",
+            "That's a wrap on this round. Final standings:",
+            "Another round in the books. Here's the damage:",
+            "Alright, let's see who's celebrating and who's crying:",
+            "Round concluded. Winners and losers revealed:",
+            "The table speaks its verdict:",
+            "Fortune has made her decision this round:",
+            "Time to face the music. Round results:",
+            "Cards never lie - here's what happened:",
+            "The house has spoken. Results:",
+            "Round's over. Let's see who beat the odds:",
+            "Another spin of fate complete. Results:",
+            "Chips counted, tears shed. Here's the breakdown:",
+            "The verdict is in for this round:",
+            "Round finished. Time for the truth:"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player Deal Hand",
+          "IsExpanded": true,
+          "Messages": [
+            "<t> Here are your cards now.",
+            "<t> Let me deal your hand.",
+            "<t> Two cards for you.",
+            "<t> What do your cards say?",
+            "<t> gets 2 cards."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player State Messages HSDS",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> - You have splittable <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Double Down] or [Split]?"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player State Messages HSD",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand] or [Double Down]?"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player State Messages HS",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit] or [Stand]?"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player DD Forced Stand Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> Now you have <points> with ${playerCards}. Hand is locked now."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player Draw Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> want another card? Then <t> will get another card~.",
+            "${HandIndex}<t> want a card - here it is.",
+            "${HandIndex}<t> decides to hit.",
+            "${HandIndex}And with that, <t> gets another card.",
+            "${HandIndex}<t> I'll draw another card for you."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player Stand Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> decides to keep the given hand. Good Luck.",
+            "${HandIndex}<t> This hand stands now on <points>."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player DD Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> want to play a risky game? - DOUBLE DOWN! - Take this card and live with the consequences~.",
+            "${HandIndex}Double Down? Did you say DOUBLE DOWN, <t>? - Well, you want it, you get it!",
+            "${HandIndex}Double bet, double chance. Let's see, what fortuna wanna do with <t>'s hand now.",
+            "${HandIndex}DD! - Let this card speak!",
+            "${HandIndex}<t> wants another card. The last card for <t>'s hand. - Rolling drumsssss~."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player DD Messages Stand",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> drew the DD card. Hand is now locked at <points>.",
+            "${HandIndex}Double Down complete. <t> stands automatically at <points>."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player Split Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "<t> splits the hand. Okay let's see~.",
+            "These two cards are getting divided into 2 hands. What will <t> do with them?",
+            "<t> wants to split. Let's gooo~."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player BlackJack Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}Wohoo. <t> got a NATURAL BLACKJACK! Congrats!",
+            "${HandIndex}FANTASTIC. A NATURAL BLACKJACK FOR <t>! Congrats!"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player BlackJack Messages Shout",
+          "IsExpanded": true,
+          "Messages": [
+            "Wohoo. <t> got a natural blackjack. Congrats to <t>!"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player Dirty BlackJack Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}Wohoo. <t> got a blackjack. Fantastic!",
+            "${HandIndex}Unbelievable. A BLACKJACK FOR <t>! CONGRATS!"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player Busts Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}Oh no. <t> got busted with <points>.",
+            "${HandIndex}That's bad luck. <t> busted with <points>.",
+            "${HandIndex}Ouch! <t> busted at <points>.",
+            "${HandIndex}Bust! <t> pushed it to <points> and paid the price.",
+            "${HandIndex}Dealer smiles. <t> went over with <points>.",
+            "${HandIndex}Too hot to handle - <t> burned out at <points>.",
+            "${HandIndex}Unlucky! <t> cracked with <points>.",
+            "${HandIndex}And that's a bust - <t> hits <points>.",
+            "${HandIndex}Over 21 alert: <t> landed on <points>.",
+            "${HandIndex}Greed got the best of <t> at <points>.",
+            "${HandIndex}One card too far - <t> ended on <points>.",
+            "${HandIndex}The cards said 'nope.' <t> busted with <points>.",
+            "${HandIndex}Risky business - <t> busted at <points>.",
+            "${HandIndex}<t> went full send… to <points>. Bust.",
+            "${HandIndex}The dealer thanks you, <t>: <points> is a bust.",
+            "${HandIndex}Close? Not really. <t> busted with <points>.",
+            "${HandIndex}Math check failed: <t> reached <points>.",
+            "${HandIndex}You hate to see it - <t> busted at <points>.",
+            "${HandIndex}<t> hit <points> and instantly regretted it.",
+            "${HandIndex}That last hit was spicy - <t> busted with <points>.",
+            "${HandIndex}Bold move, <t>. <points> is still a bust.",
+            "${HandIndex}Dealer: 'I'll allow it.' Rules: 'No.' <t> has <points>.",
+            "${HandIndex}<t> chased 21 and caught <points>. Bust.",
+            "${HandIndex}Congratulations, <t> - you found <points> the hard way.",
+            "${HandIndex}House wins this round: <t> busted with <points>.",
+            "${HandIndex}Fortune favors the bold… not <t> at <points>.",
+            "${HandIndex}<t> tried to outsmart the deck and got <points>.",
+            "${HandIndex}Too many hits, not enough sense - <t> busted at <points>.",
+            "${HandIndex}<t> went overboard with <points>.",
+            "${HandIndex}The deck giveth, the deck busteth: <t> at <points>.",
+            "${HandIndex}<t> zigged when they should've stayed - <points>.",
+            "${HandIndex}<t> just invented a new number: <points> (aka bust)."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Dealer Draw Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "New round on the table - dealer starts off with a card.",
+            "Alright, fresh hand incoming. Dealer draws the opener.",
+            "Let's kick this round off - dealer reveals the first card.",
+            "The house makes the first move. Dealer draws.",
+            "Place your bets and brace yourself - dealer flips the opening card.",
+            "And we're live. Dealer draws to set the tone for this round.",
+            "Round start: the dealer breaks the silence with the first card.",
+            "Cards up - dealer opens the round with a draw.",
+            "Here we go again. Dealer draws the first card and the table wakes up.",
+            "The deck speaks first - dealer draws to begin the round.",
+            "New round, same nerves. Dealer reveals the opening card.",
+            "Let the drama begin - dealer pulls the first card.",
+            "The table is set and the dealer starts the story with one card.",
+            "First card down - dealer opens the round with a draw.",
+            "Starting whistle: dealer draws the opener and we're in.",
+            "Another round begins. Dealer draws and the tension returns.",
+            "Eyes on the felt - dealer flips the first card to start off.",
+            "No turning back now. Dealer draws the opening card.",
+            "Fresh round, fresh fate - dealer reveals what we're up against.",
+            "The house sets the pace - dealer draws the first card.",
+            "Let's see what kind of round this will be - dealer opens with a draw.",
+            "Dealer draws the opener. Somewhere, a wallet flinches.",
+            "New round boots up - dealer drops the first card on the table.",
+            "The dealer starts the countdown with a single draw.",
+            "Dealer draws the first card - now the round can officially misbehave."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Dealer Hit Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "Dealer hits - let's see what fate deals next.",
+            "One more card for the dealer. No fear, just confidence.",
+            "Dealer takes another - surely this can't go wrong.",
+            "Dealer hits. The deck is about to say something important.",
+            "Dealer asks for a card - fortune, don't embarrass me.",
+            "Another card, please. Let's spice this round up.",
+            "Dealer hits again - because playing it safe is overrated.",
+            "Dealer reaches for the deck. One more step toward glory… or doom.",
+            "Hit me - dealer style.",
+            "Dealer hits. The table holds its breath.",
+            "Dealer goes fishing for a better number.",
+            "Dealer: 'I can fix this.' *draws another card*",
+            "Dealer hits - trusting cardboard and bad decisions.",
+            "Dealer wants another card. The suspense is free, the stress is not.",
+            "Dealer hits. If this works, it was skill. If not, it was the deck."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Dealer Stands Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "Dealer stands on ${dealerpoints}. No more cards - time to settle this.",
+            "Dealer stays at ${dealerpoints}. Let's see who'll be smiling after this hand.",
+            "Dealer stands - final answer to this ${dealerpoints}. Showdown time.",
+            "That's ${dealerpoints} for the dealer. Let's compare hands.",
+            "Dealer stands with ${dealerpoints}. The rest is just math and regret.",
+            "Dealer locks the ${dealerpoints} in - now we find out who guessed right.",
+            "Dealer stands. ${dealerpoints} it is. No more flirting with disaster.",
+            "Dealer holds his ${dealerpoints}. Cards down, results up.",
+            "Dealer stands - ${dealerpoints} - let the chips fall where they may.",
+            "${dealerpoints} - Dealer stays. Time to see who played it smart.",
+            "${dealerpoints} - Dealer stands. The hand is set. the verdict is next.",
+            "Dealer stops here with ${dealerpoints}. Let's finish this round."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Dealer Blackjack Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "Dealer hits BLACKJACK. The house sends its regards.",
+            "Blackjack for the dealer - clean, cruel, and classic.",
+            "Dealer blackjack. Sometimes the deck just chooses violence.",
+            "Dealer reveals BLACKJACK - instant pressure on the table.",
+            "Dealer has BLACKJACK. That escalated quickly.",
+            "BLACKJACK! Dealer didn't even break a sweat.",
+            "Dealer blackjack - lucky? maybe. painful? definitely.",
+            "Dealer shows BLACKJACK. Round went from 'maybe' to 'nope.'",
+            "Dealer blackjack. The house always remembers your last bet.",
+            "BLACKJACK for the dealer - short round, sharp sting.",
+            "Dealer reveals a perfect 21 - BLACKJACK.",
+            "Dealer blackjack. The table just got a lot quieter."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Dealer Busts Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "Dealer busts with <points>. Greed is a harsh dealer.",
+            "Dealer pushed too far - <points>. That's a bust.",
+            "Dealer overcooked it: <points>. Oops.",
+            "Dealer busted at <points>. The house does, in fact, lose sometimes.",
+            "Too many hits - dealer explodes with <points>.",
+            "Dealer drew one card too many and landed on <points>.",
+            "Dealer busts with <points>. The deck finally fights back.",
+            "Dealer went past 21 - <points>. That's what we call 'unfortunate.'",
+            "Dealer busts at <points>. Suddenly, the table feels lucky.",
+            "Dealer's confidence just turned into <points>. Bust.",
+            "Dealer tried to be brave - ended up at <points>.",
+            "Dealer busted with <points>. Turns out risk is universal.",
+            "Dealer hits <points> and immediately regrets it.",
+            "Dealer busted at <points>. The house takes an L this round.",
+            "Dealer went overboard: <points>. Bust, plain and simple."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Hand Reaction Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}Will <points> be enough for <t> this round?",
+            "${HandIndex}<t> sits on <points> - bold choice or bad idea?",
+            "${HandIndex}<points> for <t>. The table is watching.",
+            "${HandIndex}<t> has <points>. Now we wait for the dealer's answer."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Win Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> wins the round with <points>.",
+            "${HandIndex}Victory for <t> - <points> takes it.",
+            "${HandIndex}<t> takes the hand: <points>.",
+            "${HandIndex}<t> comes out on top with <points>."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Push Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}Push for <t> at <points>. Full bet returned.",
+            "${HandIndex}It's a push: <t> with <points>. All stakes back.",
+            "${HandIndex}Standoff! <t> pushes with <points>. Complete refund.",
+            "${HandIndex}No winner - push at <points> for <t>. Total bet returned."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Bust Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> busts with <points>. That one hurt.",
+            "${HandIndex}Bust! <t> went over with <points>.",
+            "${HandIndex}<t> pushed too far - <points>. Busted.",
+            "${HandIndex}Unlucky round: <t> busts at <points>."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Lost Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> loses this hand with <points>.",
+            "${HandIndex}Not enough - <t> falls short with <points>.",
+            "${HandIndex}<t> doesn't take it this time: <points>.",
+            "${HandIndex}House takes this one - <t> ends on <points>."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Payment Reminder",
+          "IsExpanded": true,
+          "Messages": [
+            "Please pay ${missingGil} gil to continue your ${action}. Otherwise your choice gets revoked.",
+            "I still need ${missingGil} gil from you to proceed with the ${action}.",
+            "Wallet check! ${missingGil} gil are missing for your ${action}."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Bank Tell Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${bankamount} is on your Bank. You're currently playing with ${betamount}"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player Split Draw Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}Now dealing the opening card for <t>'s next hand.",
+            "${HandIndex}Next hand for <t> - let's see what we're working with.",
+            "${HandIndex}Drawing the starting card for <t>'s split hand",
+            "${HandIndex}<t>'s next hand gets its second card. Let's go.",
+            "${HandIndex}Time to set up <t>'s next split hand - here comes the card."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player Hand Preview Messages",
+          "IsExpanded": true,
+          "Messages": [
+            " <points> as a start, <t>.",
+            " First card lands at <points> for <t>.",
+            " <t> opens with <points> - interesting.",
+            " The cards begin at <points> for <t>.",
+            " And the first card says <points>."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Dealer First Card Messages",
+          "IsExpanded": true,
+          "Messages": [
+            " My opening card shows ${dealerpoints}.",
+            " Just ${dealerpoints} for me right now - let's see how this goes.",
+            " ${dealerpoints} on my side. Plan accordingly.",
+            " First card gives me ${dealerpoints}.",
+            " The house starts with ${dealerpoints}."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player Charlie Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}Incredible! <t> drew enough cards without busting - CHARLIE! Automatic win!",
+            "${HandIndex}CHARLIE! <t> survived all those cards and walks away as a winner!",
+            "${HandIndex}<t> just pulled off a CHARLIE! Auto-win with bonus payout!",
+            "${HandIndex}The impossible happened - <t> has a CHARLIE! Instant victory!"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Venue Shout",
+          "IsExpanded": true,
+          "Messages": [
+            "Ready for some Black Jack? Come over to me and let us play Black Jack. (PF 7777)",
+            "The cutest Black Jack Dealer since ... well ... EVER - Come to me and let us play Black Jack. (PF 7777)",
+            "Do you dare to steal my gil? o.o Come to me at the upper floor and let us play Black Jack. (PF 7777)",
+            "Your blue Black Jack Dealer is ready for some Rounds. :3 Meet me upstairs (PF 7777)",
+            "Want to play Black Jack? Come to me and lets play a few rounds. (PF 7777)",
+            "I'm ready to deal some cards for you. Come over to me and lets play Black Jack. (PF 7777)"
+          ],
+          "ADFlags": [],
+          "Mode": 2,
+          "IterativeIndex": 4
+        },
+        {
+          "Name": "Invitations",
+          "IsExpanded": true,
+          "Messages": [
+            "Hello. Do you want to join for BlackJack? Join my PartyFinder with code 7777",
+            "Welcome. Would you join for BlackJack? Join my PartyFinder with code 7777",
+            "The Blackjack-Table is open. Can i pull you into the endless pit of BlackJack-Addiction? Join my PartyFinder with code 7777",
+            "Another player for BlackJack? Join my PartyFinder with code 7777",
+            "Hello~. Are you here for BlackJack? Join my PartyFinder with code 7777",
+            "Wohooo. Another victi... i mean player. *giggle* - Wanna join BlackJack? Join my PartyFinder with code 7777"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player State Messages HSDTS",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> - You have splittable <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Double Down], [Triple Down] or [Split]?"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player State Messages HSTS",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> - You have splittable <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Triple Down] or [Split]?"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player State Messages HSDT",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand], [Double Down] or [Triple Down]?"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player State Messages HST",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> - You have <points> with ${playerCards}. Dealer has ${dealerpoints}. Do you want to [Hit], [Stand] or [Triple Down]?"
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player TD Forced Stand Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}Now you have <points> with ${playerCards}. Since it was a Triple Down, this hand is now locked."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player TD Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> is going all in with a TRIPLE DOWN! Two cards are coming.",
+            "${HandIndex}Triple Down for <t>! The hand gets exactly two more cards."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player TD First Card Messages",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}The first Triple Down card is out. One mandatory card remains."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        },
+        {
+          "Name": "Player TD Messages Stand",
+          "IsExpanded": true,
+          "Messages": [
+            "${HandIndex}<t> drew both TD cards. Hand is now locked at <points>.",
+            "${HandIndex}Triple Down complete. <t> stands automatically at <points>."
+          ],
+          "ADFlags": [],
+          "Mode": 0,
+          "IterativeIndex": 0
+        }
+      ],
+      "UserRegexes": [
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 24,
+          "ActionParam": "",
+          "Name": "Ready",
+          "Patterns": [
+            "^ready\\!*$",
+            "^i\\'m ready\\!*$",
+            "^r\\!*$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 7
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 7,
+          "ActionParam": "",
+          "Name": "Trade: Inbound",
+          "Patterns": [
+            "^(.+) möchte mit dir handeln\\.$",
+            "^(.+) wishes to trade with you\\.$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 7,
+          "ActionParam": "",
+          "Name": "Trade: Outbound",
+          "Patterns": [
+            "^Du hast (.+) einen Handel angeboten\\.$",
+            "^Trade request sent to (.+)$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 8,
+          "ActionParam": "",
+          "Name": "Trade: Gil In",
+          "Patterns": [
+            "^Du erhältst ([\\d.]+) Gil\\.$",
+            "^You receive ([\\d,]+) gil\\.$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 9,
+          "ActionParam": "",
+          "Name": "Trade: Gil Out",
+          "Patterns": [
+            "^Du überreichst ([\\d.]+) Gil\\.$",
+            "^You hand over ([\\d,]+) gil\\.$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 10,
+          "ActionParam": "",
+          "Name": "Trade: Success",
+          "Patterns": [
+            "^Der Handel wurde abgeschlossen\\.$",
+            "^Trade complete\\.$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 11,
+          "ActionParam": "",
+          "Name": "Trade: Cancel",
+          "Patterns": [
+            "^Der Handel wurde abgebrochen\\.$",
+            "^Trade canceled\\.$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 13,
+          "ActionParam": "",
+          "Name": "Dice: Blackjack Logic",
+          "Patterns": [
+            "Würfeln! .*?\\) (\\d+)\\s*$",
+            "Random! .*?\\) (\\d+)\\s*$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 2,
+          "ActionParam": "",
+          "Name": "Draw",
+          "Patterns": [
+            "^hit$",
+            "^hit\\!$",
+            "^hit me$",
+            "^hit me\\!$",
+            "^h$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 3,
+          "ActionParam": "",
+          "Name": "Stand",
+          "Patterns": [
+            "^stand$",
+            "^stando$",
+            "^standy$",
+            "^<se\\.7>$",
+            "^stay$",
+            "^s$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 5,
+          "ActionParam": "",
+          "Name": "Split",
+          "Patterns": [
+            "^split$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 4,
+          "ActionParam": "",
+          "Name": "Double Down",
+          "Patterns": [
+            "^dd\\!*$",
+            "^double down\\!*$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 24,
+          "ActionParam": "",
+          "Name": "New Round",
+          "Patterns": [
+            "^ready$",
+            "^Ready ♥$",
+            "^Ready <3$",
+            "^ready\\!$",
+            "^r$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 25,
+          "ActionParam": "",
+          "Name": "Bank Tell",
+          "Patterns": [
+            "^bank please$",
+            "^bank$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 27,
+          "ActionParam": "",
+          "Name": "Set Bet",
+          "Patterns": [
+            "^bet\\s+((?:\\d[\\d.,]*\\s*[km]?)|max|all|full|min)$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": true,
+          "Sources": 3
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 30,
+          "ActionParam": "",
+          "Name": "Withdraw",
+          "Patterns": [
+            "^withdraw\\s+((?:\\d[\\d.,]*\\s*[km]?)|all|everything)$",
+            "^payout\\s+((?:\\d[\\d.,]*\\s*[km]?)|all|everything)$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        },
+        {
+          "Enabled": true,
+          "Mode": 1,
+          "Action": 32,
+          "ActionParam": "",
+          "Name": "Bank Transfer",
+          "Patterns": [
+            "^transfer\\s+(-?(?:(?:\\d[\\d.,]*\\s*[km]?)|half|50%|min|max))\\s*$"
+          ],
+          "CaseSensitive": false,
+          "ApplyToTells": false,
+          "Sources": 1
+        }
+      ],
+      "ActivePresetName": "Main Core Setup",
+      "ActivePresetId": "2d267d0ffe244b538dbfcb09c75a4ba3",
+      "MinBet": 50000,
+      "MaxBet": 1000000,
+      "VipBetTiers": [],
+      "BettingPresets": [],
+      "BetLimitEntriesMigrated": true,
+      "ShortBetFormat": true,
+      "HideCardSuits": false,
+      "DefaultBatchesSeeded": true,
+      "DefaultRegexSeeded": true,
+      "DefaultCommandsSeeded": true,
+      "AutoInitialDeal": true,
+      "AutoDealerDraw": true,
+      "AutoRun": true,
+      "AutoActivateTradingPlayers": true,
+      "EnableAutomation": true,
+      "ShowAutoDealerDrawButton": true,
+      "ShowAutoPlayerHandButton": true,
+      "ShowAutoContinueButton": true,
+      "ShowAutoRunButton": true,
+      "DealerDrawsUntil": 17,
+      "DealerSoftRule": true,
+      "SmallResult": true,
+      "ResultTemplate": "${results}",
+      "ShortResultRules": [],
+      "ShortResultRulesInitialized": true,
+      "AutostartRoundOnlyOnMultiplePlayers": false,
+      "AutoContinueMinimumPlayers": 1,
+      "AutoContinueMinimumPlayersMigrated": true,
+      "EnableAntiDouble": true,
+      "HighlightColor": {
+        "X": 1.0,
+        "Y": 1.0,
+        "Z": 0.0,
+        "W": 1.0
+      },
+      "HighlightTextColor": {
+        "X": 0.0,
+        "Y": 0.0,
+        "Z": 0.0,
+        "W": 1.0
+      },
+      "ButtonColor": {
+        "X": 0.26,
+        "Y": 0.26,
+        "Z": 0.26,
+        "W": 1.0
+      },
+      "ButtonTextColor": {
+        "X": 1.0,
+        "Y": 1.0,
+        "Z": 1.0,
+        "W": 1.0
+      },
+      "GilVisual": 2,
+      "PayoutPercent": 50.0,
+      "GilPerHour": 0,
+      "WageIntervalMode": 3,
+      "ClipHoursMode": 1,
+      "UseFixedWage": true,
+      "FixedWage": 0,
+      "UtcOffsetHours": 2,
+      "UtcOffsetMinutes": 120,
+      "UtcTimeZoneName": "Berlin",
+      "UtcSummerTime": false,
+      "UtcOffsetConfigured": true,
+      "dismissDevWarning": true,
+      "HashedStats": true,
+      "StatsSubtractPlayerBanks": true,
+      "StatsHouseBank": 0,
+      "LastSeenVersion": "1.9.1.0",
+      "DisableUpdatePopup": false,
+      "UseBurgerMenu": false,
+      "MenuStyle": 2,
+      "MenuStyleMigrated": true,
+      "MainViewVersion": 3,
+      "MainViewV2SuperCompact": false,
+      "ImportantNoticeAcknowledged": true,
+      "Version3MigrationNoticeOpened": false,
+      "BlacklistDetectedAt": "",
+      "BlacklistActive": false,
+      "InitialViewDirection": -1.5709751,
+      "LookEveryTime": true,
+      "NotepadText": "",
+      "NearbyFavorites": [
+        "Haku Yuki@Mateus",
+        "Amystra Nakano@Exodus",
+        "Vaas Ultima@Kraken"
+      ],
+      "NearbyDistanceCap": 4.84,
+      "ShowNearbyPlayers": true,
+      "NearbySticky": false,
+      "NearbyColumns": 3,
+      "NoAutoDequeue": true,
+      "NearbyAlwaysShowCircle": true,
+      "PartyNearbyJCommand": 1,
+      "NearbyQuestionCommandName": "",
+      "NearbyShowFootNumbers": false,
+      "NearbyOffsetX": 0.0,
+      "NearbyOffsetZ": 0.0,
+      "NearbyShape": 1,
+      "NearbyRectangleAspectRatio": 0.64,
+      "NearbyRectangleRotation": 0.0,
+      "NearbyUseFixedPosition": true,
+      "NearbyFixedCenterX": 10.3338175,
+      "NearbyFixedCenterY": 3.585851,
+      "NearbyFixedCenterZ": -1.132934,
+      "NearbyFixedCenterCaptured": true,
+      "NearbyAutoActEnabled": false,
+      "NearbyAutoActCommandName": "Ask for join",
+      "NearbyAutoActTimeoutMinutes": 400.0,
+      "NearbyAutoActIgnoreList": [],
+      "AutoContinue": false,
+      "AutoContinueDelay": 20.0,
+      "AutoContinueBarColor": {
+        "X": 0.2,
+        "Y": 0.8,
+        "Z": 0.2,
+        "W": 1.0
+      },
+      "AutoContinueBarHeight": 20.0,
+      "AutoContinueBarShowText": true,
+      "NearbyAlertEnabled": true,
+      "NearbyAlertSoundFiles": [
+        "Z:\\home\\mind\\.local\\share\\Steam\\steamui\\sounds\\deck_ui_toast.wav"
+      ],
+      "NearbyAlertSoundEntries": [
+        {
+          "Path": "Z:\\home\\mind\\.local\\share\\Steam\\steamui\\sounds\\deck_ui_toast.wav",
+          "Enabled": true,
+          "Volume": 100.0
+        }
+      ],
+      "NearbyAlertSoundEntriesMigrated": true,
+      "NearbyAlertVolume": 50.0,
+      "NearbyAlertCooldown": 0.3,
+      "NearbyAlertSoundMode": 1,
+      "CustomButtonPaddingH": 6.0,
+      "CustomButtonPaddingV": 0.0,
+      "CustomButtonFontScale": 1.0,
+      "CustomButtonUseMono": false,
+      "ButtonBarPopout": false,
+      "ButtonBarNoBackground": false,
+      "ButtonBarLocked": false,
+      "ButtonBarLayout": 0,
+      "ButtonBarFixedWidth": false,
+      "ButtonBarFixedWidthValue": 200.0,
+      "ButtonBarBackgroundColor": {
+        "X": 0.1,
+        "Y": 0.1,
+        "Z": 0.1,
+        "W": 1.0
+      },
+      "SelectedFontName": "Default",
+      "GeneralButtonDefaultStyle": {
+        "Background": {
+          "X": 0.26,
+          "Y": 0.26,
+          "Z": 0.26,
+          "W": 1.0
+        },
+        "Text": {
+          "X": 1.0,
+          "Y": 1.0,
+          "Z": 1.0,
+          "W": 1.0
+        },
+        "FontSize": 1.0,
+        "PaddingTop": 0,
+        "PaddingLeft": 0,
+        "PaddingBottom": 0,
+        "PaddingRight": 0
+      },
+      "GeneralButtonActiveStyle": {
+        "Background": {
+          "X": 1.0,
+          "Y": 0.5,
+          "Z": 0.0,
+          "W": 1.0
+        },
+        "Text": {
+          "X": 1.0,
+          "Y": 1.0,
+          "Z": 1.0,
+          "W": 1.0
+        },
+        "FontSize": 1.0,
+        "PaddingTop": 0,
+        "PaddingLeft": 0,
+        "PaddingBottom": 0,
+        "PaddingRight": 0
+      },
+      "GeneralButtonHighlightStyle": {
+        "Background": {
+          "X": 1.0,
+          "Y": 1.0,
+          "Z": 0.0,
+          "W": 1.0
+        },
+        "Text": {
+          "X": 0.0,
+          "Y": 0.0,
+          "Z": 0.0,
+          "W": 1.0
+        },
+        "FontSize": 1.0,
+        "PaddingTop": 0,
+        "PaddingLeft": 0,
+        "PaddingBottom": 0,
+        "PaddingRight": 0
+      },
+      "CustomButtonDefaultStyle": {
+        "Background": {
+          "X": 0.26,
+          "Y": 0.26,
+          "Z": 0.26,
+          "W": 1.0
+        },
+        "Text": {
+          "X": 1.0,
+          "Y": 1.0,
+          "Z": 1.0,
+          "W": 1.0
+        },
+        "FontSize": 1.0,
+        "PaddingTop": 0,
+        "PaddingLeft": 6,
+        "PaddingBottom": 0,
+        "PaddingRight": 6
+      },
+      "DrawLogicEntries": [
+        {
+          "Name": "Player Cross",
+          "Script": "// --- 1. GLOBAL SETTINGS & CAMERA MATH ---\n// Get distance to camera for dynamic line thickness\nSetVar(\"dx\", Minus(<cameraPosition>.x, <pos>.x))\nSetVar(\"dy\", Minus(<cameraPosition>.y, <pos>.y))\nSetVar(\"dz\", Minus(<cameraPosition>.z, <pos>.z))\nSetVar(\"dist\", Sqrt(Plus(Plus(Mul(GetVar(\"dx\"), GetVar(\"dx\")), Mul(GetVar(\"dy\"), GetVar(\"dy\"))), Mul(GetVar(\"dz\"), GetVar(\"dz\")))))\n\n// Dynamic Line Thickness: Thinner far away, thicker close (0.4 to 2.0 range)\nSetLineThickness(Clamp(Div(8.0, Max(1, GetVar(\"dist\"))), 0.4, 2.0))\n\nIterateHand {\n    IterateCard {\n        // --- 2. DYNAMIC RADIUS & FAN MATH ---\n        // Base radius is 0.5. If more than 6 cards, increase radius by 0.05 per card.\n        SetVar(\"extraCards\", Max(0, Minus(<CardsTotal>, 4)))\n        SetVar(\"radius\", Plus(0.4, Mul(GetVar(\"extraCards\"), 0.023)))\n\n        // Fan layout: 140 degrees total (70 left, 70 right)\n        // Convert to radians: 70 deg = ~1.2217 rad\n        SetVar(\"halfCone\", 0.65)\n        SetVar(\"divisor\", Max(Minus(<CardsTotal>, 1), 1))\n\n        // Calculate the angle 'a' within the 140-degree cone\n        // If only 1 card, it stays at the center (0 offset from camera direction)\n        SetVar(\"interpolation\", Minus(Div(<CardIndex>, GetVar(\"divisor\")), 0.5))\n        SetVar(\"a\", Mul(GetVar(\"interpolation\"), Mul(GetVar(\"halfCone\"), 2)))\n\n        // Local coordinates relative to camera direction\n        // Sin(a) is horizontal offset, -Cos(a) pulls it towards the camera\n        SetVar(\"lx\", Mul(Sin(GetVar(\"a\")), GetVar(\"radius\")))\n        SetVar(\"lz\", Mul(Cos(GetVar(\"a\")), Mul(GetVar(\"radius\"), -1)))\n\n        // World-rotation matrix based on camera direction\n        SetVar(\"wx\", Plus(Mul(GetVar(\"lx\"), Cos(<cameraDirection>)), Mul(GetVar(\"lz\"), Sin(<cameraDirection>))))\n        SetVar(\"wz\", Minus(Mul(GetVar(\"lz\"), Cos(<cameraDirection>)), Mul(GetVar(\"lx\"), Sin(<cameraDirection>))))\n\n        // --- 3. DRAWING THE CARD WITH ROUNDED CORNERS ---\n        SetDrawColor(0, 0, 0, 1) // Border Black\n        SetFillColor(1, 1, 1, 0.85) // Card Face White\n\n        SetVar(\"targetY\", Plus(Plus(<pos>.y, 1.3), Mul(<HandIndex>, 0.3)))\n        BeginShape(Plus(<pos>.x, GetVar(\"wx\")), GetVar(\"targetY\"), Plus(<pos>.z, GetVar(\"wz\")))\n\n        // Card Dimensions: Width 0.09, Height 0.16 (Half: 0.045 / 0.08)\n        // Corner Radius: 0.015\n        SetVar(\"r\", 0.015)\n        SetVar(\"hw\", 0.045)\n        SetVar(\"hh\", 0.08)\n        SetVar(\"innerW\", Minus(GetVar(\"hw\"), GetVar(\"r\")))\n        SetVar(\"innerH\", Minus(GetVar(\"hh\"), GetVar(\"r\")))\n\n        BeginPath()\n        // Start Top-Right Corner Arc (5 Segments)\n        MoveTo(GetVar(\"innerW\"), GetVar(\"hh\"), 0)\n        LineTo(Plus(GetVar(\"innerW\"), Mul(GetVar(\"r\"), 0.38)), Plus(GetVar(\"innerH\"), Mul(GetVar(\"r\"), 0.92)), 0)\n        LineTo(Plus(GetVar(\"innerW\"), Mul(GetVar(\"r\"), 0.70)), Plus(GetVar(\"innerH\"), Mul(GetVar(\"r\"), 0.70)), 0)\n        LineTo(Plus(GetVar(\"innerW\"), Mul(GetVar(\"r\"), 0.92)), Plus(GetVar(\"innerH\"), Mul(GetVar(\"r\"), 0.38)), 0)\n        LineTo(GetVar(\"hw\"), GetVar(\"innerH\"), 0)\n\n        // Bottom-Right Corner Arc\n        LineTo(GetVar(\"hw\"), Mul(GetVar(\"innerH\"), -1), 0)\n        LineTo(Plus(GetVar(\"innerW\"), Mul(GetVar(\"r\"), 0.92)), Minus(Mul(GetVar(\"innerH\"), -1), Mul(GetVar(\"r\"), 0.38)), 0)\n        LineTo(Plus(GetVar(\"innerW\"), Mul(GetVar(\"r\"), 0.70)), Minus(Mul(GetVar(\"innerH\"), -1), Mul(GetVar(\"r\"), 0.70)), 0)\n        LineTo(Plus(GetVar(\"innerW\"), Mul(GetVar(\"r\"), 0.38)), Minus(Mul(GetVar(\"innerH\"), -1), Mul(GetVar(\"r\"), 0.92)), 0)\n        LineTo(GetVar(\"innerW\"), Mul(GetVar(\"hh\"), -1), 0)\n\n        // Bottom-Left Corner Arc\n        LineTo(Mul(GetVar(\"innerW\"), -1), Mul(GetVar(\"hh\"), -1), 0)\n        LineTo(Minus(Mul(GetVar(\"innerW\"), -1), Mul(GetVar(\"r\"), 0.38)), Minus(Mul(GetVar(\"innerH\"), -1), Mul(GetVar(\"r\"), 0.92)), 0)\n        LineTo(Minus(Mul(GetVar(\"innerW\"), -1), Mul(GetVar(\"r\"), 0.70)), Minus(Mul(GetVar(\"innerH\"), -1), Mul(GetVar(\"r\"), 0.70)), 0)\n        LineTo(Minus(Mul(GetVar(\"innerW\"), -1), Mul(GetVar(\"r\"), 0.92)), Minus(Mul(GetVar(\"innerH\"), -1), Mul(GetVar(\"r\"), 0.38)), 0)\n        LineTo(Mul(GetVar(\"hw\"), -1), Mul(GetVar(\"innerH\"), -1), 0)\n\n        // Top-Left Corner Arc\n        LineTo(Mul(GetVar(\"hw\"), -1), GetVar(\"innerH\"), 0)\n        LineTo(Minus(Mul(GetVar(\"innerW\"), -1), Mul(GetVar(\"r\"), 0.92)), Plus(GetVar(\"innerH\"), Mul(GetVar(\"r\"), 0.38)), 0)\n        LineTo(Minus(Mul(GetVar(\"innerW\"), -1), Mul(GetVar(\"r\"), 0.70)), Plus(GetVar(\"innerH\"), Mul(GetVar(\"r\"), 0.70)), 0)\n        LineTo(Minus(Mul(GetVar(\"innerW\"), -1), Mul(GetVar(\"r\"), 0.38)), Plus(GetVar(\"innerH\"), Mul(GetVar(\"r\"), 0.92)), 0)\n        LineTo(Mul(GetVar(\"innerW\"), -1), GetVar(\"hh\"), 0)\n        ClosePath()\n\n        // Content\n        SetDrawColor(<CardColorR>, <CardColorG>, <CardColorB>, 1)\n        SetFillColor(<CardColorR>, <CardColorG>, <CardColorB>, 0)\n        IterateLetter {\n            DrawChar(<letter>, Mul(Minus(<letterIndex>, Mul(Minus(<letterTotal>, 1), 0.5)), -0.035), 0, 0.035)\n        }\n\n        FinishShape()\n\n        // --- 4. ORIENTATION ---\n        // Rotate the shape to face the camera (0 flip to see the front)\n        Rotate(AlterRot(<cameraDirection>, 0))\n\n        Draw()\n    }\n}\n",
+          "ScriptPath": "0.txt",
+          "IsIterate": true,
+          "IsActive": true,
+          "AutoReload": true
+        }
+      ],
+      "DrawLogicStartEntry": "Player Cross",
+      "DrawLogicSeeded": true,
+      "DotTokenMigrated": true,
+      "GameplayRegexPatternsMigrated": true,
+      "BankTransferRegexMigrated": true,
+      "NotifyGroupsMigrated": true,
+      "DrawLogicScriptDir": "",
+      "TablePopout": false,
+      "NearbyPopout": false,
+      "HideThanksPage": true,
+      "PresetsMigrated": true,
+      "DrawLogicScale": 1.0,
+      "DrawLogicOffsetX": 0.0,
+      "DrawLogicOffsetY": 0.0,
+      "DrawLogicOffsetZ": 0.0,
+      "DrawLogicOffsetR": 0.0,
+      "DrawLogicColorSpades": {
+        "X": 0.0,
+        "Y": 0.0,
+        "Z": 0.0,
+        "W": 1.0
+      },
+      "DrawLogicColorClubs": {
+        "X": 0.0,
+        "Y": 0.0,
+        "Z": 0.0,
+        "W": 1.0
+      },
+      "DrawLogicColorHearts": {
+        "X": 1.0,
+        "Y": 0.0,
+        "Z": 0.0,
+        "W": 1.0
+      },
+      "DrawLogicColorDiamonds": {
+        "X": 1.0,
+        "Y": 0.0,
+        "Z": 0.0,
+        "W": 1.0
+      },
+      "CurrentLevel": 2,
+      "CustomVisiblePages": [
+        "Regexes",
+        "Messages",
+        "Commands",
+        "OwnButtons",
+        "Settings",
+        "Vars",
+        "RoundLog",
+        "Debug",
+        "Thanks",
+        "Stats",
+        "Presets",
+        "DrawLogic"
+      ],
+      "BetLimitEntries": [
+        {
+          "Active": true,
+          "Kind": 0,
+          "VipLevel": 0,
+          "Name": "Min",
+          "Amount": 50000
+        },
+        {
+          "Active": true,
+          "Kind": 2,
+          "VipLevel": 0,
+          "Name": "Max",
+          "Amount": 1000000
+        },
+        {
+          "Active": false,
+          "Kind": 1,
+          "VipLevel": 1,
+          "Name": "VIP",
+          "Amount": 2000000
+        }
+      ],
+      "Version": 0
+    },
+    "IsDelta": false
+  }
+]

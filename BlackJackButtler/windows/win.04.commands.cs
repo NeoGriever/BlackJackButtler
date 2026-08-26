@@ -145,7 +145,8 @@ public partial class BlackJackButtlerWindow
 
             ImGui.PushID($"group_{group.Name}");
 
-            if (!string.IsNullOrEmpty(_filterCommands))
+            if (!string.IsNullOrEmpty(_filterCommands)
+                || _pendingOpenCommandGroups.Remove(group.Name))
                 ImGui.SetNextItemOpen(true, ImGuiCond.Always);
 
             if (ImGui.CollapsingHeader($"{displayName} (Internal: {group.Name})"))

@@ -801,6 +801,11 @@ public sealed class PresetEntry
     public bool SettingsCategoryMigrated = false;
     public bool MessagesCategoryMigrated = false;
 
+    // Version der mitgelieferten Standard-Preset-Definition. Dadurch können
+    // gezielte Updates einmalig eingespielt werden, ohne spätere Nutzeranpassungen
+    // erneut zu überschreiben.
+    public int BuiltInDefinitionVersion = 0;
+
     // Optionale Titelfarbe (null = automatisch aus Checkbox-Kombination berechnet)
     public Vector4? CustomTitleColor = null;
 

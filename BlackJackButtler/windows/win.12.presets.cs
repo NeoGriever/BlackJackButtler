@@ -114,6 +114,7 @@ public partial class BlackJackButtlerWindow
     {
         _presetNavHoverPage = null;
         EnsureDefaultPresetDefinitions();
+        EnsureTripleDownPartsInDefaultPresets();
 
         // Migration-Trigger
         if (_config.Presets.Count > 0 && !_config.PresetsMigrated && !_presetMigrationPending)

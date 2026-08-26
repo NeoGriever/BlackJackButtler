@@ -260,6 +260,7 @@ public partial class BlackJackButtlerWindow
         Indent(() =>
         {
         CheckRuleSave("Enabled##v2_triple_down", ref _config.EnableTripleDown);
+        DrawTripleDownStateRepairNotice();
         DrawV3TripleDownPointsLimit();
         CheckRuleSave("Allow TD after Split", ref _config.AllowTripleDownAfterSplit);
         CheckRuleSave("Refund TD on Push", ref _config.RefundFullTripleDownOnPush);
