@@ -71,6 +71,7 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     private string? _pendingSettingsFocus;
     private string? _pendingSettingsTab;
     private string? _pendingCommandsTab;
+    private readonly HashSet<string> _pendingOpenCommandGroups = new(StringComparer.OrdinalIgnoreCase);
     private string? _pendingOwnButtonGroupName;
 
     private bool _showRestoreSessionButton = false;
@@ -191,7 +192,12 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     }
 
     public void SetHighlightNewRound() => _highlightNewRound = true;
-    public void Dispose() { }
+    public void Dispose()
+    {
+#if DEBUG
+        _debugVisualCanvas.Dispose();
+#endif
+    }
     public void OpenMain() { _page = Page.Main; IsOpen = true; Plugin.Instance.UpdateEventHooks(); }
     public void OpenSettings() { _page = Page.Settings; IsOpen = true; Plugin.Instance.UpdateEventHooks(); }
 

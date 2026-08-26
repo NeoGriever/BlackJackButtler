@@ -4,12 +4,12 @@
     "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
     "Description": "/bjb - opens the blackjack buttler tool",
     "InternalName": "BlackJackButtler",
-    "AssemblyVersion": "1.9.0.3",
+    "AssemblyVersion": "1.9.1.0",
     "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "TestingDalamudApiLevel": 15,
     "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/BlackJackButtler/images/icon.png",
     "Tags": ["BlackJack", "Helper", "Chat"],
-    "Changelog": "Version 1.9.0.3\n\n- Fixed persistent Nearby range rendering, including off-screen rectangle edges.\n- Reworked Betting entry types and repaired duplicate Minimum entries.\n- Consolidated Rules, General, Visual, System, Alliance, Preset, Time Zone, and Sound controls.\n\nSee changelog.md or the in-game Changelog dialog for complete details."
+    "Changelog": "Version 1.9.1.0\n\n- missing internal system commands fix for Triple Down"
 }
