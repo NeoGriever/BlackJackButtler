@@ -638,43 +638,80 @@ public static class PayoutManagement
 
         try
         {
-            if (!IsDropboxCommandRegistered())
-            {
-                Plugin.Instance.GetMainWindow().AddDebugLog("[PayoutManagement] Dropbox not loaded; using local Dropbox clone");
-                return false;
-            }
-
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            var queueEntryType = assemblies
-                .Select(a => a.GetType("Dropbox.QueueEntry", false))
-                .FirstOrDefault(t => t != null);
-            var taskType = assemblies
-                .Select(a => a.GetType("Dropbox.TaskAddItemsToTrade", false))
-                .FirstOrDefault(t => t != null);
-            var enqueue = taskType?.GetMethod("Enqueue", BindingFlags.Public | BindingFlags.Static);
-
-            if (queueEntryType == null || enqueue == null)
+            // Dropbox exposes TaskAddItemsToTrade.Enqueue(IEnumerable<QueueEntry>, int).
+            // Keep both reflected types from the same assembly: an old plugin load context may
+            // otherwise supply QueueEntry while a newer one supplies the task type, causing
+            // Invoke to reject the argument and unnecessarily fall back to local automation.
+            var taskApis = GetDropboxTaskApis().ToList();
+            if (taskApis.Count == 0)
             {
                 Plugin.Instance.GetMainWindow().AddDebugLog("[PayoutManagement] Dropbox task API not found; using local Dropbox clone");
                 return false;
             }
 
-            OpenDropboxWindow();
+            // The command only opens Dropbox's UI. Its registration is not a reliable test that
+            // the task API is available, especially when Dropbox was loaded after BJB.
+            if (IsDropboxCommandRegistered())
+                OpenDropboxWindow();
+
             if (!TargetPayoutPlayerImmediate(player))
             {
                 Plugin.Instance.GetMainWindow().AddDebugLog("[PayoutManagement] Dropbox target/focus target could not be set; using local Dropbox clone");
                 return false;
             }
 
-            var emptyEntries = Array.CreateInstance(queueEntryType, 0);
-            enqueue.Invoke(null, new object[] { emptyEntries, gil });
-            Plugin.Instance.GetMainWindow().AddDebugLog("[PayoutManagement] Dropbox task invoked directly");
-            return true;
+            foreach (var (queueEntryType, enqueue) in taskApis)
+            {
+                try
+                {
+                    var emptyEntries = Array.CreateInstance(queueEntryType, 0);
+                    enqueue.Invoke(null, new object[] { emptyEntries, gil });
+                    Plugin.Instance.GetMainWindow().AddDebugLog(
+                        $"[PayoutManagement] Dropbox task invoked directly ({enqueue.DeclaringType?.Assembly.GetName().Name})");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Instance.GetMainWindow().AddDebugLog(
+                        $"[PayoutManagement] Dropbox task invocation failed ({enqueue.DeclaringType?.Assembly.GetName().Name}): {ex.GetBaseException().Message}");
+                }
+            }
+
+            Plugin.Instance.GetMainWindow().AddDebugLog("[PayoutManagement] All Dropbox task APIs failed; using local Dropbox clone");
+            return false;
         }
         catch (Exception ex)
         {
             Plugin.Instance.GetMainWindow().AddDebugLog($"[PayoutManagement] Dropbox start failed; using local Dropbox clone: {ex.GetBaseException().Message}");
             return false;
+        }
+    }
+
+    private static IEnumerable<(Type QueueEntryType, MethodInfo Enqueue)> GetDropboxTaskApis()
+    {
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        {
+            var queueEntryType = assembly.GetType("Dropbox.QueueEntry", false);
+            var taskType = assembly.GetType("Dropbox.TaskAddItemsToTrade", false);
+            if (queueEntryType == null || taskType == null)
+                continue;
+
+            var queueEntryArrayType = queueEntryType.MakeArrayType();
+            var enqueue = taskType
+                .GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .FirstOrDefault(method =>
+                {
+                    if (!method.Name.Equals("Enqueue", StringComparison.Ordinal))
+                        return false;
+
+                    var parameters = method.GetParameters();
+                    return parameters.Length == 2
+                        && parameters[0].ParameterType.IsAssignableFrom(queueEntryArrayType)
+                        && parameters[1].ParameterType == typeof(int);
+                });
+
+            if (enqueue != null)
+                yield return (queueEntryType, enqueue);
         }
     }
 
