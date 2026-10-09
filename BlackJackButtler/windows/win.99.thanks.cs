@@ -17,12 +17,14 @@ public partial class BlackJackButtlerWindow
         "Saph",
         "Lydia",
         "Dissendra Blackthorn",
-        "Club: Calisto"
+        "Club: Calisto",
+        "Xi Mal",
+        "Vampfaia Mal"
     };
 
     private List<string> _thanksToNamesSupport = new()
     {
-
+        "Xi Mal"
     };
 
     private void DrawThanksPage()
@@ -187,26 +189,11 @@ public partial class BlackJackButtlerWindow
         ImGui.Spacing();
 
         var nameColor2 = new Vector4(0.3f, 0.8f, 0.7f, 1.0f);
-        var glowColor2 = new Vector4(0.2f, 0.9f, 0.4f, 0.3f);
 
         foreach (var name2 in _thanksToNamesSupport)
         {
             var nameSize2 = ImGui.CalcTextSize(name2);
             var posX2 = (windowWidth - nameSize2.X) / 2;
-
-            var drawList2 = ImGui.GetWindowDrawList();
-            var cursorPos2 = ImGui.GetCursorScreenPos();
-            var textPos2 = new Vector2(posX2 + cursorPos2.X - 8, cursorPos2.Y);
-
-            for (int offsetX2 = -2; offsetX2 <= 2; offsetX2++)
-            {
-                for (int offsetY2 = -2; offsetY2 <= 2; offsetY2++)
-                {
-                    if (offsetX2 == 0 && offsetY2 == 0) continue;
-                    var glowPos2 = new Vector2(textPos2.X + offsetX2, textPos2.Y + offsetY2);
-                    drawList2.AddText(glowPos2, ImGui.ColorConvertFloat4ToU32(glowColor2), name2);
-                }
-            }
 
             ImGui.SetCursorPosX(posX2);
             ImGui.TextColored(nameColor2, name2);

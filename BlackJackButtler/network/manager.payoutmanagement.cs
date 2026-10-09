@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -9,8 +10,9 @@ using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
-using ECommons.Automation;
+using ECommons.ChatMethods;
 using ECommons.DalamudServices;
+using ECommons.Reflection;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using static ECommons.GenericHelpers;
 
@@ -22,11 +24,8 @@ public static class PayoutManagement
 
     private const long MaxGilPerTrade = 1_000_000;
     private const double TargetSettleSeconds = 0.45;
-    private const double TradeOpenTimeoutSeconds = 8.0;
     private const double DropboxTradeOpenTimeoutSeconds = 30.0;
-    private const double AddonStepTimeoutSeconds = 5.0;
     private const double TradeClosedSettleSeconds = 1.0;
-    private const double ActionThrottleSeconds = 0.20;
 
     private enum PayoutState
     {
@@ -34,9 +33,6 @@ public static class PayoutManagement
         Targeting,
         OpeningTrade,
         WaitingTradeOpen,
-        OpeningGilInput,
-        SettingGil,
-        ConfirmingTrade,
         WaitingTradeClose,
         TradeClosedSettle,
     }
@@ -44,8 +40,8 @@ public static class PayoutManagement
     private enum TradeExecutor
     {
         None,
+        ModularTrade,
         Dropbox,
-        LocalClone,
     }
 
     public enum PayoutStartResult
@@ -71,17 +67,51 @@ public static class PayoutManagement
     private static long _lastKnownBank;
     private static long _currentChunk;
     private static bool _cancelRequested;
-    private static bool _confirmAllowed;
-    private static bool _sentTradeCommand;
     private static bool _openedDropboxUiForPayout;
-    private static bool _currentTradeAutoConfirm;
     private static long _bankBeforeCurrentTrade;
-    private static DateTime _lastTradeActionAt = DateTime.MinValue;
     private static TradeExecutor _executor = TradeExecutor.None;
     private static readonly Queue<QueuedPayout> QueuedPayouts = new();
+#if DEBUG
+    private static bool _isResetting;
+#endif
+    private static bool _modularTradeInitialized;
+
+    public readonly record struct DropboxStatus(bool Installed, bool Active);
 
     public static bool IsActive => _state != PayoutState.Idle;
     public static string CurrentTargetName => _targetName;
+
+    public static void Initialize()
+    {
+        if (_modularTradeInitialized)
+            return;
+
+        try
+        {
+            global::ModularTrade.TradeManager.Initialize(
+                new ModularTrade.BjbDalamudTradeAdapter());
+            global::ModularTrade.TradeManager.TradeChanged += OnModularTradeChanged;
+            _modularTradeInitialized = true;
+            Trace("Initialized integrated ModularTrade executor.");
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "[PayoutManagement] Failed to initialize integrated ModularTrade executor.");
+        }
+    }
+
+    public static void Dispose()
+    {
+        if (!_modularTradeInitialized)
+            return;
+
+        global::ModularTrade.TradeManager.TradeChanged -= OnModularTradeChanged;
+        if (global::ModularTrade.TradeManager.IsBusy)
+            global::ModularTrade.TradeManager.Cancel();
+        global::ModularTrade.TradeManager.Dispose();
+        _modularTradeInitialized = false;
+        Trace("Disposed integrated ModularTrade executor.");
+    }
 
     public static void StartPayout(PlayerState p)
     {
@@ -108,12 +138,8 @@ public static class PayoutManagement
         _lastKnownBank = p.Bank;
         _currentChunk = Math.Min(amount, MaxGilPerTrade);
         _cancelRequested = false;
-        _confirmAllowed = false;
-        _sentTradeCommand = false;
         _openedDropboxUiForPayout = false;
-        _currentTradeAutoConfirm = false;
         _bankBeforeCurrentTrade = p.Bank;
-        _lastTradeActionAt = DateTime.MinValue;
         _executor = TradeExecutor.None;
 
         SetState(PayoutState.Targeting,
@@ -189,6 +215,8 @@ public static class PayoutManagement
 
     public static void Tick()
     {
+        if (_modularTradeInitialized)
+            global::ModularTrade.TradeManager.Update();
         if (!IsActive) return;
 
         if (_cancelRequested)
@@ -211,8 +239,7 @@ public static class PayoutManagement
             return;
         }
 
-        var settlementPending = _state is PayoutState.ConfirmingTrade
-            or PayoutState.WaitingTradeClose
+        var settlementPending = _state is PayoutState.WaitingTradeClose
             or PayoutState.TradeClosedSettle;
         if (player.Bank <= 0 && !settlementPending)
         {
@@ -243,81 +270,42 @@ public static class PayoutManagement
                     Reset("No Gil available for remaining payout");
                     return;
                 }
-                _confirmAllowed = false;
                 _bankBeforeCurrentTrade = player.Bank;
-                _currentTradeAutoConfirm = false;
 
-                if (TryStartDropboxPayout(recipient, (int)_currentChunk))
+                var dropbox = GetDropboxStatus();
+                if (ShouldUseDropbox(dropbox))
                 {
-                    _executor = TradeExecutor.Dropbox;
-                    _sentTradeCommand = true;
-                    SetState(PayoutState.WaitingTradeOpen, "Dropbox payout task queued");
-                    return;
-                }
-
-                _executor = TradeExecutor.LocalClone;
-                _currentTradeAutoConfirm = true;
-                _sentTradeCommand = true;
-                ChatCommandRouter.Send("/trade", Plugin.Instance.Configuration, "PayoutManagement");
-                SetState(PayoutState.WaitingTradeOpen, "Local Dropbox clone trade command sent");
-                break;
-
-            case PayoutState.WaitingTradeOpen:
-                if (IsTradeOpen())
-                {
-                    if (_executor == TradeExecutor.Dropbox)
+                    if (TryStartDropboxPayout(recipient, (int)_currentChunk))
                     {
-                        SetState(PayoutState.WaitingTradeClose, "Dropbox opened trade");
+                        _executor = TradeExecutor.Dropbox;
+                        SetState(PayoutState.WaitingTradeOpen, "Dropbox payout task queued");
                         return;
                     }
 
-                    SetState(PayoutState.OpeningGilInput, "Trade opened");
+                    Reset("Dropbox is active but its trade task could not be started");
                     return;
                 }
-                if (StateElapsed >= (_executor == TradeExecutor.Dropbox ? DropboxTradeOpenTimeoutSeconds : TradeOpenTimeoutSeconds))
+
+                if (TryStartModularTradePayout(recipient, (int)_currentChunk))
+                {
+                    _executor = TradeExecutor.ModularTrade;
+                    SetState(PayoutState.WaitingTradeOpen, "Integrated ModularTrade payout started");
+                    return;
+                }
+                Reset("Integrated ModularTrade executor could not start");
+                break;
+
+            case PayoutState.WaitingTradeOpen:
+                if (_executor == TradeExecutor.ModularTrade)
+                    return; // ModularTrade owns its state and reports its verified outcome via its event.
+
+                if (IsTradeOpen())
+                {
+                    SetState(PayoutState.WaitingTradeClose, "Dropbox opened trade");
+                    return;
+                }
+                if (StateElapsed >= DropboxTradeOpenTimeoutSeconds)
                     Reset("Timed out waiting for Trade addon");
-                break;
-
-            case PayoutState.OpeningGilInput:
-                if (!IsTradeOpen())
-                {
-                    RetryOrResetAfterUnexpectedTradeClose(player);
-                    return;
-                }
-                if (TryOpenGilInput())
-                    SetState(PayoutState.SettingGil, "Gil input opened");
-                else if (StateElapsed >= AddonStepTimeoutSeconds)
-                    Reset("Timed out opening Gil input");
-                break;
-
-            case PayoutState.SettingGil:
-                if (!IsTradeOpen())
-                {
-                    RetryOrResetAfterUnexpectedTradeClose(player);
-                    return;
-                }
-                if (TrySetNumericInput((int)_currentChunk))
-                {
-                    _confirmAllowed = true;
-                    if (_currentTradeAutoConfirm)
-                        SetState(PayoutState.ConfirmingTrade, $"Gil set: {_currentChunk:N0}");
-                    else
-                        SetState(PayoutState.WaitingTradeClose, $"Gil set, waiting for manual confirmation: {_currentChunk:N0}");
-                }
-                else if (StateElapsed >= AddonStepTimeoutSeconds)
-                {
-                    Reset("Timed out setting Gil amount");
-                }
-                break;
-
-            case PayoutState.ConfirmingTrade:
-                if (!IsTradeOpen())
-                {
-                    SetState(PayoutState.TradeClosedSettle, "Trade closed after confirm");
-                    return;
-                }
-                TryConfirmTrade();
-                TryConfirmYesNo();
                 break;
 
             case PayoutState.WaitingTradeClose:
@@ -350,9 +338,6 @@ public static class PayoutManagement
                     Reset("Bank reached 0 before requested payout completed");
                     return;
                 }
-                _sentTradeCommand = false;
-                _confirmAllowed = false;
-                _currentTradeAutoConfirm = false;
                 _executor = TradeExecutor.None;
                 SetState(PayoutState.Targeting,
                     $"Remaining payout={_remainingAmount:N0}, bank={player.Bank:N0}, continuing");
@@ -405,8 +390,20 @@ public static class PayoutManagement
 
     public static void Reset(string reason = "Reset")
     {
+#if DEBUG
+        if (_isResetting)
+            return;
+        _isResetting = true;
+#endif
+        try
+        {
         if (IsActive)
-            Plugin.Instance.GetMainWindow().AddDebugLog($"[PayoutManagement] {reason}");
+            DebugLog($"[PayoutManagement] {reason}");
+
+        Trace($"Reset: reason='{reason}', executor={_executor}, remaining={_remainingAmount}, chunk={_currentChunk}");
+
+        if (_executor == TradeExecutor.ModularTrade && global::ModularTrade.TradeManager.IsBusy)
+            global::ModularTrade.TradeManager.Cancel();
 
         var startNextQueuedPayout = reason.Equals("Payout complete", StringComparison.OrdinalIgnoreCase)
             && QueuedPayouts.Count > 0;
@@ -421,12 +418,8 @@ public static class PayoutManagement
         _lastKnownBank = 0;
         _currentChunk = 0;
         _cancelRequested = false;
-        _confirmAllowed = false;
-        _sentTradeCommand = false;
         _openedDropboxUiForPayout = false;
-        _currentTradeAutoConfirm = false;
         _bankBeforeCurrentTrade = 0;
-        _lastTradeActionAt = DateTime.MinValue;
         _executor = TradeExecutor.None;
         _stateEnteredAt = DateTime.UtcNow;
 
@@ -437,6 +430,13 @@ public static class PayoutManagement
         else if (!reason.Equals("Payout complete", StringComparison.OrdinalIgnoreCase))
         {
             QueuedPayouts.Clear();
+        }
+        }
+        finally
+        {
+#if DEBUG
+            _isResetting = false;
+#endif
         }
     }
 
@@ -452,7 +452,8 @@ public static class PayoutManagement
     {
         _state = state;
         _stateEnteredAt = DateTime.UtcNow;
-        Plugin.Instance.GetMainWindow().AddDebugLog($"[PayoutManagement] {state}: {log}");
+        DebugLog($"[PayoutManagement] {state}: {log}");
+        Trace($"State={state}, executor={_executor}, target={_targetName}@{_targetWorldId}, chunk={_currentChunk}, remaining={_remainingAmount}: {log}");
     }
 
     private static PlayerState? GetCurrentPlayer()
@@ -470,7 +471,7 @@ public static class PayoutManagement
                 && (request.WorldId == 0 || candidate.WorldId == request.WorldId));
             if (player == null || player.Bank <= 0)
             {
-                Plugin.Instance.GetMainWindow().AddDebugLog(
+                DebugLog(
                     $"[PayoutManagement] Skipped queued payout for {request.PlayerName}: player missing or bank empty");
                 continue;
             }
@@ -479,7 +480,7 @@ public static class PayoutManagement
             if (TryStartPayout(player, amount) == PayoutStartResult.Started)
                 return;
 
-            Plugin.Instance.GetMainWindow().AddDebugLog(
+            DebugLog(
                 $"[PayoutManagement] Skipped queued payout for {player.DisplayName}: could not start payout");
         }
     }
@@ -513,20 +514,6 @@ public static class PayoutManagement
         return recipient != null && ReferenceEquals(detectedPartner, recipient)
             ? GetPayoutSource(players)
             : null;
-    }
-
-    private static void RetryOrResetAfterUnexpectedTradeClose(PlayerState player)
-    {
-        if (!_sentTradeCommand)
-        {
-            Reset("Trade closed before command was sent");
-            return;
-        }
-
-        if (_remainingAmount <= 0)
-            Reset("Payout complete");
-        else
-            SetState(PayoutState.TradeClosedSettle, "Trade closed before payout completed");
     }
 
     private static bool TryParsePayoutNumber(string text, bool hasSuffix, out decimal value)
@@ -631,9 +618,154 @@ public static class PayoutManagement
             && (worldId == 0 || pc.HomeWorld.RowId == worldId));
     }
 
+    private static bool TryStartModularTradePayout(PlayerState player, int gil)
+    {
+        var isBusy = global::ModularTrade.TradeManager.IsBusy;
+        if (!_modularTradeInitialized || isBusy)
+        {
+            Trace($"Integrated ModularTrade unavailable: initialized={_modularTradeInitialized}, busy={isBusy}");
+            return false;
+        }
+
+        if (FindPlayerObject(player.Name, player.WorldId) is not IPlayerCharacter character)
+        {
+            Trace($"Integrated ModularTrade could not resolve recipient {player.DisplayName}.");
+            return false;
+        }
+
+        try
+        {
+            var recipient = new Sender(character).ToString();
+            Trace($"Starting integrated ModularTrade recipient={recipient}, gil={gil}.");
+            global::ModularTrade.TradeManager.Trade(recipient, gil);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Plugin.Log.Error(ex, "[PayoutManagement] Integrated ModularTrade could not start.");
+            return false;
+        }
+    }
+
+    private static bool ShouldUseDropbox(DropboxStatus status)
+    {
+#if DEBUG
+        return Plugin.Instance.Configuration.DebugPayoutExecutor switch
+        {
+            DebugPayoutExecutorVariant.ModularTrade => false,
+            DebugPayoutExecutorVariant.Dropbox => status.Active,
+            _ => status.Installed && status.Active,
+        };
+#else
+        return status.Installed && status.Active;
+#endif
+    }
+
+    /// <summary>Queries Dalamud's installed-plugin list and its loaded-plugin registry separately.</summary>
+    public static DropboxStatus GetDropboxStatus()
+    {
+        var active = false;
+        var installed = false;
+
+        try
+        {
+            active = DalamudReflector.TryGetDalamudPlugin(
+                "Dropbox", out _, out _, suppressErrors: true, ignoreCache: true);
+        }
+        catch (Exception ex)
+        {
+            Trace($"Dropbox active-state query failed: {ex.GetBaseException().Message}");
+        }
+
+        try
+        {
+            var getPluginManager = typeof(DalamudReflector).GetMethod(
+                "GetPluginManager", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            var pluginManager = getPluginManager?.Invoke(null, null);
+            var installedPlugins = pluginManager?.GetType().GetProperty(
+                "InstalledPlugins", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(pluginManager)
+                as IEnumerable;
+
+            if (installedPlugins is not null)
+            {
+                foreach (var plugin in installedPlugins)
+                {
+                    if (plugin is not null && IsDropboxPlugin(plugin))
+                    {
+                        installed = true;
+                        break;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Trace($"Dropbox installation-state query failed: {ex.GetBaseException().Message}");
+        }
+
+        // A loaded plugin is necessarily installed, even if a future Dalamud build changes
+        // the internal installed-plugin collection accessed above.
+        return new DropboxStatus(installed || active, active);
+    }
+
+    private static bool IsDropboxPlugin(object plugin)
+    {
+        var type = plugin.GetType();
+        var internalName = type.GetProperty("InternalName")?.GetValue(plugin) as string
+            ?? type.GetField("InternalName")?.GetValue(plugin) as string;
+        if (string.Equals(internalName, "Dropbox", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var manifest = type.GetProperty("Manifest")?.GetValue(plugin);
+        if (manifest is null)
+            return false;
+
+        var manifestType = manifest.GetType();
+        internalName = manifestType.GetProperty("InternalName")?.GetValue(manifest) as string
+            ?? manifestType.GetField("InternalName")?.GetValue(manifest) as string;
+        return string.Equals(internalName, "Dropbox", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void OnModularTradeChanged(
+        global::ModularTrade.TradeEventType type,
+        global::ModularTrade.TradeSnapshot snapshot)
+    {
+        Trace($"ModularTrade event={type}, state={snapshot.State}, step={snapshot.CurrentStep}/{snapshot.TotalSteps}, confirmed={snapshot.ConfirmedAmount}/{snapshot.TotalAmount}, reason={snapshot.FailureReason}");
+        if (!IsActive || _executor != TradeExecutor.ModularTrade)
+            return;
+
+        switch (type)
+        {
+            case global::ModularTrade.TradeEventType.Success:
+                SetState(PayoutState.TradeClosedSettle,
+                    $"Integrated ModularTrade verified {_currentChunk:N0} Gil");
+                break;
+
+            case global::ModularTrade.TradeEventType.Cancel:
+                Reset($"Integrated ModularTrade stopped: {snapshot.FailureReason}; verified={snapshot.ConfirmedAmount:N0}");
+                break;
+        }
+    }
+
+    private static void Trace(string message)
+    {
+#if DEBUG
+        if (Plugin.Instance.Configuration.DebugTradeLogging)
+            Plugin.Log.Debug($"[PayoutManagement] {message}");
+#endif
+    }
+
+    private static void DebugLog(string message)
+    {
+#if DEBUG
+        if (Plugin.Instance.Configuration.DebugTradeLogging)
+            Plugin.Instance.GetMainWindow().AddDebugLog(message);
+#endif
+    }
+
     private static bool TryStartDropboxPayout(PlayerState player, int gil)
     {
-        if (Plugin.IsDebugMode) return false;
+        Trace($"Trying external Dropbox executor for {player.DisplayName}, gil={gil}.");
         if (gil < 1 || gil > MaxGilPerTrade) return false;
 
         try
@@ -645,7 +777,8 @@ public static class PayoutManagement
             var taskApis = GetDropboxTaskApis().ToList();
             if (taskApis.Count == 0)
             {
-                Plugin.Instance.GetMainWindow().AddDebugLog("[PayoutManagement] Dropbox task API not found; using local Dropbox clone");
+                Trace("External Dropbox task API was not found.");
+                DebugLog("[PayoutManagement] Dropbox task API not found");
                 return false;
             }
 
@@ -656,7 +789,7 @@ public static class PayoutManagement
 
             if (!TargetPayoutPlayerImmediate(player))
             {
-                Plugin.Instance.GetMainWindow().AddDebugLog("[PayoutManagement] Dropbox target/focus target could not be set; using local Dropbox clone");
+                DebugLog("[PayoutManagement] Dropbox target/focus target could not be set");
                 return false;
             }
 
@@ -666,23 +799,26 @@ public static class PayoutManagement
                 {
                     var emptyEntries = Array.CreateInstance(queueEntryType, 0);
                     enqueue.Invoke(null, new object[] { emptyEntries, gil });
-                    Plugin.Instance.GetMainWindow().AddDebugLog(
+                    DebugLog(
                         $"[PayoutManagement] Dropbox task invoked directly ({enqueue.DeclaringType?.Assembly.GetName().Name})");
+                    Trace($"External Dropbox task invocation succeeded: assembly={enqueue.DeclaringType?.Assembly.GetName().Name}.");
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    Plugin.Instance.GetMainWindow().AddDebugLog(
+                    DebugLog(
                         $"[PayoutManagement] Dropbox task invocation failed ({enqueue.DeclaringType?.Assembly.GetName().Name}): {ex.GetBaseException().Message}");
+                    Trace($"External Dropbox task invocation failed: {ex.GetBaseException().Message}");
                 }
             }
 
-            Plugin.Instance.GetMainWindow().AddDebugLog("[PayoutManagement] All Dropbox task APIs failed; using local Dropbox clone");
+            DebugLog("[PayoutManagement] All Dropbox task APIs failed");
             return false;
         }
         catch (Exception ex)
         {
-            Plugin.Instance.GetMainWindow().AddDebugLog($"[PayoutManagement] Dropbox start failed; using local Dropbox clone: {ex.GetBaseException().Message}");
+            DebugLog($"[PayoutManagement] Dropbox start failed: {ex.GetBaseException().Message}");
+            Trace($"External Dropbox start failed: {ex.GetBaseException().Message}");
             return false;
         }
     }
@@ -732,10 +868,10 @@ public static class PayoutManagement
         }
         catch (Exception ex)
         {
-            Plugin.Instance.GetMainWindow().AddDebugLog($"[PayoutManagement] /dropbox command failed: {ex.Message}");
+            DebugLog($"[PayoutManagement] /dropbox command failed: {ex.Message}");
         }
 
-        Plugin.Instance.GetMainWindow().AddDebugLog(opened
+        DebugLog(opened
             ? "[PayoutManagement] /dropbox command dispatched"
             : "[PayoutManagement] /dropbox command was registered but dispatch returned false");
         _openedDropboxUiForPayout = opened;
@@ -747,88 +883,4 @@ public static class PayoutManagement
             || (TryGetAddonByName<AtkUnitBase>("Trade", out var addon) && IsAddonReady(addon));
     }
 
-    private static unsafe bool TryOpenGilInput()
-    {
-        if (!TryGetAddonByName<AtkUnitBase>("Trade", out var addon) || !IsAddonReady(addon))
-            return false;
-
-        try
-        {
-            if (!CanRunTradeAction()) return false;
-            ECommons.Automation.Callback.Fire(addon, true, 2, ECommons.Automation.Callback.ZeroAtkValue);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Plugin.Instance.GetMainWindow().AddDebugLog($"[PayoutManagement] OpenGilInput failed: {ex.Message}");
-            return false;
-        }
-    }
-
-    private static unsafe bool TrySetNumericInput(int amount)
-    {
-        if (amount < 1 || amount > MaxGilPerTrade) return false;
-        if (!TryGetAddonByName<AtkUnitBase>("InputNumeric", out var addon) || !IsAddonReady(addon))
-            return false;
-
-        try
-        {
-            if (!CanRunTradeAction()) return false;
-            ECommons.Automation.Callback.Fire(addon, true, amount);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Plugin.Instance.GetMainWindow().AddDebugLog($"[PayoutManagement] SetNumericInput failed: {ex.Message}");
-            return false;
-        }
-    }
-
-    private static unsafe bool TryConfirmTrade()
-    {
-        if (!_confirmAllowed) return false;
-        if (!TryGetAddonByName<AtkUnitBase>("Trade", out var addon) || !IsAddonReady(addon))
-            return false;
-
-        try
-        {
-            if (!CanRunTradeAction()) return false;
-            ECommons.Automation.Callback.Fire(addon, true, 0, ECommons.Automation.Callback.ZeroAtkValue);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Plugin.Instance.GetMainWindow().AddDebugLog($"[PayoutManagement] Trade confirm failed: {ex.Message}");
-            return false;
-        }
-    }
-
-    private static unsafe bool TryConfirmYesNo()
-    {
-        if (!_confirmAllowed) return false;
-        if (!TryGetAddonByName<AtkUnitBase>("SelectYesno", out var addon) || !IsAddonReady(addon))
-            return false;
-
-        try
-        {
-            if (!CanRunTradeAction()) return false;
-            ECommons.Automation.Callback.Fire(addon, true, 0);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Plugin.Instance.GetMainWindow().AddDebugLog($"[PayoutManagement] Yes/No confirm failed: {ex.Message}");
-            return false;
-        }
-    }
-
-    private static bool CanRunTradeAction()
-    {
-        var now = DateTime.UtcNow;
-        if ((now - _lastTradeActionAt).TotalSeconds < ActionThrottleSeconds)
-            return false;
-
-        _lastTradeActionAt = now;
-        return true;
-    }
 }
