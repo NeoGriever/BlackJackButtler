@@ -18,6 +18,9 @@ public enum ShortResultDataSource { None, Winners, Pushed, Loosed, Busted }
 public enum GilVisualMode { Plain, Grouped, FixedGroup }
 public enum MenuStyleMode { Sidebar, BurgerMenu, TopTabs }
 public enum WageInterval { Minute, FifteenMinutes, ThirtyMinutes, Hour, TwoHours }
+#if DEBUG
+public enum DebugPayoutExecutorVariant { Automatic, ModularTrade, Dropbox }
+#endif
 
 [Serializable]
 public sealed class ShortResultRule
@@ -143,6 +146,11 @@ public sealed class Configuration : IPluginConfiguration
     public GilVisualMode GilVisual = GilVisualMode.FixedGroup;
 
     public float PayoutPercent = 30f;
+#if DEBUG
+    // Debug-build-only controls. Trade logging is deliberately reset to off at startup.
+    public DebugPayoutExecutorVariant DebugPayoutExecutor = DebugPayoutExecutorVariant.Automatic;
+    public bool DebugTradeLogging;
+#endif
     public long GilPerHour = 250000;
     public WageInterval WageIntervalMode = WageInterval.Hour;
     public int ClipHoursMode = 0;

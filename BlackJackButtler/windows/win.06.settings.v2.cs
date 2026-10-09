@@ -45,6 +45,9 @@ public partial class BlackJackButtlerWindow
             DrawSettingsV2Tab(5, "Nearby Players", DrawSettingsV2Nearby);
             DrawSettingsV2Tab(6, "Visual", DrawSettingsV2Visual);
             DrawSettingsV2Tab(7, "System", () => DrawSettingsV2System(level));
+#if DEBUG
+            DrawSettingsV2Tab(8, "DEBUG", DrawSettingsDebugTab);
+#endif
             ImGui.EndTabBar();
         }
 

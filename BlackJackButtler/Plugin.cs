@@ -190,6 +190,16 @@ public sealed class Plugin : IDalamudPlugin
 
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
+#if DEBUG
+        // Detailed payout/trade logs are opt-in for each plugin load; they can become very noisy
+        // during a live trade and are controlled from Settings → DEBUG.
+        if (Configuration.DebugTradeLogging)
+        {
+            Configuration.DebugTradeLogging = false;
+            Configuration.Save();
+        }
+#endif
+
         if (Configuration.EnsureShortResultRules())
             Configuration.Save();
 
@@ -255,6 +265,7 @@ public sealed class Plugin : IDalamudPlugin
         windowSystem.AddWindow(notepadWindow);
 
         mainWindow = new BlackJackButtlerWindow(Configuration, () => Configuration.Save(), chatLog, notepadWindow);
+        PayoutManagement.Initialize();
 
         buttonBarWindow = new CustomButtonBarWindow(Configuration, () => Configuration.Save(),
             () => mainWindow?.GetWindowRect() ?? (Vector2.Zero, Vector2.Zero), mainWindow);
@@ -669,6 +680,7 @@ public sealed class Plugin : IDalamudPlugin
 
         NearbyAlertManager.Dispose();
         DrawLogicScriptManager.Dispose();
+        PayoutManagement.Dispose();
 
         CommandManager.RemoveHandler(CommandName);
 
