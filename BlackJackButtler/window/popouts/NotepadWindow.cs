@@ -6,7 +6,7 @@ using Dalamud.Interface;
 
 namespace BlackJackButtler.Windows;
 
-public class NotepadWindow : Window
+public class NotepadWindow : ThemedWindow
 {
     private string _text = "";
     private bool _loaded = false;
@@ -33,6 +33,7 @@ public class NotepadWindow : Window
 
     public override void PreDraw()
     {
+        base.PreDraw();
         if (_needsPositioning && _getMainWindowRect != null)
         {
             var (pos, size) = _getMainWindowRect();
@@ -49,10 +50,12 @@ public class NotepadWindow : Window
     public override void PostDraw()
     {
         ImGui.PopStyleVar();
+        base.PostDraw();
     }
 
     public override void Draw()
     {
+        BeginThemeDraw();
         ImGui.PushFont(UiBuilder.MonoFont);
         if (ImGui.InputTextMultiline("##notepad", ref _text, 65536, new Vector2(-1, -1)))
         {

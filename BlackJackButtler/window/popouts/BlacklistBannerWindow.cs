@@ -4,7 +4,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace BlackJackButtler.Windows;
 
-public class BlacklistBannerWindow : Window
+public class BlacklistBannerWindow : ThemedWindow
 {
     public BlacklistBannerWindow()
         : base(
@@ -25,6 +25,7 @@ public class BlacklistBannerWindow : Window
 
     public override void PreDraw()
     {
+        base.PreDraw();
         var viewport = ImGui.GetMainViewport();
         var viewportPos = viewport.WorkPos;
         var viewportSize = viewport.Size;
@@ -37,6 +38,7 @@ public class BlacklistBannerWindow : Window
     public override void PostDraw()
     {
         ImGui.PopStyleColor();
+        base.PostDraw();
     }
 
     public override void OnClose()
@@ -47,6 +49,7 @@ public class BlacklistBannerWindow : Window
 
     public override void Draw()
     {
+        BeginThemeDraw();
         var message = BlacklistManager.BannerMessage;
         var textSize = ImGui.CalcTextSize(message);
         var windowSize = ImGui.GetWindowSize();

@@ -91,6 +91,12 @@ FEATURE LOOKUP
   Settings
     BlackJackButtler/window/settings
 
+  Themes
+    BlackJackButtler/classes/themes
+    BlackJackButtler/system/themes
+    BlackJackButtler/window/settings/themes
+    BlackJackButtler/themes/base.json
+
   Dialog windows
     BlackJackButtler/window/main/popups
     BlackJackButtler/window/popouts

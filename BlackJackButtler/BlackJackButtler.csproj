@@ -16,6 +16,7 @@
     </Content>
     <EmbeddedResource Include="..\changelog.md" LogicalName="BlackJackButtler.changelog.md" />
     <EmbeddedResource Include="presets\fast-message-preset.json" LogicalName="BlackJackButtler.FastMessagePreset.json" />
+    <EmbeddedResource Include="themes\base.json" LogicalName="BlackJackButtler.Themes.Base.json" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">

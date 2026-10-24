@@ -16,6 +16,8 @@ public partial class BlackJackButtlerWindow : Window, IDisposable
     public BlackJackButtlerWindow(Configuration config, Action save, ChatLogBuffer chatLog, NotepadWindow notepadWindow) : base($"BlackJack Buttler v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version} [Default]###BlackJackButtler")
     {
         _config = config;
+        _themes = new Themes.ThemeManager(Plugin.PluginInterface.GetPluginConfigDirectory());
+        EnsureThemeLayers();
         var origSave = save;
         _save = () => { _presetDirty = true; origSave(); };
         _chatLog = chatLog;

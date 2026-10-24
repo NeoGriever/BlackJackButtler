@@ -6,8 +6,9 @@ using BlackJackButtler.Chat;
 
 namespace BlackJackButtler.Windows;
 
-public class TablePopoutWindow : Window
+public class TablePopoutWindow : ThemedWindow
 {
+    protected override ThemeArea ThemeScope => ThemeArea.Main;
     private readonly Configuration _config;
     private readonly Action _save;
     private readonly BlackJackButtlerWindow _mainWindow;
@@ -35,6 +36,7 @@ public class TablePopoutWindow : Window
 
     public override void Draw()
     {
+        BeginThemeDraw();
         if (ImGui.IsWindowAppearing()) return;
 
         DrawTablePopoutControls();

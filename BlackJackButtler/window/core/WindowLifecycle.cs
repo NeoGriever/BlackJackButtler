@@ -16,6 +16,7 @@ public partial class BlackJackButtlerWindow
     public void SetHighlightNewRound() => _highlightNewRound = true;
     public void Dispose()
     {
+        _themes.Dispose();
 #if DEBUG
         _debugVisualCanvas.Dispose();
 #endif
@@ -38,6 +39,7 @@ public partial class BlackJackButtlerWindow
 
     public override void PreDraw()
     {
+        PushTheme();
         DeckCard.ShowSuits = !_config.HideCardSuits;
         if (_presetDirty)
         {
@@ -49,4 +51,6 @@ public partial class BlackJackButtlerWindow
         var dirty = _presetChangeCount > 0 ? "*" : "";
         WindowName = $"BlackJack Buttler v{ver} [{label}{dirty}]###BlackJackButtler";
     }
+
+    public override void PostDraw() => PopTheme();
 }

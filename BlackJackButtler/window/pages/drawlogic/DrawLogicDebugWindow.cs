@@ -5,8 +5,9 @@ using Dalamud.Bindings.ImGui;
 
 namespace BlackJackButtler.Windows;
 
-public class DrawLogicDebugWindow : Window
+public class DrawLogicDebugWindow : ThemedWindow
 {
+    protected override ThemeArea ThemeScope => ThemeArea.DrawLogic;
     public DrawLogicDebugWindow() : base("DrawLogic Debug###bjb_dl_debug")
     {
         Size = new Vector2(600, 500);
@@ -15,6 +16,7 @@ public class DrawLogicDebugWindow : Window
 
     public override void Draw()
     {
+        BeginThemeDraw();
         if (BJBGui.SmallButton("Capture"))
             DrawLogicInterpreter.TriggerDebugCapture();
         ImGui.SameLine();

@@ -23,6 +23,8 @@ public partial class BlackJackButtlerWindow
 
         _lastWindowPos = ImGui.GetWindowPos();
         _lastWindowSize = ImGui.GetWindowSize();
+        DrawThemeBackground();
+        ApplyWindowFontScale();
 
 
         if (_showRestoreSessionButton)
@@ -118,14 +120,15 @@ public partial class BlackJackButtlerWindow
             ImGui.SameLine();
         }
 
-        BJBGui.ButtonTextColor = _config.ButtonTextColor;
+        BJBGui.ButtonTextColor = CurrentTheme.Fonts.TryGetValue("button", out var themeButtonFont) && Themes.ThemeDefinition.TryColor(themeButtonFont.Color, out var themeButtonText)
+            ? themeButtonText : _config.ButtonTextColor;
         BJBGui.GilVisual = _config.GilVisual;
         var btnHover  = new Vector4(Math.Min(_config.ButtonColor.X * 1.2f, 1f), Math.Min(_config.ButtonColor.Y * 1.2f, 1f), Math.Min(_config.ButtonColor.Z * 1.2f, 1f), _config.ButtonColor.W);
         var btnActive = new Vector4(_config.ButtonColor.X * 0.85f, _config.ButtonColor.Y * 0.85f, _config.ButtonColor.Z * 0.85f, _config.ButtonColor.W);
-        ImGui.PushStyleColor(ImGuiCol.Button,        _config.ButtonColor);
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, btnHover);
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive,  btnActive);
-        ImGui.BeginChild("bjb.content", new Vector2(0, childHeight), true);
+        ImGui.PushStyleColor(ImGuiCol.Button,        ThemeButtonColor("Button", _config.ButtonColor));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, ThemeButtonColor("ButtonHovered", btnHover));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive,  ThemeButtonColor("ButtonActive", btnActive));
+        BeginThemedContentChild(childHeight);
 
         if (burgerMode)
         {
@@ -190,7 +193,7 @@ public partial class BlackJackButtlerWindow
             case Page.Messages:     DrawMessagesPage(); break;
             case Page.Commands:     DrawCommandsPage(); break;
             case Page.OwnButtons:   _page = Page.Commands; DrawCommandsPage(); break;
-            case Page.Settings:     DrawSettingsPage(); break;
+            case Page.Settings:     DrawThemedSettingsPage(); break;
             case Page.Vars:         DrawVarsPage(); break;
             case Page.RoundLog:     DrawRoundLogPage(); break;
             case Page.Debug:        DrawDebugPage(); break;

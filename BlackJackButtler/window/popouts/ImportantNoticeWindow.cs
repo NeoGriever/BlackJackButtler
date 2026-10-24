@@ -5,7 +5,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace BlackJackButtler.Windows;
 
-public class ImportantNoticeWindow : Window
+public class ImportantNoticeWindow : ThemedWindow
 {
     private readonly Configuration _config;
     private readonly Action _save;
@@ -82,6 +82,7 @@ public class ImportantNoticeWindow : Window
 
     public override void PreDraw()
     {
+        base.PreDraw();
         var bg = ImGui.GetStyle().Colors[(int)ImGuiCol.WindowBg];
         ImGui.PushStyleColor(ImGuiCol.WindowBg, new Vector4(bg.X, bg.Y, bg.Z, 0.95f));
     }
@@ -89,6 +90,7 @@ public class ImportantNoticeWindow : Window
     public override void PostDraw()
     {
         ImGui.PopStyleColor();
+        base.PostDraw();
     }
 
     public override void OnClose()
@@ -99,6 +101,7 @@ public class ImportantNoticeWindow : Window
 
     public override void Draw()
     {
+        BeginThemeDraw();
         if (_openedAt == DateTime.MinValue)
             _openedAt = DateTime.Now;
 

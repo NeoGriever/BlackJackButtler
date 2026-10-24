@@ -23,9 +23,10 @@ public partial class BlackJackButtlerWindow
         DrawSettingsTab(4, "Time & Delay", DrawTimeDelaySettings);
         DrawSettingsTab(5, "Nearby Players", DrawNearbySettingsContent);
         DrawSettingsTab(6, "Visual", DrawVisualSettings);
-        DrawSettingsTab(7, "System", () => DrawSystemSettings(level));
+        DrawSettingsTab(7, "Themes", DrawThemeSettings);
+        DrawSettingsTab(8, "System", () => DrawSystemSettings(level));
 #if DEBUG
-        DrawSettingsTab(8, "DEBUG", DrawSettingsDebugTab);
+        DrawSettingsTab(9, "DEBUG", DrawSettingsDebugTab);
 #endif
 
         ImGui.EndTabBar();

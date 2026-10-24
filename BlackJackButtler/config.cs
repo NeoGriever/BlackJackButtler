@@ -16,6 +16,16 @@ public enum BetLimitEntryKind { MinBet, Vip, Normal }
 public enum ShortResultDataSource { None, Winners, Pushed, Loosed, Busted }
 public enum GilVisualMode { Plain, Grouped, FixedGroup }
 public enum MenuStyleMode { Sidebar, BurgerMenu, TopTabs }
+[Flags]
+public enum ThemeArea { None = 0, Main = 1, Regex = 2, Messages = 4, Commands = 8, Presets = 16, Settings = 32, Stats = 64, DrawLogic = 128, All = Main | Regex | Messages | Commands | Presets | Settings | Stats | DrawLogic }
+
+[Serializable]
+public sealed class ThemeLayer
+{
+    public string Name = "";
+    public bool Enabled = true;
+    public ThemeArea Areas = ThemeArea.All;
+}
 public enum WageInterval { Minute, FifteenMinutes, ThirtyMinutes, Hour, TwoHours }
 #if DEBUG
 public enum DebugPayoutExecutorVariant { Automatic, ModularTrade, Dropbox }
@@ -268,6 +278,9 @@ public sealed class Configuration : IPluginConfiguration
     public float ButtonBarFixedWidthValue = 200f;
     public Vector4 ButtonBarBackgroundColor = new(0.1f, 0.1f, 0.1f, 1f);
     public string SelectedFontName = "Default";
+    public string SelectedTheme = "Base";
+    public List<ThemeLayer> ThemeLayers = new();
+    public bool ThemeAreasMigrated = false;
     public ButtonStyleConfig GeneralButtonDefaultStyle = ButtonStyleConfig.Default();
     public ButtonStyleConfig GeneralButtonActiveStyle = ButtonStyleConfig.Active();
     public ButtonStyleConfig GeneralButtonHighlightStyle = ButtonStyleConfig.Highlight();

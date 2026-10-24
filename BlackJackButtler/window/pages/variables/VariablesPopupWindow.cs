@@ -4,7 +4,7 @@ using Dalamud.Interface.Windowing;
 
 namespace BlackJackButtler.Windows;
 
-public class VariablesPopupWindow : Window
+public class VariablesPopupWindow : ThemedWindow
 {
     private readonly BlackJackButtlerWindow _mainWindow;
 
@@ -18,6 +18,7 @@ public class VariablesPopupWindow : Window
 
     public override void Draw()
     {
+        BeginThemeDraw();
         _mainWindow.DrawVarsPage();
     }
 }

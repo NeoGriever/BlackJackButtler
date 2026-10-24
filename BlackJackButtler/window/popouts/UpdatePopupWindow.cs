@@ -7,7 +7,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace BlackJackButtler.Windows;
 
-public class UpdatePopupWindow : Window
+public class UpdatePopupWindow : ThemedWindow
 {
     private readonly Configuration _config;
     private readonly Action _save;
@@ -35,6 +35,7 @@ public class UpdatePopupWindow : Window
 
     public override void PreDraw()
     {
+        base.PreDraw();
         var viewport = ImGui.GetMainViewport();
         var center = viewport.GetCenter();
         ImGui.SetNextWindowPos(new Vector2(center.X - 450, center.Y - 380), ImGuiCond.FirstUseEver);
@@ -42,6 +43,7 @@ public class UpdatePopupWindow : Window
 
     public override void Draw()
     {
+        BeginThemeDraw();
         ImGui.PushFont(UiBuilder.MonoFont);
 
         if (ImGui.BeginChild("##changelog_content", new Vector2(-1, -150), false))

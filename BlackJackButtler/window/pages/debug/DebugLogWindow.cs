@@ -8,7 +8,7 @@ using Dalamud.Bindings.ImGui;
 
 namespace BlackJackButtler.Windows;
 
-public class DebugLogWindow : Window
+public class DebugLogWindow : ThemedWindow
 {
     private readonly BlackJackButtlerWindow _main;
     private int _lastVisibleEntryCount = -1;
@@ -23,6 +23,7 @@ public class DebugLogWindow : Window
 
     public override void Draw()
     {
+        BeginThemeDraw();
         if (BJBGui.SmallButton("Clear Log"))
         {
             _main.ClearDebugLog();

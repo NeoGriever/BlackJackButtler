@@ -9,7 +9,7 @@ using BlackJackButtler.Chat;
 
 namespace BlackJackButtler.Windows;
 
-public class ChatBoxWindow : Window
+public class ChatBoxWindow : ThemedWindow
 {
     private readonly ChatLogBuffer _chatLog;
     private readonly Configuration _config;
@@ -38,6 +38,7 @@ public class ChatBoxWindow : Window
 
     public override void Draw()
     {
+        BeginThemeDraw();
         if (BJBGui.SmallButton("Clear##bjb_chat_clear")) _chatLog.Clear();
         ImGui.SameLine();
         if (BJBGui.SmallButton("Copy##bjb_chat_copy")) CopyVisibleToClipboard();

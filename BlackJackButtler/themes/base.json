@@ -1,0 +1,22 @@
+{
+  "name": "Base",
+  "fonts": {
+    "window": { "family": "Default", "size": 1.0 },
+    "settings": { "family": "Default", "size": 1.0 },
+    "button": { "family": "Default", "size": 1.0 }
+  },
+  "colors": {
+    "Button": "#424242FF",
+    "ButtonHovered": "#4F4F4FFF",
+    "ButtonActive": "#383838FF",
+    "Text": "#FFFFFFFF"
+  },
+  "corners": {
+    "window": { "rounding": null, "topLeft": true, "topRight": true, "bottomLeft": true, "bottomRight": true },
+    "child": { "rounding": null, "topLeft": true, "topRight": true, "bottomLeft": true, "bottomRight": true },
+    "frame": { "rounding": null, "topLeft": true, "topRight": true, "bottomLeft": true, "bottomRight": true },
+    "button": { "rounding": null, "topLeft": true, "topRight": true, "bottomLeft": true, "bottomRight": true }
+  },
+  "backgroundImage": "",
+  "headerColor": ""
+}

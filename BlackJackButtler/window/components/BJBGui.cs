@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using BlackJackButtler.Themes;
 
 namespace BlackJackButtler.Windows;
 
@@ -12,6 +13,45 @@ internal static class BJBGui
     public static Vector4 ButtonTextColor = new Vector4(1f, 1f, 1f, 1f);
     public static readonly Vector4 OrangeHighlightTextColor = new Vector4(0f, 0f, 0f, 1f);
     public static GilVisualMode GilVisual = GilVisualMode.FixedGroup;
+    public static ThemeCorners? ThemeButtonCorners;
+    public static ThemeFont? ThemeButtonFont;
+    public static float ThemeWindowFontScale = 1f;
+
+    private static bool DrawButton(string label, Vector2 size, bool small = false)
+    {
+        var font = ThemeButtonFont;
+        var pushMono = font != null && font.Family.Equals("Mono", StringComparison.OrdinalIgnoreCase);
+        if (pushMono) ImGui.PushFont(UiBuilder.MonoFont);
+        var scale = font == null ? ThemeWindowFontScale : Math.Clamp(font.Size, 0.5f, 3f);
+        if (font != null) ImGui.SetWindowFontScale(scale);
+        var fontColor = Vector4.Zero;
+        var pushColor = font != null && ThemeDefinition.TryColor(font.Color, out fontColor);
+        if (pushColor) ImGui.PushStyleColor(ImGuiCol.Text, fontColor);
+        var corners = ThemeButtonCorners;
+        var custom = corners?.Rounding is > 0f && !(corners.TopLeft && corners.TopRight && corners.BottomLeft && corners.BottomRight);
+        bool clicked;
+        if (!custom)
+        {
+            clicked = small ? ImGui.SmallButton(label) : ImGui.Button(label, size);
+        }
+        else
+        {
+            var visible = label.Split(new[] { "##" }, 2, StringSplitOptions.None)[0];
+            var textSize = ImGui.CalcTextSize(visible);
+            var padding = ImGui.GetStyle().FramePadding;
+            var actualSize = new Vector2(size.X > 0 ? size.X : textSize.X + 2f * padding.X, size.Y > 0 ? size.Y : textSize.Y + (small ? 0f : 2f * padding.Y));
+            clicked = ImGui.InvisibleButton(label, actualSize);
+            var slot = ImGui.IsItemActive() ? ImGuiCol.ButtonActive : ImGui.IsItemHovered() ? ImGuiCol.ButtonHovered : ImGuiCol.Button;
+            var start = ImGui.GetItemRectMin();
+            var end = ImGui.GetItemRectMax();
+            ImGui.GetWindowDrawList().AddRectFilled(start, end, ImGui.GetColorU32(slot), corners!.Rounding!.Value, corners.Flags);
+            ImGui.GetWindowDrawList().AddText(start + (actualSize - textSize) * 0.5f, ImGui.GetColorU32(ImGuiCol.Text), visible);
+        }
+        if (pushColor) ImGui.PopStyleColor();
+        if (font != null) ImGui.SetWindowFontScale(ThemeWindowFontScale);
+        if (pushMono) ImGui.PopFont();
+        return clicked;
+    }
     private sealed class LongInputState
     {
         public bool IsEditing;
@@ -61,7 +101,7 @@ internal static class BJBGui
     public static bool Button(string label)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
-        var r = ImGui.Button(label);
+        var r = DrawButton(label, default);
         ImGui.PopStyleColor();
         return r;
     }
@@ -69,7 +109,7 @@ internal static class BJBGui
     public static bool Button(string label, Vector2 size)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
-        var r = ImGui.Button(label, size);
+        var r = DrawButton(label, size);
         ImGui.PopStyleColor();
         return r;
     }
@@ -77,7 +117,7 @@ internal static class BJBGui
     public static bool Button(string label, Vector2 size, Vector4 textColor)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, textColor);
-        var r = ImGui.Button(label, size);
+        var r = DrawButton(label, size);
         ImGui.PopStyleColor();
         return r;
     }
@@ -85,7 +125,7 @@ internal static class BJBGui
     public static bool Button(string label, Vector4 textColor)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, textColor);
-        var r = ImGui.Button(label);
+        var r = DrawButton(label, default);
         ImGui.PopStyleColor();
         return r;
     }
@@ -94,7 +134,7 @@ internal static class BJBGui
     {
         ImGui.PushStyleColor(ImGuiCol.Button, buttonColor);
         ImGui.PushStyleColor(ImGuiCol.Text, textColor);
-        var r = ImGui.Button(label);
+        var r = DrawButton(label, default);
         ImGui.PopStyleColor(2);
         return r;
     }
@@ -103,7 +143,7 @@ internal static class BJBGui
     {
         ImGui.PushStyleColor(ImGuiCol.Button, buttonColor);
         ImGui.PushStyleColor(ImGuiCol.Text, textColor);
-        var r = ImGui.Button(label, size);
+        var r = DrawButton(label, size);
         ImGui.PopStyleColor(2);
         return r;
     }
@@ -111,7 +151,7 @@ internal static class BJBGui
     public static bool SmallButton(string label)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, ButtonTextColor);
-        var r = ImGui.SmallButton(label);
+        var r = DrawButton(label, default, true);
         ImGui.PopStyleColor();
         return r;
     }
@@ -119,7 +159,7 @@ internal static class BJBGui
     public static bool SmallButton(string label, Vector4 textColor)
     {
         ImGui.PushStyleColor(ImGuiCol.Text, textColor);
-        var r = ImGui.SmallButton(label);
+        var r = DrawButton(label, default, true);
         ImGui.PopStyleColor();
         return r;
     }
@@ -128,7 +168,7 @@ internal static class BJBGui
     {
         ImGui.PushStyleColor(ImGuiCol.Button, buttonColor);
         ImGui.PushStyleColor(ImGuiCol.Text, textColor);
-        var r = ImGui.SmallButton(label);
+        var r = DrawButton(label, default, true);
         ImGui.PopStyleColor(2);
         return r;
     }

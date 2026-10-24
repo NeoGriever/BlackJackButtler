@@ -5,8 +5,9 @@ using Dalamud.Bindings.ImGui;
 
 namespace BlackJackButtler.Windows;
 
-public class CustomButtonBarWindow : Window
+public class CustomButtonBarWindow : ThemedWindow
 {
+    protected override ThemeArea ThemeScope => ThemeArea.Main;
     private readonly Configuration _config;
     private readonly Action _save;
     private readonly Func<(Vector2, Vector2)>? _getMainWindowRect;
@@ -27,6 +28,7 @@ public class CustomButtonBarWindow : Window
 
     public override void PreDraw()
     {
+        base.PreDraw();
         if (_needsPositioning && _getMainWindowRect != null)
         {
             var (pos, size) = _getMainWindowRect();
@@ -47,6 +49,7 @@ public class CustomButtonBarWindow : Window
 
     public override void Draw()
     {
+        BeginThemeDraw();
         _mainWindow.RenderCustomButtons("bar", _config.ButtonBarLayout == ButtonBarLayout.Vertical);
 
         if (_config.ButtonBarLayout == ButtonBarLayout.Horizontal)

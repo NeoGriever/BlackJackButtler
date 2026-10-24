@@ -5,8 +5,9 @@ using Dalamud.Bindings.ImGui;
 
 namespace BlackJackButtler.Windows;
 
-public class NearbyPopoutWindow : Window
+public class NearbyPopoutWindow : ThemedWindow
 {
+    protected override ThemeArea ThemeScope => ThemeArea.Main;
     private readonly Configuration _config;
     private readonly Action _save;
     private readonly BlackJackButtlerWindow _mainWindow;
@@ -34,6 +35,7 @@ public class NearbyPopoutWindow : Window
 
     public override void Draw()
     {
+        BeginThemeDraw();
         if (ImGui.IsWindowAppearing()) return;
         _mainWindow.DrawNearbyPlayersSection();
     }
