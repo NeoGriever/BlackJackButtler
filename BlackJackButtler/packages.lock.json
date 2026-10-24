@@ -20,6 +20,15 @@
         "resolved": "3.1.0.18",
         "contentHash": "Py7NhvFM7v5jdNS2xaAEVt6DOTmVa8weCUN8hh/p/ELjH/XsVcfjv2+B/kKfqStlIGyOu6dhNlB8Lv1JNnyiqw=="
       },
+      "Jint": {
+        "type": "Direct",
+        "requested": "[4.2.0, )",
+        "resolved": "4.2.0",
+        "contentHash": "cMzTLC4T2z4hxAL2putQ6BTc1pzHSOsoDjUeDuWvPK7Kejpq1fFBSPdHoOQosPcw5XTicTCccqHoYaGE7fqazQ==",
+        "dependencies": {
+          "Acornima": "1.1.1"
+        }
+      },
       "NAudio": {
         "type": "Direct",
         "requested": "[2.2.1, )",
@@ -61,6 +70,11 @@
         "dependencies": {
           "NAudio.Core": "2.2.1"
         }
+      },
+      "Acornima": {
+        "type": "Transitive",
+        "resolved": "1.1.1",
+        "contentHash": "+ul3wnGmz+e845O8pKzA4NVuRiYvPXlVn+5vgQTN7zmBi/VAgV6aAyBtjBkv1tLKUUFCZS6cPJtRPLOQ1D9XHw=="
       },
       "NAudio.Asio": {
         "type": "Transitive",

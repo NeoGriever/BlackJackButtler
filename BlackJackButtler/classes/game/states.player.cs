@@ -1,0 +1,300 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace BlackJackButtler;
+
+public class PlayerState
+{
+    public bool IsDebugPlayer = false;
+    public bool IsImaginaryPlayer = false;
+    public string ReferencedPlayerName = string.Empty;
+    public uint ReferencedPlayerWorldId;
+    public bool IsDealer = false;
+
+    public string Name = string.Empty;
+    public string Alias = string.Empty;
+    public string ResolvedName = string.Empty;
+    public uint WorldId;
+    public bool IsActivePlayer = false;
+
+    public bool IsOnHold = false;
+    public bool WasOnHoldThisRound = false;
+    public bool IsOnBench = false;
+    public DateTime BenchedAt = DateTime.MinValue;
+    public bool JoinedMidRound = false;
+    public bool ReadySkip = false;
+
+    public bool IsInParty = true;
+    public bool IsCurrentTurn = false;
+    public bool HasInitialHandDealt = false;
+    public bool IsDone = false;
+
+    public long Bank = 0;
+    public long CurrentBet = 0;
+    public long LastRoundResult = 0;
+    public long BankAtRoundStart = 0;
+    public int SoundEffectId = 0;
+
+    public List<HandState> Hands = new();
+    public int CurrentHandIndex = 0;
+
+    public bool HighlightBet = false;
+    public bool HighlightHit = false;
+    public bool HighlightStand = false;
+    public bool HighlightDD = false;
+    public bool HighlightTD = false;
+    public bool HighlightSplit = false;
+    public bool HighlightPay = false;
+    public bool HighlightAlias = false;
+    public bool HighlightPause = false;
+    public bool HighlightLeave = false;
+    public bool HighlightJoin = false;
+    public bool HighlightTell = false;
+    public bool IsInDebt => Bank < 0;
+
+    public string DisplayName => !string.IsNullOrWhiteSpace(Alias) ? Alias : !string.IsNullOrWhiteSpace(ResolvedName) ? ResolvedName : Name;
+    public string UIID => IsImaginaryPlayer ? $"{Name}_{WorldId}_ghost_{ReferencedPlayerName}_{ReferencedPlayerWorldId}" : $"{Name}_{WorldId}";
+
+    public string GetCardsString(int handIndex)
+    {
+        if (handIndex < 0 || handIndex >= Hands.Count) return string.Empty;
+        var cards = Hands[handIndex].Cards;
+        if (cards.Count == 0) return string.Empty;
+
+        if (cards.Count == 1) return cards[0].ToString();
+
+        var allButLast = string.Join(", ", cards.Take(cards.Count - 1).Select(c => c.ToString()));
+        return $"{allButLast} and {cards.Last()}";
+    }
+
+    public int GetBestScore(int handIndex)
+    {
+        var (min, max) = CalculatePoints(handIndex);
+        return (max.HasValue && max.Value <= 21) ? max.Value : min;
+    }
+
+    public void HandleBetDeduction(long amount)
+    {
+        Bank -= amount;
+    }
+
+    public void ResetHighlightsOnceConsistent()
+    {
+        HighlightHit = false;
+        HighlightStand = false;
+        HighlightDD = false;
+        HighlightTD = false;
+        HighlightSplit = false;
+    }
+
+    public void ResetHighlightsAll()
+    {
+        HighlightBet = false;
+        HighlightHit = false;
+        HighlightStand = false;
+        HighlightDD = false;
+        HighlightTD = false;
+        HighlightSplit = false;
+        HighlightPay = false;
+        HighlightAlias = false;
+        HighlightPause = false;
+        HighlightLeave = false;
+        HighlightJoin = false;
+        HighlightTell = false;
+    }
+
+    public void ResetForNewRound()
+    {
+        Hands.Clear();
+        Hands.Add(new HandState(CurrentBet));
+        CurrentHandIndex = 0;
+        IsCurrentTurn = false;
+        HasInitialHandDealt = false;
+        WasOnHoldThisRound = false;
+        IsOnBench = false;
+        BenchedAt = DateTime.MinValue;
+        LastRoundResult = 0;
+        JoinedMidRound = false;
+        ResetHighlightsAll();
+    }
+
+    public (int Min, int? Max) CalculatePoints(int handIndex)
+    {
+        if (handIndex >= Hands.Count) return (0, null);
+        var cards = Hands[handIndex].Cards;
+
+        int total = 0;
+        int aces = 0;
+        foreach (var c in cards)
+        {
+            if (c.Value == 1) { total += 1; aces++; }
+            else if (c.Value >= 10) total += 10;
+            else total += c.Value;
+        }
+
+        if (aces > 0 && total + 10 <= 21)
+            return (total, total + 10);
+
+        return (total, null);
+    }
+
+    public bool IsHandDone(int index)
+    {
+        if (index >= Hands.Count) return true;
+        var (min, max) = CalculatePoints(index);
+        return Hands[index].IsStand || Hands[index].IsBust || min >= 21 || (max.HasValue && max == 21);
+    }
+
+    public static int GetCardScoreValue(int cardRawValue)
+    {
+        if (cardRawValue >= 10) return 10;
+        return cardRawValue;
+    }
+
+    public PlayerState Clone()
+    {
+        return new PlayerState
+        {
+            IsDebugPlayer = IsDebugPlayer,
+            IsImaginaryPlayer = IsImaginaryPlayer,
+            ReferencedPlayerName = ReferencedPlayerName,
+            ReferencedPlayerWorldId = ReferencedPlayerWorldId,
+            IsDealer = IsDealer,
+            Name = Name,
+            Alias = Alias,
+            ResolvedName = ResolvedName,
+            WorldId = WorldId,
+            IsActivePlayer = IsActivePlayer,
+
+            IsOnHold = IsOnHold,
+            WasOnHoldThisRound = WasOnHoldThisRound,
+            IsOnBench = IsOnBench,
+            BenchedAt = BenchedAt,
+            JoinedMidRound = JoinedMidRound,
+            ReadySkip = ReadySkip,
+
+            IsInParty = IsInParty,
+            IsCurrentTurn = IsCurrentTurn,
+            HasInitialHandDealt = HasInitialHandDealt,
+            IsDone = IsDone,
+
+            Bank = Bank,
+            CurrentBet = CurrentBet,
+            LastRoundResult = LastRoundResult,
+            BankAtRoundStart = BankAtRoundStart,
+            SoundEffectId = SoundEffectId,
+
+            Hands = Hands.Select(h => h.Clone()).ToList(),
+            CurrentHandIndex = CurrentHandIndex,
+
+            HighlightBet = HighlightBet,
+            HighlightHit = HighlightHit,
+            HighlightStand = HighlightStand,
+            HighlightDD = HighlightDD,
+            HighlightTD = HighlightTD,
+            HighlightSplit = HighlightSplit,
+            HighlightPay = HighlightPay,
+            HighlightAlias = HighlightAlias,
+            HighlightPause = HighlightPause,
+            HighlightLeave = HighlightLeave,
+            HighlightJoin = HighlightJoin,
+            HighlightTell = HighlightTell
+        };
+    }
+
+    public long GetEffectiveMaxBet(Configuration cfg)
+    {
+        if (cfg.BetLimitEntries.Count > 0)
+        {
+            string resolvedWorld = VipManager.ResolveWorldName(WorldId);
+            int playerTier = VipManager.GetPlayerTier(Name, resolvedWorld);
+            var match = cfg.BetLimitEntries
+                .Where(e => e.Active && e.Kind == BetLimitEntryKind.Vip && e.VipLevel == playerTier)
+                .OrderByDescending(e => e.Amount)
+                .FirstOrDefault();
+            if (match != null) return match.Amount;
+
+            var fallback = cfg.BetLimitEntries
+                .Where(
+                    e => e.Active && (e.Kind == BetLimitEntryKind.Normal || (e.Kind == BetLimitEntryKind.Vip && e.VipLevel == 0))
+                )
+                .OrderByDescending(e => e.Amount)
+                .FirstOrDefault();
+            if (fallback != null) return fallback.Amount;
+        }
+
+        string worldName = VipManager.ResolveWorldName(WorldId);
+        int tier = VipManager.GetPlayerTier(Name, worldName);
+        if (tier > 0 && cfg.VipBetTiers.Count > 0)
+        {
+            int effectiveIndex = System.Math.Min(tier, cfg.VipBetTiers.Count) - 1;
+            return cfg.VipBetTiers[effectiveIndex].MaxBet;
+        }
+        return cfg.MaxBet;
+    }
+
+    public string GetVipTierName(Configuration cfg)
+    {
+        if (cfg.BetLimitEntries.Count > 0)
+        {
+            string resolvedWorld = VipManager.ResolveWorldName(WorldId);
+            int playerTier = VipManager.GetPlayerTier(Name, resolvedWorld);
+            if (playerTier <= 0) return string.Empty;
+
+            var match = cfg.BetLimitEntries
+                .Where(e => e.Active && e.Kind == BetLimitEntryKind.Vip && e.VipLevel == playerTier)
+                .OrderByDescending(e => e.Amount)
+                .FirstOrDefault();
+            return string.IsNullOrWhiteSpace(match?.Name) ? $"VIP {playerTier}" : match.Name;
+        }
+
+        string worldName = VipManager.ResolveWorldName(WorldId);
+        int tier = VipManager.GetPlayerTier(Name, worldName);
+        if (tier > 0 && cfg.VipBetTiers.Count > 0)
+        {
+            int effectiveIndex = System.Math.Min(tier, cfg.VipBetTiers.Count) - 1;
+            return cfg.VipBetTiers[effectiveIndex].Name;
+        }
+        return string.Empty;
+    }
+
+    public string GetShortName(List<PlayerState> allActivePlayers)
+    {
+        if (!string.IsNullOrWhiteSpace(Alias) && !Alias.Equals(Name, System.StringComparison.OrdinalIgnoreCase))
+            return Alias;
+
+        if (string.IsNullOrWhiteSpace(Name)) return "Unknown";
+
+        var otherPlayers = allActivePlayers.Where(p => p != this).ToList();
+        var nameParts = Name.Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+        for (int count = 1; count <= nameParts.Length; count++)
+        {
+            string candidate = string.Join(" ", nameParts.Take(count));
+
+            bool hasConflict = false;
+            foreach (var other in otherPlayers)
+            {
+                string otherIdentity = (!string.IsNullOrWhiteSpace(other.Alias) && !other.Alias.Equals(other.Name)) ? other.Alias : other.Name;
+
+                if (otherIdentity.StartsWith(candidate, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!Name.Equals(other.Name, System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasConflict = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hasConflict) return candidate;
+        }
+
+        int indexInDuplicates = allActivePlayers
+            .Where(p => p.Name.Equals(Name, System.StringComparison.OrdinalIgnoreCase))
+            .ToList().IndexOf(this);
+
+        return indexInDuplicates > 0 ? $"{Name} ({indexInDuplicates + 1})" : Name;
+    }
+}

@@ -74,7 +74,6 @@ public sealed class Plugin : IDalamudPlugin
     private readonly NearbyPopoutWindow nearbyPopoutWindow;
     private readonly UpdatePopupWindow updatePopupWindow;
     private readonly ImportantNoticeWindow importantNoticeWindow;
-    private readonly Version3MigrationWindow version3MigrationWindow;
     private readonly BlacklistBannerWindow blacklistBannerWindow;
     private VariablesPopupWindow variablesPopupWindow = null!;
     private DateTime _lastSync = DateTime.MinValue;
@@ -98,8 +97,7 @@ public sealed class Plugin : IDalamudPlugin
     private bool _autoContinueWaiting = false;
 
     public static bool AutoContinueActive => Instance?._autoContinueWaiting ?? false;
-    public static double AutoContinueElapsedSeconds => Instance != null && Instance._autoContinueWaiting
-        ? (DateTime.Now - Instance._lastChatActivity).TotalSeconds : 0.0;
+    public static double AutoContinueElapsedSeconds => Instance != null && Instance._autoContinueWaiting ? (DateTime.Now - Instance._lastChatActivity).TotalSeconds : 0.0;
     public static int DebugDiceSequenceIndex => Volatile.Read(ref _debugDiceSequenceIndex);
 
     public static void ResetDebugDiceSequence()
@@ -171,7 +169,8 @@ public sealed class Plugin : IDalamudPlugin
             action,
             queueKey ?? context,
             () => IsAutoActionGenerationCurrent(generation)
-                && (isStillEnabled == null || isStillEnabled()));
+                && (isStillEnabled == null || isStillEnabled())
+        );
     }
 
     public void ResetAutoActionState(bool cancelCurrentGroup)
@@ -191,8 +190,6 @@ public sealed class Plugin : IDalamudPlugin
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
 
 #if DEBUG
-        // Detailed payout/trade logs are opt-in for each plugin load; they can become very noisy
-        // during a live trade and are controlled from Settings → DEBUG.
         if (Configuration.DebugTradeLogging)
         {
             Configuration.DebugTradeLogging = false;
@@ -209,13 +206,6 @@ public sealed class Plugin : IDalamudPlugin
         if (Configuration.EnsureAutoContinueMinimumPlayersMigration())
             Configuration.Save();
 
-        // Declining the migration only suppresses the banner for the current plugin session.
-        if (Configuration.MainViewVersion != 3 && Configuration.Version3MigrationNoticeOpened)
-        {
-            Configuration.Version3MigrationNoticeOpened = false;
-            Configuration.Save();
-        }
-
         if (!Configuration.EnableAllianceSupport)
         {
             Configuration.EnableAllianceSupport = true;
@@ -223,6 +213,12 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         if (DefaultsMigration.RunMigration(Configuration))
+            Configuration.Save();
+
+        if (Configuration.EnsurePlayerSoundDefaults())
+            Configuration.Save();
+
+        if (Configuration.EnsureMoneyRingEntries())
             Configuration.Save();
 
         if (DefaultsMigration.EnsureGameplayRegexPatterns(Configuration))
@@ -267,8 +263,7 @@ public sealed class Plugin : IDalamudPlugin
         mainWindow = new BlackJackButtlerWindow(Configuration, () => Configuration.Save(), chatLog, notepadWindow);
         PayoutManagement.Initialize();
 
-        buttonBarWindow = new CustomButtonBarWindow(Configuration, () => Configuration.Save(),
-            () => mainWindow?.GetWindowRect() ?? (Vector2.Zero, Vector2.Zero), mainWindow);
+        buttonBarWindow = new CustomButtonBarWindow(Configuration, () => Configuration.Save(), () => mainWindow?.GetWindowRect() ?? (Vector2.Zero, Vector2.Zero), mainWindow);
         windowSystem.AddWindow(buttonBarWindow);
         if (Configuration.ButtonBarPopout) buttonBarWindow.IsOpen = true;
 
@@ -280,7 +275,6 @@ public sealed class Plugin : IDalamudPlugin
             Configuration.Presets.AddRange(loaded);
         }
 
-        // Popout-Zustand ist nur session-stabil — beim Plugin-Start immer geschlossen
         Configuration.TablePopout  = false;
         Configuration.NearbyPopout = false;
 
@@ -307,9 +301,6 @@ public sealed class Plugin : IDalamudPlugin
         importantNoticeWindow = new ImportantNoticeWindow(Configuration, () => Configuration.Save());
         windowSystem.AddWindow(importantNoticeWindow);
 
-        version3MigrationWindow = new Version3MigrationWindow(Configuration, () => Configuration.Save());
-        windowSystem.AddWindow(version3MigrationWindow);
-        mainWindow.SetVersion3MigrationWindow(version3MigrationWindow);
 
         blacklistBannerWindow = new BlacklistBannerWindow();
         windowSystem.AddWindow(blacklistBannerWindow);
@@ -463,14 +454,12 @@ public sealed class Plugin : IDalamudPlugin
             }
         }
 
-        // Party-Sync (throttled auf 1x/Sekunde)
         if ((DateTime.Now - _lastSync).TotalMilliseconds > 1000)
         {
             mainWindow.SyncPartyPublic();
             _lastSync = DateTime.Now;
         }
 
-        // Auto Initial Deal
         if (Configuration.EnableAutomation && Configuration.AutoInitialDeal
             && GameEngine.CurrentPhase == GamePhase.InitialDeal)
         {
@@ -492,7 +481,8 @@ public sealed class Plugin : IDalamudPlugin
                             && GameEngine.CurrentPhase == GamePhase.InitialDeal
                             && currentPlayer.IsCurrentTurn
                             && !currentPlayer.HasInitialHandDealt,
-                        $"AutoDeal:{currentPlayer.Name}");
+                        $"AutoDeal:{currentPlayer.Name}"
+                    );
                 }
                 else
                 {
@@ -513,7 +503,6 @@ public sealed class Plugin : IDalamudPlugin
             }
         }
 
-        // Auto Dealer Draw
         if (Configuration.EnableAutomation && Configuration.AutoDealerDraw
             && GameEngine.CurrentPhase == GamePhase.DealerTurn)
         {
@@ -529,16 +518,20 @@ public sealed class Plugin : IDalamudPlugin
                         int score = (max.HasValue && max.Value <= 21) ? max.Value : min;
                         bool isSoft = max.HasValue && max.Value <= 21 && max.Value != min;
                         bool shouldHit = score < Configuration.DealerDrawsUntil
-                            || (Configuration.DealerSoftRule && isSoft && score == Configuration.DealerDrawsUntil);
+                            || (!Configuration.DealerSoftRule && isSoft && score == Configuration.DealerDrawsUntil);
                         if (shouldHit)
                         {
                             mainWindow.AddDebugLog($"[AutoDealer] Hit: score={score} (soft={isSoft}) vs {(Configuration.DealerSoftRule ? "soft" : "hard")} {Configuration.DealerDrawsUntil}");
                             var players = mainWindow.GetPlayers();
                             RunAutoAction(
                                 "AutoDealerHit",
-                                () => GameEngine.DealerHit(Configuration, players),
+                                () => GameEngine.DealerHit(
+                                    Configuration,
+                                    players
+                                ),
                                 () => Configuration.AutoDealerDraw && GameEngine.CurrentPhase == GamePhase.DealerTurn,
-                                "AutoDealerAction");
+                                "AutoDealerAction"
+                            );
                         }
                         else
                         {
@@ -553,7 +546,8 @@ public sealed class Plugin : IDalamudPlugin
                                     mainWindow.AddDebugLog("[AutoDealer] DealerStand + EvaluateFinalResults completed");
                                 },
                                 () => Configuration.AutoDealerDraw && GameEngine.CurrentPhase == GamePhase.DealerTurn,
-                                "AutoDealerAction");
+                                "AutoDealerAction"
+                            );
                         }
                     }
                 }
@@ -568,7 +562,6 @@ public sealed class Plugin : IDalamudPlugin
             }
         }
 
-        // Payout + Trade + JoinQueue + NearbyAlert
         DebugAutoPlayerManager.Tick(Configuration);
         PayoutManagement.Tick();
         TradeManager.Tick();
@@ -620,7 +613,8 @@ public sealed class Plugin : IDalamudPlugin
                               && GameEngine.CanAcceptInterRoundDetectors()
                               && mainWindow.GetPlayers().Count(p => p.IsActivePlayer && !p.IsOnHold)
                                   >= Configuration.AutoContinueMinimumPlayers,
-                        "RoundStart");
+                        "RoundStart"
+                    );
                 }
             }
             else
@@ -705,7 +699,8 @@ public sealed class Plugin : IDalamudPlugin
         var pending = new PendingChatMessage(
             (int)message.LogKind,
             message.Sender,
-            message.Message);
+            message.Message
+        );
 
         lock (_pendingChatGate)
             _pendingChatMessages.Enqueue(pending);
@@ -717,7 +712,8 @@ public sealed class Plugin : IDalamudPlugin
         {
             _chatSourceHook = GameInteropProvider.HookFromAddress<RaptureLogModule.Delegates.AddMsgSourceEntry>(
                 RaptureLogModule.MemberFunctionPointers.AddMsgSourceEntry,
-                OnAddChatSourceEntry);
+                OnAddChatSourceEntry
+            );
             _chatSourceHook.Enable();
         }
         catch (Exception ex)
@@ -732,7 +728,8 @@ public sealed class Plugin : IDalamudPlugin
         ulong accountId,
         int messageIndex,
         ushort worldId,
-        ushort chatType)
+        ushort chatType
+    )
     {
         _chatSourceHook!.Original(module, contentId, accountId, messageIndex, worldId, chatType);
 
@@ -796,7 +793,8 @@ public sealed class Plugin : IDalamudPlugin
             pending.Message.TextValue ?? string.Empty,
             pending.Sender,
             pending.Message,
-            pending.SourceContentId);
+            pending.SourceContentId
+        );
     }
 
     public uint GetLogNameType()
@@ -810,7 +808,8 @@ public sealed class Plugin : IDalamudPlugin
         string messageText,
         SeString? rawSender = null,
         SeString? rawMessage = null,
-        ulong sourceContentId = 0)
+        ulong sourceContentId = 0
+    )
     {
         string logName = !string.IsNullOrEmpty(playerName) ? playerName : senderText;
         string logLine = string.IsNullOrEmpty(logName) ? messageText : $"{logName}: {messageText}";
@@ -836,7 +835,8 @@ public sealed class Plugin : IDalamudPlugin
             worldId,
             playerName,
             GetLogNameType(),
-            type);
+            type
+        );
 
         if (ChatLogBuffer.IsSystemChatType(type))
             GroupContextManager.ObserveSystemMessage(parsed.Message);
@@ -849,7 +849,8 @@ public sealed class Plugin : IDalamudPlugin
             mainWindow.AddDebugLog(
                 $"[DiceDetection] Type={type}, Sender='{parsed.Name}', " +
                 $"CID={parsed.SourceContentId}, Identity={parsed.IdentitySource}, " +
-                $"OwnRoll={parsed.Event}, Value={parsed.DiceValue?.ToString() ?? "(none)"}");
+                $"OwnRoll={parsed.Event}, Value={parsed.DiceValue?.ToString() ?? "(none)"}"
+            );
             StatsLogManager.AppendDiceResult(parsed.Message);
         }
 
@@ -872,28 +873,6 @@ public sealed class Plugin : IDalamudPlugin
         public ulong SourceContentId { get; set; }
         public uint SourceWorldId { get; set; }
         public ushort NativeChatType { get; set; }
-    }
-
-    private static string DumpPayloads(SeString s)
-    {
-        var sb = new StringBuilder(1024);
-
-        for (var i = 0; i < s.Payloads.Count; i++)
-        {
-            var p = s.Payloads[i];
-            sb.Append(i).Append(": ").Append(p.GetType().Name);
-
-            if (p is TextPayload tp)
-                sb.Append(" -> \"").Append(tp.Text).Append('"');
-            else if (p is PlayerPayload pp)
-                sb.Append($" -> PlayerName=\"{pp.PlayerName}\", WorldId={pp.World}");
-            else
-                sb.Append(" -> ").Append(p.ToString());
-
-            sb.AppendLine();
-        }
-
-        return sb.ToString();
     }
 
     private static string ToHex(byte[] bytes)

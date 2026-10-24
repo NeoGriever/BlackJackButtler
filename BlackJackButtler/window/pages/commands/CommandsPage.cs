@@ -1,0 +1,485 @@
+using System;
+using System.Linq;
+using System.Numerics;
+using BlackJackButtler.Chat;
+using Dalamud.Bindings.ImGui;
+using Rx = System.Text.RegularExpressions.Regex;
+using RxOptions = System.Text.RegularExpressions.RegexOptions;
+
+namespace BlackJackButtler.Windows;
+
+public partial class BlackJackButtlerWindow
+{
+    private const string AntiDoubleApplyPopupId = "Apply Anti-Double to matching commands?##bjb_ad_apply_all";
+    private static readonly Rx CommandVariablePattern = new(
+        @"\$\$?\{[^}]+\}|\+\{[^}]+\}|<(?!se\.[^>]*>)[^>]+>",
+        RxOptions.Compiled | RxOptions.IgnoreCase
+    );
+
+    private string _filterCommands = string.Empty;
+    private PluginCommand? _pendingAntiDoubleCommand;
+    private string _pendingAntiDoubleText = string.Empty;
+    private string _pendingAntiDoubleComparisonKey = string.Empty;
+    private bool _openAntiDoubleApplyPopup;
+    private bool _triggerAntiDoubleApplyPopup;
+
+    private void DrawCommandsPage()
+    {
+        if (ImGui.BeginTabBar("##commands_tabs"))
+        {
+            var commandsFlags = _pendingCommandsTab == "Commands" ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+            if (ImGui.BeginTabItem("Commands", commandsFlags))
+            {
+                if (_pendingCommandsTab == "Commands") _pendingCommandsTab = null;
+                DrawCommandChainsTab();
+                ImGui.EndTabItem();
+            }
+            var ownButtonsFlags = _pendingCommandsTab == "OwnButtons" ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+            if (ImGui.BeginTabItem("Own Buttons", ownButtonsFlags))
+            {
+                if (_pendingCommandsTab == "OwnButtons") _pendingCommandsTab = null;
+                DrawOwnButtonsPage();
+                ImGui.EndTabItem();
+            }
+            ImGui.EndTabBar();
+        }
+
+        if (_triggerAntiDoubleApplyPopup)
+        {
+            ImGui.OpenPopup(AntiDoubleApplyPopupId);
+            _triggerAntiDoubleApplyPopup = false;
+        }
+
+        DrawAntiDoubleApplyPopup();
+    }
+
+    private void DrawCommandChainsTab()
+    {
+        ImGui.TextUnformatted("Command Chains");
+        ImGui.SameLine();
+
+        var io = ImGui.GetIO();
+        bool keysDown = io.KeyCtrl && io.KeyShift;
+
+        if (!keysDown) ImGui.BeginDisabled();
+        if (keysDown) ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.6f, 0f, 0f, 1f));
+        if (BJBGui.Button("Hard Reset…##res_cmds"))
+        {
+            _openCmdForceDefaultsPopup = true;
+            ImGui.OpenPopup("bjb.cmd.restore.confirm");
+        }
+        if (keysDown) ImGui.PopStyleColor();
+        if (!keysDown)
+        {
+            ImGui.EndDisabled();
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+                ImGui.SetTooltip("Hold CTRL + SHIFT to reset all command chains.");
+        }
+
+        if (ImGui.BeginPopupModal("bjb.cmd.restore.confirm", ref _openCmdForceDefaultsPopup, ImGuiWindowFlags.AlwaysAutoResize))
+        {
+            ImGui.TextColored(new Vector4(1, 0, 0, 1), "WARNING: HARD RESET");
+            ImGui.TextUnformatted("This will delete all standard messages and commands and recreate them.");
+            ImGui.TextUnformatted("Choose which defaults pack to restore:");
+            ImGui.Spacing();
+
+            if (BJBGui.Button("Use New Defaults (recommended)", new Vector2(260, 0)))
+            {
+                DefaultsMigration.SeedDefaultsFromEmbeddedConfiguration(_config);
+                _save();
+                _openCmdForceDefaultsPopup = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.SameLine();
+            if (BJBGui.Button("Use Old Defaults", new Vector2(160, 0)))
+            {
+                DefaultsMigration.SeedAllDefaults(_config);
+                _save();
+                _openCmdForceDefaultsPopup = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.SameLine();
+            if (BJBGui.Button("Cancel", new Vector2(120, 0)))
+            {
+                _openCmdForceDefaultsPopup = false;
+                ImGui.CloseCurrentPopup();
+            }
+            ImGui.EndPopup();
+        }
+
+        ImGui.Separator();
+
+        BJBGui.DrawFilterBar("commands", ref _filterCommands, "Search command name or text...");
+        ImGui.Spacing();
+
+        foreach (var group in _config.CommandGroups)
+        {
+            string displayName = group.Name switch {
+                "Initial" => "Player Start",
+                "Hit" => "Player Hit",
+                "Stand" => "Player Stand",
+                "DD" => "Player Double Down",
+                "TD" => "Player Triple Down",
+                "Split" => "Player Split",
+                "PlayerBust" => "Player Busted",
+                "PlayerTDForcedStand" => "Player Triple Down Forced Stand",
+                "DealStart" => "Dealer Start",
+                "DealHit" => "Dealer Hit",
+                "DealStand" => "Dealer Stand",
+                "DealerBJ" => "Dealer Has Blackjack",
+                "DealerBust" => "Dealer Busted",
+                "BankTell" => "Bank Tell (Individual)",
+                _ => group.Name
+            };
+
+            if (!BJBGui.MatchesFilter(_filterCommands, displayName, group.Commands.Select(c => (string?)c.Text))
+                && !BJBGui.MatchesFilter(_filterCommands, group.Name))
+                continue;
+
+            ImGui.PushID($"group_{group.Name}");
+
+            if (!string.IsNullOrEmpty(_filterCommands)
+                || _pendingOpenCommandGroups.Remove(group.Name))
+                ImGui.SetNextItemOpen(true, ImGuiCond.Always);
+
+            if (ImGui.CollapsingHeader($"{displayName} (Internal: {group.Name})"))
+            {
+                DrawCommandGroupTable(group);
+
+                if (BJBGui.Button("+ Add Command Step"))
+                {
+                    group.Commands.Add(new PluginCommand { Text = "/p New step...", Delay = 1.0f });
+                    _save();
+                }
+            }
+            ImGui.PopID();
+            ImGui.Spacing();
+        }
+
+    }
+
+    private void DrawCommandGroupTable(CommandGroup group)
+    {
+        if (!ImGui.BeginTable($"table_{group.Name}", 8, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
+            return;
+
+        ImGui.TableSetupColumn("Act",                    ImGuiTableColumnFlags.WidthFixed,   30);
+        ImGui.TableSetupColumn("Grp",                    ImGuiTableColumnFlags.WidthFixed,   45);
+        ImGui.TableSetupColumn("Command / Chat Message", ImGuiTableColumnFlags.WidthStretch);
+        ImGui.TableSetupColumn("Wait (s)",               ImGuiTableColumnFlags.WidthFixed,  100);
+        ImGui.TableSetupColumn("1x",                    ImGuiTableColumnFlags.WidthFixed,   25);
+        ImGui.TableSetupColumn("AD",                     ImGuiTableColumnFlags.WidthFixed,   25);
+        ImGui.TableSetupColumn("",                       ImGuiTableColumnFlags.WidthFixed,   50);
+        ImGui.TableSetupColumn("X",                      ImGuiTableColumnFlags.WidthFixed,   30);
+        ImGui.TableHeadersRow();
+
+        int  prevGroupId = 0;
+        bool groupOpen   = false;
+
+        for (int i = 0; i < group.Commands.Count; i++)
+        {
+            var cmd = group.Commands[i];
+
+            if (cmd.GroupId != prevGroupId)
+            {
+                if (groupOpen)
+                {
+                    ImGui.TableNextRow(ImGuiTableRowFlags.None, 4f);
+                    ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, ImGui.GetColorU32(new Vector4(0.25f, 0.25f, 0.45f, 0.5f)));
+                    groupOpen = false;
+                }
+
+                if (cmd.GroupId != 0)
+                {
+                    if (!group.LineGroups.ContainsKey(cmd.GroupId))
+                    {
+                        group.LineGroups[cmd.GroupId] = new CommandLineGroup();
+                        _save();
+                    }
+                    var lg = group.LineGroups[cmd.GroupId];
+
+                    ImGui.TableNextRow(ImGuiTableRowFlags.None, 22f);
+                    ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, ImGui.GetColorU32(new Vector4(0.15f, 0.18f, 0.38f, 0.9f)));
+
+                    ImGui.TableSetColumnIndex(2);
+                    ImGui.TextColored(new Vector4(0.65f, 0.82f, 1f, 1f), $"  Group {cmd.GroupId}");
+                    ImGui.SameLine();
+                    string modeLabel = lg.Mode == SelectionMode.Iterative ? "Iterative" : "Random";
+                    if (ImGui.SmallButton($"{modeLabel}##grphdr_{group.Name}_{cmd.GroupId}"))
+                    {
+                        lg.Mode = lg.Mode == SelectionMode.Iterative ? SelectionMode.Random : SelectionMode.Iterative;
+                        _save();
+                    }
+
+                    groupOpen = true;
+                }
+
+                prevGroupId = cmd.GroupId;
+            }
+
+            ImGui.TableNextRow();
+            ImGui.PushID(i);
+
+            ImGui.TableNextColumn();
+            if (ImGui.Checkbox("##active", ref cmd.Enabled)) _save();
+
+            ImGui.TableNextColumn();
+            {
+                int gid = cmd.GroupId;
+                ImGui.SetNextItemWidth(-1);
+                if (BJBGui.DragInt("##grp", ref gid, 0.15f, 0, 9, gid == 0 ? "-" : "%d"))
+                {
+                    cmd.GroupId = Math.Clamp(gid, 0, 9);
+                    _save();
+                }
+                if (ImGui.IsItemHovered())
+                    ImGui.SetTooltip("Group (0 = no group).\nSame number = one command per trigger (iterative/random).");
+            }
+
+            ImGui.TableNextColumn();
+            if (cmd.GroupId != 0) ImGui.Indent(10f);
+            bool wasCmdRef = cmd.IsCommandRef;
+            if (wasCmdRef)
+                ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.5f, 0.8f, 1f));
+            if (BJBGui.SmallButton($"C##cmdref_{group.Name}_{i}"))
+            {
+                cmd.IsCommandRef = !cmd.IsCommandRef;
+                if (cmd.IsCommandRef)
+                    cmd.NonDoubled = false;
+                _save();
+            }
+            if (wasCmdRef) ImGui.PopStyleColor();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip(cmd.IsCommandRef ? "Command Reference (click for Message)" : "Message (click for Command Reference)");
+            ImGui.SameLine();
+            if (cmd.IsCommandRef)
+            {
+                var groupNames = _config.CommandGroups.Concat(_config.CustomCommandGroups)
+                    .Where(g => !g.Name.Equals(group.Name, StringComparison.OrdinalIgnoreCase))
+                    .Select(g => g.Name)
+                    .Append("Payout")
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                int selectedIdx = Array.FindIndex(groupNames, n => n.Equals(cmd.CommandRefName, StringComparison.OrdinalIgnoreCase));
+                if (selectedIdx < 0) selectedIdx = 0;
+                ImGui.SetNextItemWidth(-1);
+                if (groupNames.Length > 0)
+                {
+                    if (BJBGui.Combo($"##cmdref_combo_{group.Name}_{i}", ref selectedIdx, groupNames, groupNames.Length))
+                    {
+                        cmd.CommandRefName = groupNames[selectedIdx];
+                        _save();
+                    }
+                }
+                else
+                {
+                    ImGui.TextDisabled("No other groups available");
+                }
+            }
+            else
+            {
+                ImGui.SetNextItemWidth(-1);
+                if (ImGui.InputText($"##text_{group.Name}_{i}", ref cmd.Text, 256))
+                {
+                    if (!ChatCommandRouter.IsGroupChatMessageCommand(cmd.Text))
+                        cmd.NonDoubled = false;
+                    _save();
+                }
+            }
+            if (cmd.GroupId != 0) ImGui.Unindent(10f);
+
+            ImGui.TableNextColumn();
+            ImGui.SetNextItemWidth(-1);
+            float maxDelay = _config.UnlockWaitTimer ? 30f : 12f;
+            float oldDelay = cmd.Delay;
+            if (BJBGui.DragFloat("##delay", ref cmd.Delay, 0.01f, 0.01f, maxDelay, "%.2fs"))
+            {
+                float nearestInt = MathF.Round(cmd.Delay);
+                float oldDist = MathF.Abs(oldDelay - nearestInt);
+                float newDist = MathF.Abs(cmd.Delay - nearestInt);
+                if (newDist < 0.2f && oldDist > 0.2f)
+                    cmd.Delay = nearestInt;
+                cmd.Delay = Math.Clamp(cmd.Delay, 0.01f, maxDelay);
+                _save();
+            }
+
+            ImGui.TableNextColumn();
+            if (ImGui.Checkbox("##fixed", ref cmd.FixedDelay)) _save();
+            if (ImGui.IsItemHovered())
+                ImGui.SetTooltip("Fixed Delay: Ignore Command Speed multiplier.\nAlways use the base delay (1x).");
+
+            ImGui.TableNextColumn();
+            bool canUseAntiDouble = !cmd.IsCommandRef
+                && ChatCommandRouter.IsGroupChatMessageCommand(cmd.Text);
+            if (!canUseAntiDouble && cmd.NonDoubled)
+            {
+                cmd.NonDoubled = false;
+                _save();
+            }
+            if (!canUseAntiDouble) ImGui.BeginDisabled();
+            bool isAD = cmd.NonDoubled;
+            bool antiDoubleClicked = isAD ? BJBGui.SmallButtonHighlighted($"AD##ad_{group.Name}_{i}", _config.HighlightColor, _config.HighlightTextColor) : BJBGui.SmallButton($"AD##ad_{group.Name}_{i}");
+            if (!canUseAntiDouble) ImGui.EndDisabled();
+
+            if (antiDoubleClicked)
+            {
+                if (cmd.NonDoubled)
+                {
+                    cmd.NonDoubled = false;
+                    _save();
+                }
+                else
+                {
+                    RequestAntiDoubleActivation(cmd);
+                }
+            }
+
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            {
+                ImGui.SetTooltip(
+                    canUseAntiDouble ? "Compare this line's final result with the last generated Party/Alliance message." : "Anti-Double is only available for /p, /party, /a, and /alliance messages."
+                );
+            }
+
+            ImGui.TableNextColumn();
+            bool isFirst = i == 0;
+            bool isLast  = i == group.Commands.Count - 1;
+
+            if (isFirst) ImGui.BeginDisabled();
+            if (BJBGui.SmallButton("^##up"))
+            {
+                (group.Commands[i - 1], group.Commands[i]) = (group.Commands[i], group.Commands[i - 1]);
+                _save();
+                ImGui.PopID();
+                break;
+            }
+            if (isFirst) ImGui.EndDisabled();
+
+            ImGui.SameLine();
+
+            if (isLast) ImGui.BeginDisabled();
+            if (BJBGui.SmallButton("v##down"))
+            {
+                (group.Commands[i], group.Commands[i + 1]) = (group.Commands[i + 1], group.Commands[i]);
+                _save();
+                ImGui.PopID();
+                break;
+            }
+            if (isLast) ImGui.EndDisabled();
+
+            ImGui.TableNextColumn();
+            if (BJBGui.Button("X##del"))
+            {
+                group.Commands.RemoveAt(i);
+                _save();
+                ImGui.PopID();
+                break;
+            }
+
+            ImGui.PopID();
+        }
+
+        if (groupOpen)
+        {
+            ImGui.TableNextRow(ImGuiTableRowFlags.None, 4f);
+            ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, ImGui.GetColorU32(new Vector4(0.25f, 0.25f, 0.45f, 0.5f)));
+        }
+
+        ImGui.EndTable();
+    }
+
+    private void RequestAntiDoubleActivation(PluginCommand command)
+    {
+        if (CommandVariablePattern.IsMatch(command.Text))
+        {
+            ActivateAntiDouble(command, applyToMatchingCommands: false);
+            return;
+        }
+
+        _pendingAntiDoubleCommand = command;
+        _pendingAntiDoubleText = command.Text;
+        ChatCommandRouter.TryGetAntiDoubleComparisonKey(
+            command.Text,
+            out _pendingAntiDoubleComparisonKey
+        );
+        _openAntiDoubleApplyPopup = true;
+        _triggerAntiDoubleApplyPopup = true;
+    }
+
+    private void DrawAntiDoubleApplyPopup()
+    {
+        if (!ImGui.BeginPopupModal(
+            AntiDoubleApplyPopupId,
+            ref _openAntiDoubleApplyPopup,
+            ImGuiWindowFlags.AlwaysAutoResize
+        ))
+            return;
+
+        var matchingCount = AllCommandGroups()
+            .SelectMany(g => g.Commands)
+            .Count(
+                c => !c.IsCommandRef
+                    && ChatCommandRouter.TryGetAntiDoubleComparisonKey(c.Text, out var key)
+                    && key.Equals(_pendingAntiDoubleComparisonKey, StringComparison.Ordinal)
+            );
+
+        ImGui.TextWrapped("Enable Anti-Double for every command line with the same normalized text?");
+        ImGui.TextDisabled("Party/Alliance prefixes, surrounding whitespace, and <se.*> tags are ignored.");
+        ImGui.Spacing();
+        ImGui.TextDisabled(_pendingAntiDoubleText);
+        ImGui.TextUnformatted($"Matching command lines: {matchingCount}");
+        ImGui.Spacing();
+
+        if (BJBGui.Button("Yes, enable all", new Vector2(170f, 0f)))
+        {
+            if (_pendingAntiDoubleCommand != null)
+                ActivateAntiDouble(_pendingAntiDoubleCommand, applyToMatchingCommands: true);
+            CloseAntiDoubleApplyPopup();
+        }
+
+        ImGui.SameLine();
+        if (BJBGui.Button("No, only this line", new Vector2(170f, 0f)))
+        {
+            if (_pendingAntiDoubleCommand != null)
+                ActivateAntiDouble(_pendingAntiDoubleCommand, applyToMatchingCommands: false);
+            CloseAntiDoubleApplyPopup();
+        }
+
+        ImGui.EndPopup();
+    }
+
+    private void ActivateAntiDouble(PluginCommand command, bool applyToMatchingCommands)
+    {
+        if (applyToMatchingCommands)
+        {
+            foreach (var candidate in AllCommandGroups().SelectMany(g => g.Commands))
+            {
+                if (!candidate.IsCommandRef
+                    && ChatCommandRouter.TryGetAntiDoubleComparisonKey(candidate.Text, out var key)
+                    && key.Equals(_pendingAntiDoubleComparisonKey, StringComparison.Ordinal))
+                    candidate.NonDoubled = true;
+            }
+        }
+        else
+        {
+            command.NonDoubled = true;
+        }
+
+        _config.EnableAntiDouble = true;
+        _save();
+    }
+
+    private System.Collections.Generic.IEnumerable<CommandGroup> AllCommandGroups()
+        => _config.CommandGroups.Concat(_config.CustomCommandGroups);
+
+    private void CloseAntiDoubleApplyPopup()
+    {
+        _pendingAntiDoubleCommand = null;
+        _pendingAntiDoubleText = string.Empty;
+        _pendingAntiDoubleComparisonKey = string.Empty;
+        _openAntiDoubleApplyPopup = false;
+        _triggerAntiDoubleApplyPopup = false;
+        ImGui.CloseCurrentPopup();
+    }
+}

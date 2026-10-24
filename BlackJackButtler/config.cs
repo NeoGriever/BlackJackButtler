@@ -12,7 +12,6 @@ public enum NearbyAlertSoundMode { Iterative, Random, FirstOnly }
 public enum NearbyShapeMode { Circle, Rectangle }
 public enum PartyNearbyJCommandMode { None, PartyInvite }
 public enum ButtonBarLayout { Horizontal, Vertical }
-// Keep the original numeric values for MinBet/Vip so existing JSON remains valid.
 public enum BetLimitEntryKind { MinBet, Vip, Normal }
 public enum ShortResultDataSource { None, Winners, Pushed, Loosed, Busted }
 public enum GilVisualMode { Plain, Grouped, FixedGroup }
@@ -41,6 +40,16 @@ public sealed class ShortResultRule
         Compress = Compress,
         Template = Template,
     };
+}
+
+[Serializable]
+public sealed class MoneyRingEntry
+{
+    public bool Enabled = true;
+    public string Label = string.Empty;
+    public long Amount;
+
+    public MoneyRingEntry Clone() => new() { Enabled = Enabled, Label = Label, Amount = Amount };
 }
 
 [Serializable]
@@ -87,7 +96,6 @@ public sealed class Configuration : IPluginConfiguration
     public bool EnableCompanionSync = false;
     public string CompanionServerAddress = "http://127.0.0.1:8000";
     public int CompanionTimeoutMs = 200;
-    // Legacy compatibility only. Alliance routing is always enabled.
     public bool EnableAllianceSupport = true;
     public string AllianceNearbyCommandName = "";
 
@@ -95,13 +103,12 @@ public sealed class Configuration : IPluginConfiguration
     public List<CommandGroup> CustomCommandGroups = new();
     public List<CustomButtonEntry> CustomButtonEntries = new();
     public bool CustomButtonEntriesMigrated = false;
-    // Legacy storage retained for import/export compatibility. New entries take priority.
     public List<string> CustomButtonOrder = new();
     public List<MessageBatch> MessageBatches = new();
     public List<UserRegexEntry> UserRegexes = new();
 
     public List<PresetEntry> Presets = new();
-    public string? ActivePresetName = null;   // null = "Default"
+    public string? ActivePresetName = null;
     public string ActivePresetId = string.Empty;
 
     public long MinBet = 50000;
@@ -109,9 +116,33 @@ public sealed class Configuration : IPluginConfiguration
 
     public List<VipBetTier> VipBetTiers = new();
     public List<BettingPreset> BettingPresets = new();
+    public bool MoneyRingEnabled = true;
+    public bool MoneyRingInitialized;
+    public List<MoneyRingEntry> MoneyRingEntries = new();
     public bool BetLimitEntriesMigrated = false;
     public bool ShortBetFormat = true;
     public bool HideCardSuits = false;
+
+    public static List<MoneyRingEntry> CreateDefaultMoneyRingEntries() => new()
+    {
+        new() { Label = "50k", Amount = 50_000 },
+        new() { Label = "100k", Amount = 100_000 },
+        new() { Label = "200k", Amount = 200_000 },
+        new() { Label = "500k", Amount = 500_000 },
+        new() { Label = "1m", Amount = 1_000_000 },
+        new() { Label = "2m", Amount = 2_000_000 },
+        new() { Label = "5m", Amount = 5_000_000 },
+    };
+
+    public bool EnsureMoneyRingEntries()
+    {
+        if (MoneyRingInitialized && MoneyRingEntries != null) return false;
+        MoneyRingEntries ??= new List<MoneyRingEntry>();
+        if (MoneyRingEntries.Count == 0)
+            MoneyRingEntries = CreateDefaultMoneyRingEntries();
+        MoneyRingInitialized = true;
+        return true;
+    }
 
     public bool DefaultBatchesSeeded = false;
     public bool DefaultRegexSeeded = false;
@@ -120,13 +151,15 @@ public sealed class Configuration : IPluginConfiguration
     public bool AutoInitialDeal = false;
     public bool AutoDealerDraw = false;
     public bool AutoRun = false;
-    // Controls runtime handling of newly joined group members; defaults to enabled for existing configurations.
     public bool AutoActivateTradingPlayers = true;
     public bool EnableAutomation = true;
     public bool ShowAutoDealerDrawButton = true;
     public bool ShowAutoPlayerHandButton = true;
     public bool ShowAutoContinueButton = true;
     public bool ShowAutoRunButton = true;
+    public bool EnablePlayerSoundEffects = false;
+    public bool[] AllowedPlayerSoundEffects = Enumerable.Repeat(true, 16).ToArray();
+    public Dictionary<string, int> PlayerSoundPreferences = new(StringComparer.OrdinalIgnoreCase);
     public int DealerDrawsUntil = 17;
     public bool DealerSoftRule = true;
     public bool SmallResult = false;
@@ -134,20 +167,17 @@ public sealed class Configuration : IPluginConfiguration
     public List<ShortResultRule> ShortResultRules = new();
     public bool ShortResultRulesInitialized = false;
     public bool AutostartRoundOnlyOnMultiplePlayers = true;
-    // Replaces the legacy two-player Auto-Continue choice with an explicit threshold.
-    // The legacy value is retained because it still belongs to Player Ready Start.
     public int AutoContinueMinimumPlayers = 1;
     public bool AutoContinueMinimumPlayersMigrated = false;
     public bool EnableAntiDouble = false;
     public Vector4 HighlightColor = new Vector4(1.0f, 1.0f, 0.0f, 1.0f);
     public Vector4 HighlightTextColor = new Vector4(0f, 0f, 0f, 1f);
-    public Vector4 ButtonColor     = new Vector4(0.26f, 0.26f, 0.26f, 1.0f); // dark grey
-    public Vector4 ButtonTextColor = new Vector4(1.0f,  1.0f,  1.0f,  1.0f); // white
+    public Vector4 ButtonColor     = new Vector4(0.26f, 0.26f, 0.26f, 1.0f);
+    public Vector4 ButtonTextColor = new Vector4(1.0f,  1.0f,  1.0f,  1.0f);
     public GilVisualMode GilVisual = GilVisualMode.FixedGroup;
 
     public float PayoutPercent = 30f;
 #if DEBUG
-    // Debug-build-only controls. Trade logging is deliberately reset to off at startup.
     public DebugPayoutExecutorVariant DebugPayoutExecutor = DebugPayoutExecutorVariant.Automatic;
     public bool DebugTradeLogging;
 #endif
@@ -157,8 +187,6 @@ public sealed class Configuration : IPluginConfiguration
     public bool UseFixedWage = false;
     public long FixedWage = 500000;
 
-    // UtcOffsetHours remains for compatibility with existing configuration and presets.
-    // New code uses signed minutes so half- and quarter-hour time zones are lossless.
     public int UtcOffsetHours = 0;
     public int UtcOffsetMinutes = int.MinValue;
     public string UtcTimeZoneName = string.Empty;
@@ -176,11 +204,8 @@ public sealed class Configuration : IPluginConfiguration
     public bool UseBurgerMenu = false;
     public MenuStyleMode MenuStyle = MenuStyleMode.Sidebar;
     public bool MenuStyleMigrated = false;
-    public int MainViewVersion = 1;
-    public bool MainViewV2SuperCompact = false;
 
     public bool ImportantNoticeAcknowledged = false;
-    public bool Version3MigrationNoticeOpened = false;
 
     public string BlacklistDetectedAt = "";
     public bool BlacklistActive = false;
@@ -198,7 +223,6 @@ public sealed class Configuration : IPluginConfiguration
     public bool NoAutoDequeue = false;
     public bool NearbyAlwaysShowCircle = false;
     public PartyNearbyJCommandMode PartyNearbyJCommand = PartyNearbyJCommandMode.PartyInvite;
-    // Legacy compatibility only. The additional Nearby custom-command button was removed.
     public string NearbyQuestionCommandName = string.Empty;
     public bool NearbyShowFootNumbers = true;
     public float NearbyOffsetX = 0f;
@@ -224,8 +248,6 @@ public sealed class Configuration : IPluginConfiguration
     public bool AutoContinueBarShowText = false;
 
     public bool NearbyAlertEnabled = false;
-    // Legacy paths remain serialized for backwards-compatible import/export. Structured
-    // entries take precedence once migrated because they carry enabled state and volume.
     public List<string> NearbyAlertSoundFiles = new();
     public List<NearbyAlertSoundEntry> NearbyAlertSoundEntries = new();
     public bool NearbyAlertSoundEntriesMigrated = false;
@@ -307,8 +329,6 @@ public sealed class Configuration : IPluginConfiguration
         }
         else
         {
-            // Older builds initialized the field with defaults before Newtonsoft
-            // populated it. Every load therefore prepended another default block.
             while (ShortResultRules.Count > defaults.Count
                 && HasRulePrefix(ShortResultRules, defaults))
             {
@@ -388,6 +408,33 @@ public sealed class Configuration : IPluginConfiguration
         if (!DefaultBatchesSeeded) { ForceResetStandardBatches(); changed = true; }
         if (!DefaultRegexSeeded) { ForceResetStandardRegexes(); changed = true; }
         if (!DefaultCommandsSeeded) { ForceResetCommandGroups(); changed = true; }
+        changed |= EnsurePlayerSoundDefaults();
+        return changed;
+    }
+
+    public bool EnsurePlayerSoundDefaults()
+    {
+        var changed = false;
+        foreach (var standard in DefaultsManager.GetDefaultMessages()
+                     .Where(batch => batch.Name is "Sound confirm" or "Sound failed"))
+        {
+            if (MessageBatches.Any(batch => string.Equals(batch.Name, standard.Name, StringComparison.OrdinalIgnoreCase)))
+                continue;
+            MessageBatches.Add(standard);
+            changed = true;
+        }
+
+        if (!UserRegexes.Any(entry => string.Equals(entry.Name, "Player Sound", StringComparison.OrdinalIgnoreCase)))
+        {
+            var soundEntry = DefaultsManager.GetDefaultRegex()
+                .FirstOrDefault(entry => entry.Action == RegexAction.SetSound);
+            if (soundEntry != null)
+            {
+                UserRegexes.Add(soundEntry);
+                changed = true;
+                RegexEngine.InvalidateCache();
+            }
+        }
         return changed;
     }
 
@@ -453,7 +500,6 @@ public sealed class Configuration : IPluginConfiguration
             UtcOffsetMinutes = Math.Clamp(UtcOffsetHours, -12, 14) * 60;
             changed = true;
         }
-        // Message settings were intentionally retired. Both behaviours are now invariant.
         if (!EnableAntiDouble)
         {
             EnableAntiDouble = true;
@@ -519,14 +565,16 @@ public sealed class Configuration : IPluginConfiguration
                 for (var i = 0; i < VipBetTiers.Count; i++)
                 {
                     var tier = VipBetTiers[i];
-                    BetLimitEntries.Add(new BetLimitEntry
-                    {
-                        Active = true,
-                        Kind = BetLimitEntryKind.Vip,
-                        VipLevel = i + 1,
-                        Name = string.IsNullOrWhiteSpace(tier.Name) ? $"VIP {i + 1}" : tier.Name,
-                        Amount = tier.MaxBet,
-                    });
+                    BetLimitEntries.Add(
+                        new BetLimitEntry
+                        {
+                            Active = true,
+                            Kind = BetLimitEntryKind.Vip,
+                            VipLevel = i + 1,
+                            Name = string.IsNullOrWhiteSpace(tier.Name) ? $"VIP {i + 1}" : tier.Name,
+                            Amount = tier.MaxBet,
+                        }
+                    );
                 }
             }
             changed = true;
@@ -535,8 +583,6 @@ public sealed class Configuration : IPluginConfiguration
         {
             foreach (var entry in BetLimitEntries)
             {
-                // V2 used VIP level 0 as the normal maximum. Preserve its amount but
-                // migrate it to the explicit kind before the new editor sees it.
                 if (entry.Kind == BetLimitEntryKind.Vip && entry.VipLevel == 0)
                 {
                     entry.Kind = BetLimitEntryKind.Normal;
@@ -570,13 +616,15 @@ public sealed class Configuration : IPluginConfiguration
         var changed = false;
         if (BetLimitEntries.Count == 0)
         {
-            BetLimitEntries.Add(new BetLimitEntry
-            {
-                Active = true,
-                Kind = BetLimitEntryKind.MinBet,
-                Name = "Min",
-                Amount = MinBet,
-            });
+            BetLimitEntries.Add(
+                new BetLimitEntry
+                {
+                    Active = true,
+                    Kind = BetLimitEntryKind.MinBet,
+                    Name = "Min",
+                    Amount = MinBet,
+                }
+            );
             return true;
         }
 
@@ -652,17 +700,20 @@ public sealed class Configuration : IPluginConfiguration
                         continue;
                     }
 
-                    var group = CustomCommandGroups.FirstOrDefault(g =>
-                        g.Name.Equals(legacyEntry, StringComparison.OrdinalIgnoreCase));
-                    CustomButtonEntries.Add(new CustomButtonEntry
-                    {
-                        GroupId = group?.Id ?? string.Empty,
-                        LegacyGroupName = group == null ? legacyEntry : string.Empty,
-                    });
+                    var group = CustomCommandGroups.FirstOrDefault(
+                        g =>
+                            g.Name.Equals(legacyEntry, StringComparison.OrdinalIgnoreCase)
+                    );
+                    CustomButtonEntries.Add(
+                        new CustomButtonEntry
+                        {
+                            GroupId = group?.Id ?? string.Empty,
+                            LegacyGroupName = group == null ? legacyEntry : string.Empty,
+                        }
+                    );
                 }
             }
 
-            // The former Unassigned section is folded into the ordered list at the end.
             foreach (var group in CustomCommandGroups)
             {
                 if (CustomButtonEntries.Any(e => !e.IsBreak && e.GroupId == group.Id)) continue;
@@ -686,19 +737,19 @@ public sealed class Configuration : IPluginConfiguration
 
     public void SyncLegacyCustomButtonOrder()
     {
-        CustomButtonOrder = CustomButtonEntries.Select(entry =>
-        {
-            if (entry.IsBreak) return "---";
-            var group = CustomCommandGroups.FirstOrDefault(g => g.Id == entry.GroupId);
-            return group?.Name ?? entry.LegacyGroupName;
-        }).Where(entry => !string.IsNullOrWhiteSpace(entry)).ToList();
+        CustomButtonOrder = CustomButtonEntries.Select(
+            entry =>
+            {
+                if (entry.IsBreak) return "---";
+                var group = CustomCommandGroups.FirstOrDefault(g => g.Id == entry.GroupId);
+                return group?.Name ?? entry.LegacyGroupName;
+            }
+        ).Where(entry => !string.IsNullOrWhiteSpace(entry)).ToList();
     }
 
     public int GetUtcOffsetMinutes()
     {
-        var baseMinutes = UtcOffsetMinutes == int.MinValue
-            ? Math.Clamp(UtcOffsetHours, -12, 14) * 60
-            : UtcOffsetMinutes;
+        var baseMinutes = UtcOffsetMinutes == int.MinValue ? Math.Clamp(UtcOffsetHours, -12, 14) * 60 : UtcOffsetMinutes;
         return baseMinutes + (UtcSummerTime ? 60 : 0);
     }
 
@@ -716,8 +767,14 @@ public sealed class Configuration : IPluginConfiguration
         {
             var snapshot = Presets.ToList();
             Presets.Clear();
-            Plugin.PluginInterface.SavePluginConfig(this);
-            Presets.AddRange(snapshot);
+            try
+            {
+                Plugin.PluginInterface.SavePluginConfig(this);
+            }
+            finally
+            {
+                Presets.AddRange(snapshot);
+            }
         }
         else
         {
@@ -777,12 +834,10 @@ public sealed class PresetEntry
     public string Name = "New Preset";
     public string PresetId = string.Empty;
 
-    // Legacy-Flags (für Migration erhalten)
     public bool ApplySettings = true;
     public bool ApplyCommands = true;
     public bool ApplyMessages = true;
 
-    // Granulare Kategorien
     public bool ApplyRegexes = true;
     public bool ApplyMessagesDefault = true;
     public bool ApplyMessagesCustom = true;
@@ -799,22 +854,16 @@ public sealed class PresetEntry
     public bool ApplySettingsSystem = false;
     public bool ApplyDrawLogic = false;
 
-    // Zeitstempel & Reihenfolge
     public DateTime CreatedAt = DateTime.UtcNow;
     public DateTime UpdatedAt = DateTime.UtcNow;
     public int SortOrder = 0;
 
-    // Migrations-Flags
     public bool CommandsCheckboxMigrated = false;
     public bool SettingsCategoryMigrated = false;
     public bool MessagesCategoryMigrated = false;
 
-    // Version der mitgelieferten Standard-Preset-Definition. Dadurch können
-    // gezielte Updates einmalig eingespielt werden, ohne spätere Nutzeranpassungen
-    // erneut zu überschreiben.
     public int BuiltInDefinitionVersion = 0;
 
-    // Optionale Titelfarbe (null = automatisch aus Checkbox-Kombination berechnet)
     public Vector4? CustomTitleColor = null;
 
     public string SnapshotJson = "{}";

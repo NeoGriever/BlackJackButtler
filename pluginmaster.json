@@ -5,20 +5,25 @@
         "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
         "Description": "/bjb - opens the blackjack buttler tool",
         "InternalName": "BlackJackButtler",
-        "Tags": ["BlackJack", "Helper", "Chat"],
+        "Tags": [
+            "BlackJack",
+            "Helper",
+            "Chat"
+        ],
         "AssemblyVersion": "1.9.1.2",
-        "TestingAssemblyVersion": "1.9.1.2",
+        "TestingAssemblyVersion": "2.0.0.1",
         "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
         "ApplicableVersion": "any",
         "DalamudApiLevel": 15,
         "TestingDalamudApiLevel": 15,
         "IsHide": "False",
-        "IsTestingExclusive": "False",
+        "IsTestingExclusive": false,
         "DownloadCount": 10,
-        "LastUpdate": 1791514197,
+        "LastUpdate": 1792810265,
         "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/plugins/BlackJackButtler/icon.png",
         "DownloadLinkInstall": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
         "DownloadLinkUpdate": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
-        "DownloadLinkTesting": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip"
+        "DownloadLinkTesting": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/testing/latest.zip",
+        "TestingChangelog": "Version 2.0.0.1\n\n- Refactoring: Entire code rework and refactoring. Structured code files with categorized classes and functions for better maintenance.\n- Change: Removed legacy V1 and V2 Config/UI-Layout.\n- Feature: Added a little dot next to bet- and bank-values. Drag&Drop allows to change the bet through a configurable pie-menu.\n- Feature: Added pie-menu settings under Settings > System\n- Fix: A logic error behind the 'Dealer stands at [ - | 17 | + ] [Soft]' setting caused the dealer to draw a card, even the 'Soft'-Button was active. This is now fixed.\n- Fix: The layout of the SFX-Selections in Automation under Player chat sound effects got corrected.\n- Fix: The rendering for 9 digits forced separator view ('***,***,***') got corrected.\n- Fix: Stats -> The input field for the date/time input allows now europe date formats like 15.07.2026"
     }
 ]

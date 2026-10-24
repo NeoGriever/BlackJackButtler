@@ -18,11 +18,6 @@ using static ECommons.GenericHelpers;
 
 namespace BlackJackButtler.ModularTrade;
 
-/// <summary>
-/// BJB's no-GUI Dalamud adapter for the standalone ModularTrade core.
-/// It is deliberately not initialized by PayoutManagement yet; that migration must follow
-/// controlled in-game validation of the current client addon's trade-item layout.
-/// </summary>
 internal unsafe sealed class BjbDalamudTradeAdapter : ITradeGameAdapter
 {
     private static readonly Rx[] GermanSuccessPatterns =
@@ -45,8 +40,6 @@ internal unsafe sealed class BjbDalamudTradeAdapter : ITradeGameAdapter
         CreateSystemMessagePattern("Trade canceled\\."),
     };
 
-    // Intentionally inactive until their exact client-localized system messages are verified.
-    // Add patterns here; MatchesTradeSystemMessage will automatically include them.
     private static readonly Rx[] FrenchSuccessPatterns = Array.Empty<Rx>();
     private static readonly Rx[] FrenchCancelPatterns = Array.Empty<Rx>();
     private static readonly Rx[] JapaneseSuccessPatterns = Array.Empty<Rx>();
@@ -109,8 +102,10 @@ internal unsafe sealed class BjbDalamudTradeAdapter : ITradeGameAdapter
     {
         var target = Plugin.ObjectTable
             .OfType<IPlayerCharacter>()
-            .FirstOrDefault(player => player.IsTargetable
-                && string.Equals(new Sender(player).ToString(), recipient, StringComparison.Ordinal));
+            .FirstOrDefault(
+                player => player.IsTargetable
+                    && string.Equals(new Sender(player).ToString(), recipient, StringComparison.Ordinal)
+            );
         if (target is null)
         {
             Trace($"FindAndTargetPlayer: recipient '{recipient}' is not targetable.");
@@ -160,9 +155,6 @@ internal unsafe sealed class BjbDalamudTradeAdapter : ITradeGameAdapter
         if (!TryGetAddonByName<AtkUnitBase>("InputNumeric", out var addon) || !IsAddonReady(addon))
             return false;
 
-        // Match Dropbox: the InputNumeric callback itself commits the visible offer.
-        // Do not overwrite it through InventoryManager; current client builds do not
-        // mirror the local offer in TradeItemsLocal reliably.
         Trace($"TrySetGil: firing direct InputNumeric callback with {amount}.");
         FireCallbackInt(addon, amount);
         return true;
@@ -236,10 +228,6 @@ internal unsafe sealed class BjbDalamudTradeAdapter : ITradeGameAdapter
         Plugin.ChatGui.ChatMessage -= OnChatMessage;
     }
 
-    // ECommons.Callback performs this exact AtkValue conversion before invoking
-    // AtkUnitBase.FireCallback. Calling the client-struct method directly avoids
-    // ECommons' static callback hook, which can become binary-incompatible after
-    // a client-structs update (e.g. missing AtkValue.Type).
     private static bool FireCallbackInt(AtkUnitBase* addon, int value)
     {
         var values = stackalloc AtkValue[1];
@@ -248,9 +236,6 @@ internal unsafe sealed class BjbDalamudTradeAdapter : ITradeGameAdapter
             Type = AtkValueType.Int,
             Int = value,
         };
-        // The native return value describes the UI handler's result, not whether
-        // the callback was dispatched. ECommons deliberately ignores it as well.
-        // The following engine state verifies the visible UI/result instead.
         addon->FireCallback(1, values, true);
         return true;
     }
@@ -263,9 +248,7 @@ internal unsafe sealed class BjbDalamudTradeAdapter : ITradeGameAdapter
             Type = AtkValueType.Int,
             Int = value,
         };
-        // ECommons.Callback.ZeroAtkValue is intentionally Type = 0, Int = 0.
         values[1] = new AtkValue { Type = 0, Int = 0 };
-        // See FireCallbackInt: dispatch is successful unless the native call throws.
         addon->FireCallback(2, values, true);
         return true;
     }
@@ -281,16 +264,12 @@ internal unsafe sealed class BjbDalamudTradeAdapter : ITradeGameAdapter
 
         Trace($"Trade system message observed: '{text}'.");
 
-        // The engine permits only one session and only accepts an outcome after its own final
-        // confirmation. Therefore a matching system message is the outcome of this trade.
-        if (MatchesTradeSystemMessage(text, GermanSuccessPatterns, EnglishSuccessPatterns,
-                FrenchSuccessPatterns, JapaneseSuccessPatterns))
+        if (MatchesTradeSystemMessage(text, GermanSuccessPatterns, EnglishSuccessPatterns, FrenchSuccessPatterns, JapaneseSuccessPatterns))
         {
             _outcome = GameTradeOutcome.Succeeded;
             Trace("Trade system message matched Success.");
         }
-        else if (MatchesTradeSystemMessage(text, GermanCancelPatterns, EnglishCancelPatterns,
-                     FrenchCancelPatterns, JapaneseCancelPatterns))
+        else if (MatchesTradeSystemMessage(text, GermanCancelPatterns, EnglishCancelPatterns, FrenchCancelPatterns, JapaneseCancelPatterns))
         {
             _outcome = GameTradeOutcome.Cancelled;
             Trace("Trade system message matched Cancel.");

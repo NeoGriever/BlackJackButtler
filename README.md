@@ -1,4 +1,4 @@
-`v1.9.0.1`
+`v2.0.0.1`
 
 # BlackJack Buttler
 
@@ -6,7 +6,7 @@ BlackJack Buttler (BJB) is a Dalamud plugin for FFXIV that turns you into a full
 
 Whether you run a casual table for friends or a high-stakes venue for dozens of rounds per night, BJB removes the mental overhead of tracking points, calculating payouts, and remembering whose turn it is. Four user levels (Beginner, Advanced, Dev, Custom) progressively reveal more configuration so you can start simple and grow into full customization.
 
-### Highlights in v1.9.0.1
+### Established features
 
 - **Imaginary Players (Ghosts):** Add one linked ghost for a real player. It has its own hand, bet, bank, and alias while the real player supplies chat actions and dice rolls.
 - **Ghost Bank Routing:** Bank tells, transfers, and `withdraw all` / `withdraw everything` support both linked accounts without ever routing a physical tell or payout to the ghost.

@@ -1,0 +1,83 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+
+namespace BlackJackButtler;
+
+[Serializable]
+public class PluginCommand
+{
+    public bool Enabled = true;
+    public string Text = string.Empty;
+    public float Delay = 0.5f;
+    public int GroupId = 0;
+    public bool NonDoubled = false;
+    public bool FixedDelay = false;
+    public bool IsCommandRef = false;
+    public string CommandRefName = string.Empty;
+}
+
+[Serializable]
+public class CommandLineGroup
+{
+    public SelectionMode Mode = SelectionMode.Iterative;
+    public int IterativeIndex = 0;
+
+    public PluginCommand? PickNext(List<PluginCommand> candidates)
+    {
+        var enabled = candidates.Where(
+            c => c.Enabled &&
+                (!string.IsNullOrWhiteSpace(c.Text) || (c.IsCommandRef && !string.IsNullOrWhiteSpace(c.CommandRefName)))
+        ).ToList();
+        if (enabled.Count == 0) return null;
+
+        switch (Mode)
+        {
+            case SelectionMode.Iterative:
+                if (IterativeIndex >= enabled.Count) IterativeIndex = 0;
+                var cmd = enabled[IterativeIndex];
+                IterativeIndex = (IterativeIndex + 1) % enabled.Count;
+                return cmd;
+            case SelectionMode.Random:
+                return enabled[Random.Shared.Next(enabled.Count)];
+            default:
+                return enabled[0];
+        }
+    }
+}
+
+[Serializable]
+public class CommandGroup
+{
+    public string Id = string.Empty;
+    public string Name = string.Empty;
+    public List<PluginCommand> Commands = new();
+    public Dictionary<int, CommandLineGroup> LineGroups = new();
+
+    public bool IsActive = true;
+    public bool IsVisible = true;
+    public string ButtonLabel = string.Empty;
+
+    public bool UseCustomButtonColor = false;
+    public bool UseCustomTextColor = false;
+    public Vector4 CustomButtonColor = new(0.26f, 0.26f, 0.26f, 1.0f);
+    public Vector4 CustomTextColor = new(1.0f, 1.0f, 1.0f, 1.0f);
+
+    public bool UseCustomPadding = false;
+    public float CustomPaddingH = 4.0f;
+    public float CustomPaddingV = 2.0f;
+    public bool UseCustomFontScale = false;
+    public float CustomFontScale = 1.0f;
+    public bool UseCustomFont = false;
+    public bool CustomUseMono = false;
+}
+
+[Serializable]
+public sealed class CustomButtonEntry
+{
+    public bool IsBreak = false;
+    public bool IsVisible = true;
+    public string GroupId = string.Empty;
+    public string LegacyGroupName = string.Empty;
+}

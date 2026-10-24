@@ -1,0 +1,95 @@
+using System;
+using System.Numerics;
+using Dalamud.Interface.Windowing;
+using Dalamud.Bindings.ImGui;
+using BlackJackButtler.Chat;
+
+namespace BlackJackButtler.Windows;
+
+public class TablePopoutWindow : Window
+{
+    private readonly Configuration _config;
+    private readonly Action _save;
+    private readonly BlackJackButtlerWindow _mainWindow;
+
+    public TablePopoutWindow(Configuration config, Action save, BlackJackButtlerWindow mainWindow)
+        : base("BJB Table##bjb_table_popout", ImGuiWindowFlags.NoCollapse)
+    {
+        _config = config;
+        _save = save;
+        _mainWindow = mainWindow;
+        SizeCondition = ImGuiCond.FirstUseEver;
+        Size = new Vector2(700, 400);
+        SizeConstraints = new WindowSizeConstraints
+        {
+            MinimumSize = new Vector2(400, 200),
+            MaximumSize = new Vector2(float.MaxValue, float.MaxValue)
+        };
+    }
+
+    public override void OnClose()
+    {
+        _config.TablePopout = false;
+        _save();
+    }
+
+    public override void Draw()
+    {
+        if (ImGui.IsWindowAppearing()) return;
+
+        DrawTablePopoutControls();
+        ImGui.Separator();
+        _mainWindow.DrawDealerPanel("_po");
+        ImGui.Spacing();
+        _mainWindow.DrawPlayersPanel("_po");
+    }
+
+    private void DrawTablePopoutControls()
+    {
+        float btnW = 80f;
+        var io = ImGui.GetIO();
+        bool canPanic = io.KeyCtrl && io.KeyShift;
+
+        if (canPanic)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.55f, 0.0f, 0.0f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.75f, 0.0f, 0.0f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.40f, 0.0f, 0.0f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f));
+            ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(1f, 1f, 0f, 1f));
+            ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 2.0f);
+            if (ImGui.Button("PANIC##tbl_panic_full", new Vector2(-1f, 0)))
+                _mainWindow.TriggerPanicStage1();
+            ImGui.PopStyleVar();
+            ImGui.PopStyleColor(5);
+            return;
+        }
+
+        if (!CommandExecutor.IsRunning) ImGui.BeginDisabled();
+        ImGui.PushStyleColor(
+            ImGuiCol.Button,
+            CommandExecutor.IsRunning ? new Vector4(0.7f, 0.0f, 0.0f, 1.0f) : new Vector4(0.3f, 0.3f, 0.3f, 1.0f)
+        );
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.9f, 0.1f, 0.1f, 1.0f));
+        if (ImGui.Button("STOP##tbl_stop", new Vector2(btnW, 0)))
+            CommandExecutor.CancelCurrentGroup();
+        ImGui.PopStyleColor(2);
+        if (!CommandExecutor.IsRunning) ImGui.EndDisabled();
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip(CommandExecutor.IsRunning ? "Stop currently running commands" : "No command group is running.");
+
+        ImGui.SameLine();
+        if (!canPanic) ImGui.BeginDisabled();
+        ImGui.PushStyleColor(
+            ImGuiCol.Button,
+            canPanic ? new Vector4(0.5f, 0.0f, 0.0f, 1.0f) : new Vector4(0.3f, 0.3f, 0.3f, 1.0f)
+        );
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(0.65f, 0.0f, 0.0f, 1.0f));
+        if (ImGui.Button("PANIC##tbl_panic", new Vector2(btnW, 0)))
+            _mainWindow.TriggerPanicStage1();
+        ImGui.PopStyleColor(2);
+        if (!canPanic) ImGui.EndDisabled();
+        if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
+            ImGui.SetTooltip("Hold Ctrl+Shift to enable PANIC");
+    }
+}
