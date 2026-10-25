@@ -1,3 +1,9 @@
+# BlackJack Buttler – Version 2.0.0.3
+
+- Fix: Round-end activity and round logs now include completed results and payout traces.
+
+---
+
 # BlackJack Buttler – Version 2.0.0.2
 
 - Fix: Multi-trade payouts above 1,000,000 Gil now complete correctly with Dropbox or integrated ModularTrade.

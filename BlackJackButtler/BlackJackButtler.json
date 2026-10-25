@@ -4,12 +4,12 @@
     "Punchline": "Good evening. I am the Buttler, turning even the wildest Blackjack tables into a perfectly orchestrated game of cards.",
     "Description": "You tend to your guests; I shall tend to the table. From cards and wagers to payouts and records, every detail is in capable hands. The rules remain yours, of course.\n\nAnd should chaos arise, fear not. Even the most troublesome guests can be managed with a little patience and impeccable manners.\n\nBlackJack Buttler will take care of:\n\nGame Management: Dealing cards, tracking turns, and enforcing Blackjack rules.\nPlayer Management: Managing players, hands, splits, and special actions.\nBanking & Payouts: Handling wagers, Gil balances, trades, and payouts.\nCustomization: Flexible rules, chat messages, and automation settings.\nStatistics & History: Keeping track of sessions, rounds, and game history.\nVisuals: Optional in-world card displays and table visualizations.\n\n/bjb - opens the blackjack buttler tool",
     "InternalName": "BlackJackButtler",
-    "AssemblyVersion": "2.0.0.2",
+    "AssemblyVersion": "2.0.0.3",
     "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
     "ApplicableVersion": "any",
     "DalamudApiLevel": 15,
     "TestingDalamudApiLevel": 15,
     "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/BlackJackButtler/images/icon.png",
     "Tags": ["BlackJack", "Helper", "Chat"],
-    "Changelog": "Version 2.0.0.2\n\n- Fix: Multi-trade payouts above 1,000,000 Gil now complete correctly with Dropbox or integrated ModularTrade.\n- Fix: Cooperative trade confirmation (Gentle Accept) avoids conflicting confirmations and waits for verified trade completion."
+    "Changelog": "Version 2.0.0.3\n\n- Fix: Round-end activity and round logs now include completed results and payout traces."
 }
