@@ -192,6 +192,12 @@ public static partial class GameEngine
             }
         }
 
+        foreach (var trace in payoutTraces.Values)
+            RoundLogManager.RecordPayoutTrace(trace);
+
+        ActivityLogManager.LogRoundEnd(dealer, players);
+        RoundLogManager.AddRound(dealer, players, cfg);
+
         SaveSessionIfNeeded(players);
         dealer.IsCurrentTurn = false;
         CompanionSyncManager.SendPlayerUpdate(cfg, dealer);

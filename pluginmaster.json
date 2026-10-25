@@ -1,29 +1,29 @@
 [
-    {
-        "Author": "Valenth Siveria",
-        "Name": "BlackJack Buttler",
-        "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
-        "Description": "/bjb - opens the blackjack buttler tool",
-        "InternalName": "BlackJackButtler",
-        "Tags": [
-            "BlackJack",
-            "Helper",
-            "Chat"
-        ],
-        "AssemblyVersion": "1.9.1.2",
-        "TestingAssemblyVersion": "2.0.0.2",
-        "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
-        "ApplicableVersion": "any",
-        "DalamudApiLevel": 15,
-        "TestingDalamudApiLevel": 15,
-        "IsHide": "False",
-        "IsTestingExclusive": false,
-        "DownloadCount": 10,
-        "LastUpdate": 1792886885,
-        "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/plugins/BlackJackButtler/icon.png",
-        "DownloadLinkInstall": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
-        "DownloadLinkUpdate": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
-        "DownloadLinkTesting": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/testing/latest.zip",
-        "TestingChangelog": "Version 2.0.0.2\n\n- Fix: Multi-trade payouts above 1,000,000 Gil now complete correctly with Dropbox or integrated ModularTrade.\n- Fix: Cooperative trade confirmation (Gentle Accept) avoids conflicting confirmations and waits for verified trade completion."
-    }
+  {
+    "Author": "Valenth Siveria",
+    "Name": "BlackJack Buttler",
+    "Punchline": "Good evening. I'm your BlackJack Buttler - quietly tracking the table and offering the right hint at the right time.",
+    "Description": "/bjb - opens the blackjack buttler tool",
+    "InternalName": "BlackJackButtler",
+    "Tags": [
+      "BlackJack",
+      "Helper",
+      "Chat"
+    ],
+    "AssemblyVersion": "1.9.1.2",
+    "TestingAssemblyVersion": "2.0.0.2",
+    "RepoUrl": "https://github.com/NeoGriever/BlackJackButtler",
+    "ApplicableVersion": "any",
+    "DalamudApiLevel": 15,
+    "TestingDalamudApiLevel": 15,
+    "IsHide": "False",
+    "IsTestingExclusive": false,
+    "DownloadCount": 10,
+    "LastUpdate": 1792952408,
+    "IconUrl": "https://raw.githubusercontent.com/NeoGriever/BlackJackButtler/main/plugins/BlackJackButtler/icon.png",
+    "DownloadLinkInstall": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/latest.zip",
+    "DownloadLinkTesting": "https://github.com/NeoGriever/BlackJackButtler/raw/main/plugins/BlackJackButtler/testing/latest.zip",
+    "TestingChangelog": "Version 2.0.0.2\n\n- Fix: Multi-trade payouts above 1,000,000 Gil now complete correctly with Dropbox or integrated ModularTrade.\n- Fix: Cooperative trade confirmation (Gentle Accept) avoids conflicting confirmations and waits for verified trade completion."
+  }
 ]
