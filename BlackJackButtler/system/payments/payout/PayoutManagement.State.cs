@@ -26,6 +26,7 @@ public static partial class PayoutManagement
     private const double TargetSettleSeconds = 0.45;
     private const double DropboxTradeOpenTimeoutSeconds = 30.0;
     private const double TradeClosedSettleSeconds = 1.0;
+    private const double TradeLedgerReconcileTimeoutSeconds = 7.0;
 
     private enum PayoutState
     {
@@ -71,6 +72,8 @@ public static partial class PayoutManagement
     private static bool _isResetting;
 #endif
     private static bool _modularTradeInitialized;
+    private static Guid? _modularTradeSessionId;
+    private static long _lastReconciliationDelta = long.MinValue;
 
     public readonly record struct DropboxStatus(bool Installed, bool Active);
 

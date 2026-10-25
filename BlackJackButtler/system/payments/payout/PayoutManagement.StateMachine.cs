@@ -48,7 +48,9 @@ public static partial class PayoutManagement
 
         var settlementPending = _state is PayoutState.WaitingTradeClose
             or PayoutState.TradeClosedSettle;
-        if (player.Bank <= 0 && !settlementPending)
+        if (player.Bank <= 0 && !settlementPending
+            && !(_executor == TradeExecutor.ModularTrade
+                && global::ModularTrade.TradeManager.IsBusy))
         {
             Reset("Bank reached 0 before requested payout completed");
             return;
@@ -78,9 +80,12 @@ public static partial class PayoutManagement
                     return;
                 }
                 _bankBeforeCurrentTrade = player.Bank;
+                _lastReconciliationDelta = long.MinValue;
 
                 var dropbox = GetDropboxStatus();
-                if (ShouldUseDropbox(dropbox))
+                var useDropbox = ShouldUseDropbox(dropbox);
+                Trace($"Executor selection: Dropbox installed={dropbox.Installed}, active={dropbox.Active}, selected={(useDropbox ? "Dropbox" : "ModularTrade")}, chunk={_currentChunk:N0}, remaining={_remainingAmount:N0}, bank={player.Bank:N0}");
+                if (useDropbox)
                 {
                     if (TryStartDropboxPayout(recipient, (int)_currentChunk))
                     {
@@ -93,8 +98,10 @@ public static partial class PayoutManagement
                     return;
                 }
 
-                if (TryStartModularTradePayout(recipient, (int)_currentChunk))
+                var modularAmount = Math.Min(_remainingAmount, player.Bank);
+                if (TryStartModularTradePayout(recipient, modularAmount))
                 {
+                    _currentChunk = modularAmount;
                     _executor = TradeExecutor.ModularTrade;
                     SetState(PayoutState.WaitingTradeOpen, "Integrated ModularTrade payout started");
                     return;
@@ -117,23 +124,32 @@ public static partial class PayoutManagement
 
             case PayoutState.WaitingTradeClose:
                 if (!IsTradeOpen())
-                    SetState(PayoutState.TradeClosedSettle, "Trade closed");
+                    SetState(PayoutState.TradeClosedSettle, "Dropbox trade closed; awaiting ledger reconciliation");
                 break;
 
             case PayoutState.TradeClosedSettle:
                 if (StateElapsed < TradeClosedSettleSeconds) return;
                 var transferred = _bankBeforeCurrentTrade - player.Bank;
-                if (transferred <= 0)
+                // V4: reconciliation observation. A closed trade window is not proof of payment.
+                if (transferred != _lastReconciliationDelta)
                 {
-                    Reset("Trade cancelled or closed without payout");
+                    _lastReconciliationDelta = transferred;
+                    Trace($"Ledger reconciliation: executor={_executor}, expected={_currentChunk:N0}, recorded={transferred:N0}, remainingBefore={_remainingAmount:N0}, elapsed={StateElapsed:F1}s");
+                }
+                if (transferred > _currentChunk)
+                {
+                    Reset($"Ledger overpayment/overlap: executor={_executor}, expected={_currentChunk:N0}, recorded={transferred:N0}; stopped without automatic retry");
                     return;
                 }
-                if (transferred != _currentChunk)
+                if (transferred < _currentChunk)
                 {
-                    Reset($"Unexpected payout amount: expected {_currentChunk:N0}, received {transferred:N0}");
+                    if (StateElapsed < TradeLedgerReconcileTimeoutSeconds)
+                        return;
+                    Reset($"Ledger reconciliation timeout: executor={_executor}, expected={_currentChunk:N0}, recorded={transferred:N0}, remaining={_remainingAmount:N0}; stopped without automatic retry");
                     return;
                 }
 
+                Trace($"Chunk reconciled: executor={_executor}, paid={_currentChunk:N0}, remainingAfter={_remainingAmount - _currentChunk:N0}, playerBank={player.Bank:N0}");
                 _remainingAmount -= _currentChunk;
                 if (_remainingAmount <= 0)
                 {

@@ -1,3 +1,10 @@
+# BlackJack Buttler – Version 2.0.0.2
+
+- Fix: Multi-trade payouts above 1,000,000 Gil now complete correctly with Dropbox or integrated ModularTrade.
+- Fix: Cooperative trade confirmation (Gentle Accept) avoids conflicting confirmations and waits for verified trade completion.
+
+---
+
 # BlackJack Buttler – Version 2.0.0.1
 
 - Refactoring: Entire code rework and refactoring. Structured code files with categorized classes and functions for better maintenance.

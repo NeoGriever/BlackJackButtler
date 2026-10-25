@@ -48,6 +48,7 @@ public static partial class PayoutManagement
         _openedDropboxUiForPayout = false;
         _bankBeforeCurrentTrade = p.Bank;
         _executor = TradeExecutor.None;
+        _modularTradeSessionId = null;
 
         SetState(PayoutState.Targeting, $"Started for {p.DisplayName}, payout={amount:N0}, bank={p.Bank:N0}, chunk={_currentChunk:N0}");
         return PayoutStartResult.Started;

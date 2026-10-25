@@ -142,6 +142,16 @@ public sealed class TradeEngine
                     break;
 
                 case TradeState.ConfirmingTrade:
+                    if (!_io.IsTradeOpen)
+                    {
+                        // V5 GentleAccept: another controller may have completed the dialog.
+                        // Payment is ambiguous until the game reports a correlated result.
+                        // Never retry automatically or close an already-settling trade.
+                        _paymentMayHaveBeenCommitted = true;
+                        _io.Log("GentleAccept: UI closed before local offer lock; awaiting game result, not retrying.");
+                        Enter(TradeState.AwaitingOutcome);
+                        break;
+                    }
                     if (!PreConfirmChecks())
                         break;
                     if (_io.IsTradeButtonEnabled && _io.TryClickTradeButton())
@@ -150,15 +160,32 @@ public sealed class TradeEngine
                         // after a subsequent timeout or ambiguous window close.
                         _paymentMayHaveBeenCommitted = true;
                         Enter(TradeState.ConfirmingFinalDialog);
+                        _io.Log($"GentleAccept: offer locked; yielding confirmation for {_options.ButtonCooldown.TotalMilliseconds:N0} ms.");
                         Gate(_options.ButtonCooldown);
                     }
                     break;
 
                 case TradeState.ConfirmingFinalDialog:
-                    if (!PreConfirmChecks())
+                    if (!_io.IsTradeOpen)
+                    {
+                        _io.Log("GentleAccept: trade UI closed during grace period; external confirmation possible. Awaiting outcome.");
+                        Enter(TradeState.AwaitingOutcome);
                         break;
+                    }
+                    if (!_io.IsCorrectRecipient(_session.Recipient))
+                    {
+                        // An offer has already been locked. The payment outcome
+                        // is now potentially ambiguous; do NOT label it safe to retry.
+                        _io.Log("GentleAccept: recipient changed after offer lock; outcome uncertain.");
+                        End(TradeEventType.Cancel, TradeState.Failed, TradeFailureReason.UnknownOutcome);
+                        break;
+                    }
+                    // Existing ButtonCooldown gives a cooperating plugin the
+                    // first opportunity to handle this confirmation. Click once
+                    // only if the exact final dialog is still visible afterward.
                     if (_io.IsFinalTradeDialogVisible && _io.TryConfirmFinalDialog())
                     {
+                        _io.Log("GentleAccept: no external confirmation observed; BJB confirmed remaining dialog.");
                         Enter(TradeState.AwaitingOutcome);
                         Gate(_options.DialogCooldown);
                     }

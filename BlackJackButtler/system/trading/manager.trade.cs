@@ -49,11 +49,13 @@ public static class TradeManager
             CompanionSyncManager.SendPlayerBankBetUpdate(Plugin.Instance.Configuration, p);
             var window = Plugin.Instance.GetMainWindow();
             window.AddDebugLog($"[TradeManager] Committed: {_currentPartner} → {p.Name} bank += {_buffer}");
+            Plugin.Log.Information($"[TradeLedger] TradeCommit: partner={_currentPartner}, player={p.DisplayName}, before={before:N0}, delta={_buffer:N0}, after={p.Bank:N0}");
         }
         else
         {
             var window = Plugin.Instance.GetMainWindow();
             window.AddDebugLog($"[TradeManager] CommitTrade: no matching player found for '{_currentPartner}'");
+            Plugin.Log.Warning($"[TradeLedger] TradeCommit unmatched partner={_currentPartner}, delta={_buffer:N0}");
         }
         _committed = true;
         Reset();
@@ -104,6 +106,7 @@ public static class TradeManager
                 RecordTradeLine(p, before, p.Bank);
                 CompanionSyncManager.SendPlayerBankBetUpdate(Plugin.Instance.Configuration, p);
                 window.AddDebugLog($"[TradeManager] Committed (fallback): {_currentPartner} bank += {_buffer}");
+                Plugin.Log.Information($"[TradeLedger] TradeCommit fallback: partner={_currentPartner}, player={p.DisplayName}, before={before:N0}, delta={_buffer:N0}, after={p.Bank:N0}");
             }
         }
 

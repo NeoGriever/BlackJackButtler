@@ -20,7 +20,7 @@ namespace BlackJackButtler;
 
 public static partial class PayoutManagement
 {
-    private static bool TryStartModularTradePayout(PlayerState player, int gil)
+    private static bool TryStartModularTradePayout(PlayerState player, long gil)
     {
         var isBusy = global::ModularTrade.TradeManager.IsBusy;
         if (!_modularTradeInitialized || isBusy)
@@ -39,7 +39,7 @@ public static partial class PayoutManagement
         {
             var recipient = new Sender(character).ToString();
             Trace($"Starting integrated ModularTrade recipient={recipient}, gil={gil}.");
-            global::ModularTrade.TradeManager.Trade(recipient, gil);
+            _modularTradeSessionId = global::ModularTrade.TradeManager.Trade(recipient, gil);
             return true;
         }
         catch (Exception ex)
@@ -55,13 +55,21 @@ public static partial class PayoutManagement
     )
     {
         Trace($"ModularTrade event={type}, state={snapshot.State}, step={snapshot.CurrentStep}/{snapshot.TotalSteps}, confirmed={snapshot.ConfirmedAmount}/{snapshot.TotalAmount}, reason={snapshot.FailureReason}");
-        if (!IsActive || _executor != TradeExecutor.ModularTrade)
+        if (!IsActive || _executor != TradeExecutor.ModularTrade
+            || _modularTradeSessionId != snapshot.SessionId)
             return;
 
         switch (type)
         {
             case global::ModularTrade.TradeEventType.Success:
-                SetState(PayoutState.TradeClosedSettle, $"Integrated ModularTrade verified {_currentChunk:N0} Gil");
+                if (snapshot.TotalAmount != _currentChunk
+                    || snapshot.ConfirmedAmount != _currentChunk
+                    || snapshot.CurrentStep != snapshot.TotalSteps)
+                {
+                    Reset($"ModularTrade success was incomplete: confirmed={snapshot.ConfirmedAmount:N0}, expected={_currentChunk:N0}");
+                    return;
+                }
+                SetState(PayoutState.TradeClosedSettle, $"Integrated ModularTrade verified {snapshot.ConfirmedAmount:N0} Gil in {snapshot.TotalSteps} trades");
                 break;
 
             case global::ModularTrade.TradeEventType.Cancel:

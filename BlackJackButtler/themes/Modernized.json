@@ -1,0 +1,41 @@
+{
+  "name": "Modernized",
+  "fonts": {
+    "window": { "family": "Default", "size": 1.0, "color": "#E8E8E0FF" },
+    "settings": { "family": "Default", "size": 1.0, "color": "#E8E8E0FF" },
+    "button": { "family": "Default", "size": 1.0, "color": "#E8E8E0FF" }
+  },
+  "colors": {
+    "WindowBg": "#171F26FA",
+    "ChildBg": "#1C252CFA",
+    "PopupBg": "#171F26FA",
+    "TitleBg": "#292F36FF",
+    "TitleBgActive": "#333B3DFF",
+    "Border": "#91784AE6",
+    "Text": "#E8E8E0FF",
+    "TextDisabled": "#A2A5A3FF",
+    "Button": "#38474FFF",
+    "ButtonHovered": "#4F6166FF",
+    "ButtonActive": "#2B3B42FF",
+    "FrameBg": "#27333AFF",
+    "FrameBgHovered": "#384B54FF",
+    "FrameBgActive": "#455B60FF",
+    "Header": "#3A4548FF",
+    "HeaderHovered": "#506064FF",
+    "HeaderActive": "#66716BFF",
+    "Tab": "#27343AFF",
+    "TabHovered": "#465B60FF",
+    "TabActive": "#3B5055FF",
+    "CheckMark": "#D9BB76FF",
+    "SliderGrab": "#9B8961FF",
+    "SliderGrabActive": "#D9BB76FF"
+  },
+  "corners": {
+    "window": { "rounding": 8, "topLeft": true, "topRight": true, "bottomLeft": true, "bottomRight": true },
+    "child": { "rounding": 6, "topLeft": true, "topRight": true, "bottomLeft": true, "bottomRight": true },
+    "frame": { "rounding": 4, "topLeft": true, "topRight": true, "bottomLeft": true, "bottomRight": true },
+    "button": { "rounding": 5, "topLeft": true, "topRight": true, "bottomLeft": true, "bottomRight": true }
+  },
+  "backgroundImage": "",
+  "headerColor": "#534A35FF"
+}

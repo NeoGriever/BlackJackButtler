@@ -58,6 +58,7 @@ public static partial class PayoutManagement
         _openedDropboxUiForPayout = false;
         _bankBeforeCurrentTrade = 0;
         _executor = TradeExecutor.None;
+        _modularTradeSessionId = null;
         _stateEnteredAt = DateTime.UtcNow;
 
         if (startNextQueuedPayout)
@@ -80,6 +81,9 @@ public static partial class PayoutManagement
     public static void NotifyTradeCancelled()
     {
         if (IsActive)
+        {
+            Trace($"TradeCancel system signal received: executor={_executor}, state={_state}, chunk={_currentChunk:N0}, remaining={_remainingAmount:N0}");
             Reset("Recipient cancelled trade");
+        }
     }
 }

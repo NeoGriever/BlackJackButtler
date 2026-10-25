@@ -22,10 +22,9 @@ public static partial class PayoutManagement
 {
     private static void Trace(string message)
     {
-#if DEBUG
-        if (Plugin.Instance.Configuration.DebugTradeLogging)
-            Plugin.Log.Debug($"[PayoutManagement] {message}");
-#endif
+        // V4: always record payout state changes in XLLog, including Release builds.
+        // No reference to DEBUG-only Configuration.DebugTradeLogging here.
+        Plugin.Log.Information($"[PayoutManagement] {message}");
     }
 
     private static void DebugLog(string message)

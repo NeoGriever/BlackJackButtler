@@ -155,6 +155,9 @@ internal unsafe sealed class BjbDalamudTradeAdapter : ITradeGameAdapter
         if (!TryGetAddonByName<AtkUnitBase>("InputNumeric", out var addon) || !IsAddonReady(addon))
             return false;
 
+        // V5 GentleAccept: arm before any controller can complete this offer.
+        _awaitingOutcomeSince = Now;
+        Log($"GentleAccept: observing result before InputNumeric callback; offeredGil={amount}, recipient={_expectedRecipient}.");
         Trace($"TrySetGil: firing direct InputNumeric callback with {amount}.");
         FireCallbackInt(addon, amount);
         return true;
@@ -179,7 +182,7 @@ internal unsafe sealed class BjbDalamudTradeAdapter : ITradeGameAdapter
         if (dialog is null)
             return false;
 
-        _awaitingOutcomeSince = Now;
+        Trace("GentleAccept: final dialog still available; BJB confirming (observer already armed).");
         Trace("TryConfirmFinalDialog: firing direct SelectYesno callback [Int:0].");
         return FireCallbackInt(dialog, 0);
     }
@@ -220,7 +223,7 @@ internal unsafe sealed class BjbDalamudTradeAdapter : ITradeGameAdapter
         if (Plugin.Instance.Configuration.DebugTradeLogging)
             Plugin.Instance.GetMainWindow().AddDebugLog($"[ModularTrade] {message}{(error is null ? string.Empty : $": {error.Message}")}");
 #endif
-        Trace($"Engine: {message}{(error is null ? string.Empty : $": {error}")}");
+        Plugin.Log.Information($"[ModularTrade] {message}{(error is null ? string.Empty : $": {error}")}");
     }
 
     public void Dispose()
@@ -267,12 +270,12 @@ internal unsafe sealed class BjbDalamudTradeAdapter : ITradeGameAdapter
         if (MatchesTradeSystemMessage(text, GermanSuccessPatterns, EnglishSuccessPatterns, FrenchSuccessPatterns, JapaneseSuccessPatterns))
         {
             _outcome = GameTradeOutcome.Succeeded;
-            Trace("Trade system message matched Success.");
+            Log($"GentleAccept: matching game-success system message observed for recipient={_expectedRecipient}.");
         }
         else if (MatchesTradeSystemMessage(text, GermanCancelPatterns, EnglishCancelPatterns, FrenchCancelPatterns, JapaneseCancelPatterns))
         {
             _outcome = GameTradeOutcome.Cancelled;
-            Trace("Trade system message matched Cancel.");
+            Log($"GentleAccept: matching game-cancel system message observed for recipient={_expectedRecipient}.");
         }
     }
 
